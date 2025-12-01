@@ -125,45 +125,6 @@ export const calculateStreaks = (friends: Friend[]): { currentStreak: number; lo
 };
 
 /**
- * Group friends by category and calculate category-specific stats
- */
-export const getCohortStats = (friends: Friend[]): Record<string, { 
-  count: number; 
-  avgScore: number; 
-  totalInteractions: number;
-  overdueCount: number;
-}> => {
-  const cohorts: Record<string, { count: number; totalScore: number; totalInteractions: number; overdueCount: number }> = {};
-  
-  friends.forEach(f => {
-    if (!cohorts[f.category]) {
-      cohorts[f.category] = { count: 0, totalScore: 0, totalInteractions: 0, overdueCount: 0 };
-    }
-    cohorts[f.category].count++;
-    cohorts[f.category].totalScore += f.individualScore || 50;
-    cohorts[f.category].totalInteractions += f.logs.length;
-    
-    const status = calculateTimeStatus(f.lastContacted, f.frequencyDays);
-    if (status.isOverdue) {
-      cohorts[f.category].overdueCount++;
-    }
-  });
-  
-  const result: Record<string, { count: number; avgScore: number; totalInteractions: number; overdueCount: number }> = {};
-  
-  Object.entries(cohorts).forEach(([category, data]) => {
-    result[category] = {
-      count: data.count,
-      avgScore: Math.round(data.totalScore / data.count),
-      totalInteractions: data.totalInteractions,
-      overdueCount: data.overdueCount
-    };
-  });
-  
-  return result;
-};
-
-/**
  * Parse CSV contacts data
  */
 export const parseCSVContacts = (csvContent: string): Array<{ name: string; phone?: string; email?: string; category?: string }> => {
@@ -279,6 +240,45 @@ export const calculateTimeStatus = (lastContacted: string, frequencyDays: number
     isOverdue: timeRemainingMs < 0,
     goalDate
   };
+};
+
+/**
+ * Group friends by category and calculate category-specific stats
+ */
+export const getCohortStats = (friends: Friend[]): Record<string, { 
+  count: number; 
+  avgScore: number; 
+  totalInteractions: number;
+  overdueCount: number;
+}> => {
+  const cohorts: Record<string, { count: number; totalScore: number; totalInteractions: number; overdueCount: number }> = {};
+  
+  friends.forEach(f => {
+    if (!cohorts[f.category]) {
+      cohorts[f.category] = { count: 0, totalScore: 0, totalInteractions: 0, overdueCount: 0 };
+    }
+    cohorts[f.category].count++;
+    cohorts[f.category].totalScore += f.individualScore || 50;
+    cohorts[f.category].totalInteractions += f.logs.length;
+    
+    const status = calculateTimeStatus(f.lastContacted, f.frequencyDays);
+    if (status.isOverdue) {
+      cohorts[f.category].overdueCount++;
+    }
+  });
+  
+  const result: Record<string, { count: number; avgScore: number; totalInteractions: number; overdueCount: number }> = {};
+  
+  Object.entries(cohorts).forEach(([category, data]) => {
+    result[category] = {
+      count: data.count,
+      avgScore: Math.round(data.totalScore / data.count),
+      totalInteractions: data.totalInteractions,
+      overdueCount: data.overdueCount
+    };
+  });
+  
+  return result;
 };
 
 export const getStatusColor = (percentage: number): string => {
