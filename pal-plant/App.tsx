@@ -6,12 +6,17 @@ import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
 import SettingsModal from './components/SettingsModal';
 import HomeView from './components/HomeView';
+import OnboardingTooltips from './components/OnboardingTooltips';
+import { useKeyboardShortcuts } from './components/KeyboardShortcuts';
+import BulkImportModal from './components/BulkImportModal';
 import { generateId, calculateTimeStatus, THEMES, calculateInteractionScore, calculateIndividualFriendScore } from './utils/helpers';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.HOME);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,12 +24,26 @@ const App: React.FC = () => {
   // Settings State
   const [settings, setSettings] = useState<AppSettings>(() => {
     const saved = localStorage.getItem('friendkeep_settings');
-    return saved ? JSON.parse(saved) : { 
+    const defaults: AppSettings = { 
       theme: 'plant', 
       textSize: 'normal', 
       highContrast: false, 
-      reducedMotion: false 
+      reducedMotion: false,
+      reminders: {
+        pushEnabled: false,
+        emailEnabled: false,
+        reminderHoursBefore: 24
+      },
+      cloudSync: {
+        enabled: false
+      },
+      hasSeenOnboarding: false
     };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...defaults, ...parsed };
+    }
+    return defaults;
   });
 
   // Data States
@@ -48,6 +67,27 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('friendkeep_categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('friendkeep_meetings', JSON.stringify(meetingRequests)); }, [meetingRequests]);
   useEffect(() => { localStorage.setItem('friendkeep_settings', JSON.stringify(settings)); }, [settings]);
+
+  // Check for first-run onboarding
+  useEffect(() => {
+    if (!settings.hasSeenOnboarding) {
+      const timer = setTimeout(() => setShowOnboarding(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    setSettings(prev => ({ ...prev, hasSeenOnboarding: true }));
+  };
+
+  // Keyboard shortcuts hook
+  const openAddModal = () => { setEditingFriend(null); setIsModalOpen(true); };
+  const { showShortcutsModal, setShowShortcutsModal, ShortcutsModal } = useKeyboardShortcuts(
+    setActiveTab,
+    openAddModal,
+    () => setIsSettingsOpen(true)
+  );
 
   // Meeting Verification Logic (Check on Load)
   useEffect(() => {
@@ -238,8 +278,13 @@ const App: React.FC = () => {
     setActiveTab(Tab.MEETINGS);
   };
 
-  const openAddModal = () => { setEditingFriend(null); setIsModalOpen(true); };
   const openEditModal = (friend: Friend) => { setEditingFriend(friend); setIsModalOpen(true); };
+
+  // Bulk import handler
+  const handleBulkImport = (newFriends: Friend[]) => {
+    setFriends(prev => [...newFriends, ...prev]);
+    alert(`Successfully imported ${newFriends.length} contacts!`);
+  };
 
   // Computed
   const filteredFriends = friends.filter(f => {
@@ -400,7 +445,30 @@ const App: React.FC = () => {
          onClose={() => setIsSettingsOpen(false)}
          settings={settings}
          onUpdate={setSettings}
+         onOpenBulkImport={() => setIsBulkImportOpen(true)}
+         onShowOnboarding={() => setShowOnboarding(true)}
+         onShowShortcuts={() => setShowShortcutsModal(true)}
       />
+
+      <BulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        onImport={handleBulkImport}
+        existingFriends={friends}
+        categories={categories}
+        settings={settings}
+      />
+
+      {/* Onboarding Tooltips */}
+      {showOnboarding && (
+        <OnboardingTooltips 
+          settings={settings}
+          onComplete={handleOnboardingComplete}
+        />
+      )}
+
+      {/* Keyboard Shortcuts Modal */}
+      <ShortcutsModal />
     </div>
   );
 };

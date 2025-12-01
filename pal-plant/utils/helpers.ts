@@ -2,6 +2,250 @@ import { Friend, ThemeId, ThemeColors, MeetingRequest, ContactLog } from '../typ
 import { Sprout, Flower, Trees, Leaf, Skull } from 'lucide-react';
 import React from 'react';
 
+/**
+ * Generate an ICS calendar event for a meeting
+ */
+export const generateICSEvent = (meeting: MeetingRequest): string => {
+  if (!meeting.scheduledDate) return '';
+  
+  const startDate = new Date(meeting.scheduledDate);
+  const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hour duration
+  
+  const formatDate = (d: Date) => {
+    return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  };
+  
+  const uid = `${meeting.id}@palplant`;
+  const dtstamp = formatDate(new Date());
+  const dtstart = formatDate(startDate);
+  const dtend = formatDate(endDate);
+  
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Pal Plant//Meeting//EN',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${dtstamp}`,
+    `DTSTART:${dtstart}`,
+    `DTEND:${dtend}`,
+    `SUMMARY:Meeting with ${meeting.name}`,
+    `DESCRIPTION:${meeting.notes || 'Meeting scheduled via Pal Plant'}`,
+    `LOCATION:${meeting.location || 'TBD'}`,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  
+  return icsContent;
+};
+
+/**
+ * Download an ICS file for a meeting
+ */
+export const downloadCalendarEvent = (meeting: MeetingRequest): void => {
+  const icsContent = generateICSEvent(meeting);
+  if (!icsContent) return;
+  
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `meeting_${meeting.name.replace(/\s+/g, '_')}_${new Date(meeting.scheduledDate!).toISOString().split('T')[0]}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+/**
+ * Calculate streak data - consecutive days with at least one interaction
+ */
+export const calculateStreaks = (friends: Friend[]): { currentStreak: number; longestStreak: number; streakDates: string[] } => {
+  // Collect all interaction dates
+  const allDates = new Set<string>();
+  
+  friends.forEach(f => {
+    f.logs.forEach(log => {
+      const date = new Date(log.date).toISOString().split('T')[0];
+      allDates.add(date);
+    });
+  });
+  
+  if (allDates.size === 0) {
+    return { currentStreak: 0, longestStreak: 0, streakDates: [] };
+  }
+  
+  // Sort dates
+  const sortedDates = Array.from(allDates).sort();
+  
+  // Calculate streaks
+  let currentStreak = 0;
+  let longestStreak = 0;
+  let tempStreak = 1;
+  const streakDates: string[] = [];
+  
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  
+  for (let i = 1; i < sortedDates.length; i++) {
+    const prevDate = new Date(sortedDates[i - 1]);
+    const currDate = new Date(sortedDates[i]);
+    const diffDays = Math.floor((currDate.getTime() - prevDate.getTime()) / 86400000);
+    
+    if (diffDays === 1) {
+      tempStreak++;
+    } else {
+      longestStreak = Math.max(longestStreak, tempStreak);
+      tempStreak = 1;
+    }
+  }
+  longestStreak = Math.max(longestStreak, tempStreak);
+  
+  // Check if current streak is still active (last interaction was today or yesterday)
+  const lastDate = sortedDates[sortedDates.length - 1];
+  if (lastDate === today || lastDate === yesterday) {
+    // Count backwards from today
+    let checkDate = lastDate === today ? today : yesterday;
+    let streak = 0;
+    
+    for (let i = sortedDates.length - 1; i >= 0; i--) {
+      if (sortedDates[i] === checkDate) {
+        streak++;
+        streakDates.unshift(sortedDates[i]);
+        const prevDay = new Date(new Date(checkDate).getTime() - 86400000).toISOString().split('T')[0];
+        checkDate = prevDay;
+      } else if (new Date(sortedDates[i]) < new Date(checkDate)) {
+        break;
+      }
+    }
+    currentStreak = streak;
+  }
+  
+  return { currentStreak, longestStreak, streakDates };
+};
+
+/**
+ * Group friends by category and calculate category-specific stats
+ */
+export const getCohortStats = (friends: Friend[]): Record<string, { 
+  count: number; 
+  avgScore: number; 
+  totalInteractions: number;
+  overdueCount: number;
+}> => {
+  const cohorts: Record<string, { count: number; totalScore: number; totalInteractions: number; overdueCount: number }> = {};
+  
+  friends.forEach(f => {
+    if (!cohorts[f.category]) {
+      cohorts[f.category] = { count: 0, totalScore: 0, totalInteractions: 0, overdueCount: 0 };
+    }
+    cohorts[f.category].count++;
+    cohorts[f.category].totalScore += f.individualScore || 50;
+    cohorts[f.category].totalInteractions += f.logs.length;
+    
+    const status = calculateTimeStatus(f.lastContacted, f.frequencyDays);
+    if (status.isOverdue) {
+      cohorts[f.category].overdueCount++;
+    }
+  });
+  
+  const result: Record<string, { count: number; avgScore: number; totalInteractions: number; overdueCount: number }> = {};
+  
+  Object.entries(cohorts).forEach(([category, data]) => {
+    result[category] = {
+      count: data.count,
+      avgScore: Math.round(data.totalScore / data.count),
+      totalInteractions: data.totalInteractions,
+      overdueCount: data.overdueCount
+    };
+  });
+  
+  return result;
+};
+
+/**
+ * Parse CSV contacts data
+ */
+export const parseCSVContacts = (csvContent: string): Array<{ name: string; phone?: string; email?: string; category?: string }> => {
+  const lines = csvContent.trim().split('\n');
+  if (lines.length < 2) return [];
+  
+  const headers = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
+  const nameIndex = headers.findIndex(h => h === 'name' || h === 'full name' || h === 'fullname');
+  const phoneIndex = headers.findIndex(h => h === 'phone' || h === 'mobile' || h === 'telephone');
+  const emailIndex = headers.findIndex(h => h === 'email' || h === 'e-mail');
+  const categoryIndex = headers.findIndex(h => h === 'category' || h === 'group' || h === 'type');
+  
+  if (nameIndex === -1) return [];
+  
+  const contacts: Array<{ name: string; phone?: string; email?: string; category?: string }> = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+    const name = values[nameIndex];
+    if (!name) continue;
+    
+    contacts.push({
+      name,
+      phone: phoneIndex !== -1 ? values[phoneIndex] : undefined,
+      email: emailIndex !== -1 ? values[emailIndex] : undefined,
+      category: categoryIndex !== -1 ? values[categoryIndex] : undefined
+    });
+  }
+  
+  return contacts;
+};
+
+/**
+ * Detect duplicate contacts based on name similarity
+ */
+export const detectDuplicates = (
+  newContacts: Array<{ name: string; phone?: string; email?: string }>,
+  existingFriends: Friend[]
+): Array<{ newContact: { name: string; phone?: string; email?: string }; existingFriend: Friend; similarity: number }> => {
+  const duplicates: Array<{ newContact: { name: string; phone?: string; email?: string }; existingFriend: Friend; similarity: number }> = [];
+  
+  const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+  
+  newContacts.forEach(newContact => {
+    const normalizedNew = normalize(newContact.name);
+    
+    existingFriends.forEach(existing => {
+      const normalizedExisting = normalize(existing.name);
+      
+      // Check for exact match
+      if (normalizedNew === normalizedExisting) {
+        duplicates.push({ newContact, existingFriend: existing, similarity: 100 });
+        return;
+      }
+      
+      // Check for partial match (one contains the other)
+      if (normalizedNew.includes(normalizedExisting) || normalizedExisting.includes(normalizedNew)) {
+        duplicates.push({ newContact, existingFriend: existing, similarity: 80 });
+        return;
+      }
+      
+      // Check by email match
+      if (newContact.email && existing.email && newContact.email.toLowerCase() === existing.email.toLowerCase()) {
+        duplicates.push({ newContact, existingFriend: existing, similarity: 95 });
+        return;
+      }
+      
+      // Check by phone match
+      if (newContact.phone && existing.phone) {
+        const normalizedNewPhone = newContact.phone.replace(/\D/g, '');
+        const normalizedExistingPhone = existing.phone.replace(/\D/g, '');
+        if (normalizedNewPhone.length >= 7 && normalizedExistingPhone.length >= 7 && 
+            (normalizedNewPhone.includes(normalizedExistingPhone) || normalizedExistingPhone.includes(normalizedNewPhone))) {
+          duplicates.push({ newContact, existingFriend: existing, similarity: 90 });
+        }
+      }
+    });
+  });
+  
+  return duplicates;
+};
+
 export const generateId = (): string => {
   return Math.random().toString(36).substring(2, 9);
 };

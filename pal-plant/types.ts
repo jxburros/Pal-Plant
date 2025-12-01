@@ -60,11 +60,28 @@ export enum Tab {
 
 export type ThemeId = 'plant' | 'midnight' | 'forest' | 'ocean' | 'sunset' | 'berry';
 
+export interface ReminderSettings {
+  pushEnabled: boolean;
+  emailEnabled: boolean;
+  reminderHoursBefore: number;
+  email?: string;
+}
+
+export interface CloudSyncSettings {
+  enabled: boolean;
+  provider?: 'google' | 'custom';
+  lastSyncDate?: string;
+  syncEmail?: string;
+}
+
 export interface AppSettings {
   theme: ThemeId;
   textSize: 'normal' | 'large' | 'xl';
   highContrast: boolean;
   reducedMotion: boolean;
+  reminders: ReminderSettings;
+  cloudSync: CloudSyncSettings;
+  hasSeenOnboarding: boolean;
 }
 
 export interface ThemeColors {
