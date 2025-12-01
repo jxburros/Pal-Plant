@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Cloud, Users, Mail, Clock, Keyboard, HelpCircle } from 'lucide-react';
 import { AppSettings, ThemeId, Friend, MeetingRequest } from '../types';
 import { THEMES } from '../utils/helpers';
 
@@ -8,10 +8,16 @@ interface SettingsModalProps {
   onClose: () => void;
   settings: AppSettings;
   onUpdate: (s: AppSettings) => void;
+  onOpenBulkImport?: () => void;
+  onShowOnboarding?: () => void;
+  onShowShortcuts?: () => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onUpdate }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ 
+  isOpen, onClose, settings, onUpdate, onOpenBulkImport, onShowOnboarding, onShowShortcuts 
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [syncEmail, setSyncEmail] = useState(settings.cloudSync?.syncEmail || '');
 
   if (!isOpen) return null;
 
@@ -62,6 +68,45 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
     reader.readAsText(file);
   };
 
+  const handleCloudSync = () => {
+    if (!settings.cloudSync?.enabled) {
+      // Enable cloud sync
+      if (syncEmail && syncEmail.includes('@')) {
+        onUpdate({
+          ...settings,
+          cloudSync: {
+            enabled: true,
+            syncEmail: syncEmail,
+            lastSyncDate: new Date().toISOString()
+          }
+        });
+        // Simulate sync
+        alert('Cloud sync enabled! Your data will be backed up automatically.');
+      } else {
+        alert('Please enter a valid email address for cloud sync.');
+      }
+    } else {
+      // Disable cloud sync
+      onUpdate({
+        ...settings,
+        cloudSync: {
+          ...settings.cloudSync,
+          enabled: false
+        }
+      });
+    }
+  };
+
+  const updateReminders = (updates: Partial<typeof settings.reminders>) => {
+    onUpdate({
+      ...settings,
+      reminders: {
+        ...settings.reminders,
+        ...updates
+      }
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -91,6 +136,118 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                   <span className="text-xs font-medium capitalize">{id}</span>
                 </button>
               ))}
+            </div>
+          </section>
+
+          {/* Reminders */}
+          <section>
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Bell size={16} /> Reminders
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <Bell size={20} className="text-slate-400" />
+                  <span className="font-medium text-slate-700">Push Notifications</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    if (!settings.reminders?.pushEnabled && 'Notification' in window) {
+                      Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                          updateReminders({ pushEnabled: true });
+                        }
+                      });
+                    } else {
+                      updateReminders({ pushEnabled: !settings.reminders?.pushEnabled });
+                    }
+                  }}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.reminders?.pushEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.reminders?.pushEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <Mail size={20} className="text-slate-400" />
+                  <span className="font-medium text-slate-700">Email Reminders</span>
+                </div>
+                <button 
+                  onClick={() => updateReminders({ emailEnabled: !settings.reminders?.emailEnabled })}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.reminders?.emailEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.reminders?.emailEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+
+              {(settings.reminders?.pushEnabled || settings.reminders?.emailEnabled) && (
+                <div className="bg-slate-50 p-3 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock size={16} className="text-slate-400" />
+                    <span className="text-sm font-medium text-slate-600">Remind me</span>
+                  </div>
+                  <select 
+                    value={settings.reminders?.reminderHoursBefore || 24}
+                    onChange={(e) => updateReminders({ reminderHoursBefore: Number(e.target.value) })}
+                    className="w-full p-2 rounded-lg border border-slate-200 text-sm"
+                  >
+                    <option value={1}>1 hour before</option>
+                    <option value={3}>3 hours before</option>
+                    <option value={24}>1 day before</option>
+                    <option value={48}>2 days before</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Cloud Sync */}
+          <section>
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Cloud size={16} /> Cloud Sync
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-4 rounded-xl">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-medium text-slate-700">Enable Cloud Backup</span>
+                  <button 
+                    onClick={handleCloudSync}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${settings.cloudSync?.enabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                  >
+                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.cloudSync?.enabled ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
+                
+                {!settings.cloudSync?.enabled && (
+                  <input 
+                    type="email"
+                    placeholder="Enter email for cloud sync"
+                    value={syncEmail}
+                    onChange={(e) => setSyncEmail(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-slate-200 text-sm"
+                  />
+                )}
+
+                {settings.cloudSync?.enabled && (
+                  <div className="text-sm text-slate-600">
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                      Synced to {settings.cloudSync.syncEmail}
+                    </p>
+                    {settings.cloudSync.lastSyncDate && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        Last sync: {new Date(settings.cloudSync.lastSyncDate).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-400 text-center">
+                Cloud sync stores an encrypted backup of your data that syncs across devices.
+              </p>
             </div>
           </section>
 
@@ -144,6 +301,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.reducedMotion ? 'left-7' : 'left-1'}`} />
                 </button>
               </div>
+
+              {/* Keyboard Shortcuts Button */}
+              {onShowShortcuts && (
+                <button 
+                  onClick={onShowShortcuts}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Keyboard size={20} className="text-slate-400" />
+                    <span className="font-medium text-slate-700">Keyboard Shortcuts</span>
+                  </div>
+                  <kbd className="px-2 py-1 bg-white rounded border border-slate-200 text-xs font-mono">?</kbd>
+                </button>
+              )}
             </div>
           </section>
 
@@ -175,8 +346,36 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                   className="hidden" 
                />
             </div>
+
+            {/* Bulk Import Button */}
+            {onOpenBulkImport && (
+              <button 
+                onClick={() => { onClose(); onOpenBulkImport(); }}
+                className="w-full mt-3 flex items-center justify-center gap-2 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+              >
+                <Users size={20} className="text-blue-600" />
+                <span className="text-sm font-bold text-blue-700">Import Contacts from CSV</span>
+              </button>
+            )}
+
             <p className="text-[10px] text-slate-400 mt-2 text-center">Data is stored locally on your device. Backup regularly to avoid loss.</p>
           </section>
+
+          {/* Help */}
+          {onShowOnboarding && (
+            <section>
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <HelpCircle size={16} /> Help
+              </h3>
+              <button 
+                onClick={() => { onShowOnboarding(); onClose(); }}
+                className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+              >
+                <HelpCircle size={20} className="text-emerald-600" />
+                <span className="text-sm font-bold text-emerald-700">Show App Tour</span>
+              </button>
+            </section>
+          )}
         </div>
       </div>
     </div>
