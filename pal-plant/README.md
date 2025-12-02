@@ -1,20 +1,31 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🌱 Pal-Plant
 
-# Run and deploy your AI Studio app
+This is the source code directory for Pal-Plant. For full documentation, see the main [README](../README.md).
 
-This contains everything you need to run your app locally.
+## Quick Start
 
-View your app in AI Studio: https://ai.studio/apps/temp/1
+```bash
+# Install dependencies
+npm install
 
-## Run Locally
+# Start development server
+npm run dev
 
-**Prerequisites:**  Node.js
+# Build for production
+npm run build
 
+# Preview production build
+npm run preview
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Development
+
+The app will be available at `http://localhost:5173` after running `npm run dev`.
+
+### Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start development server with hot reload |
+| `npm run build` | Build production bundle |
+| `npm run preview` | Preview production build locally |
