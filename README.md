@@ -47,7 +47,7 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **React 19** – UI framework
 - **TypeScript** – Type-safe JavaScript
 - **Vite** – Fast build tool and dev server
-- **Tailwind CSS** – Utility-first styling
+- **Tailwind CSS** – Utility-first styling (via CDN)
 - **Lucide React** – Beautiful icons
 - **Recharts** – Data visualization
 - **Local Storage** – Persistent data storage
