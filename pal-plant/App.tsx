@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search } from 'lucide-react';
-import { Friend, Tab, ContactLog, MeetingRequest, AppSettings } from './types';
+import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, GardenAccount, CommunityNudge } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
@@ -24,24 +24,33 @@ const App: React.FC = () => {
   // Settings State
   const [settings, setSettings] = useState<AppSettings>(() => {
     const saved = localStorage.getItem('friendkeep_settings');
-    const defaults: AppSettings = { 
-      theme: 'plant', 
-      textSize: 'normal', 
-      highContrast: false, 
+    const defaults: AppSettings = {
+      theme: 'plant',
+      textSize: 'normal',
+      highContrast: false,
       reducedMotion: false,
       reminders: {
         pushEnabled: false,
         emailEnabled: false,
         reminderHoursBefore: 24
       },
-      cloudSync: {
-        enabled: false
+      accountAccess: {
+        username: '',
+        password: '',
+        storageProviderHint: 'Ready for secure cloud storage',
+        lastUpdated: new Date().toISOString()
       },
       hasSeenOnboarding: false
     };
     if (saved) {
       const parsed = JSON.parse(saved);
-      return { ...defaults, ...parsed };
+      const migratedAccount = parsed.accountAccess || {
+        username: parsed.cloudSync?.syncEmail || '',
+        password: '',
+        storageProviderHint: 'Migrated from cloud sync',
+        lastUpdated: new Date().toISOString()
+      };
+      return { ...defaults, ...parsed, accountAccess: migratedAccount };
     }
     return defaults;
   });
@@ -49,6 +58,16 @@ const App: React.FC = () => {
   // Data States
   const [friends, setFriends] = useState<Friend[]>(() => {
     const saved = localStorage.getItem('friendkeep_data');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [accounts, setAccounts] = useState<GardenAccount[]>(() => {
+    const saved = localStorage.getItem('friendkeep_accounts');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [communityNudges, setCommunityNudges] = useState<CommunityNudge[]>(() => {
+    const saved = localStorage.getItem('friendkeep_nudges');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -64,6 +83,8 @@ const App: React.FC = () => {
 
   // Persistence
   useEffect(() => { localStorage.setItem('friendkeep_data', JSON.stringify(friends)); }, [friends]);
+  useEffect(() => { localStorage.setItem('friendkeep_accounts', JSON.stringify(accounts)); }, [accounts]);
+  useEffect(() => { localStorage.setItem('friendkeep_nudges', JSON.stringify(communityNudges)); }, [communityNudges]);
   useEffect(() => { localStorage.setItem('friendkeep_categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('friendkeep_meetings', JSON.stringify(meetingRequests)); }, [meetingRequests]);
   useEffect(() => { localStorage.setItem('friendkeep_settings', JSON.stringify(settings)); }, [settings]);
@@ -126,6 +147,46 @@ const App: React.FC = () => {
   }, [meetingRequests.length]); // Depend on length so it doesn't loop infinitely if we don't update verified status, but we do update it.
 
 
+  const nudgeMessages = [
+    'sent a gentle leaf tap from the community garden.',
+    'shared a sunshine ping to check in.',
+    'dropped a watering reminder in your patch.',
+    'waved a breezy hello from their planter.'
+  ];
+
+  // Automated "pokes" renamed to Garden Taps
+  useEffect(() => {
+    const now = new Date();
+    const linkedAccounts = accounts.filter(acc => acc.connections.includes(primaryAccountId));
+
+    const nudgesToAdd: CommunityNudge[] = [];
+
+    linkedAccounts.forEach(acc => {
+      const lastNudge = acc.lastNudgeDate ? new Date(acc.lastNudgeDate) : undefined;
+      const daysSinceNudge = lastNudge ? (now.getTime() - lastNudge.getTime()) / (1000 * 60 * 60 * 24) : Infinity;
+
+      if (daysSinceNudge >= 3) {
+        const message = nudgeMessages[Math.floor(Math.random() * nudgeMessages.length)];
+        nudgesToAdd.push({
+          id: generateId(),
+          fromAccountId: primaryAccountId,
+          toAccountId: acc.id,
+          createdAt: now.toISOString(),
+          message
+        });
+      }
+    });
+
+    if (nudgesToAdd.length === 0) return;
+
+    setCommunityNudges(prev => [...nudgesToAdd, ...prev].slice(0, 50));
+    setAccounts(prev => prev.map(acc => {
+      const nudge = nudgesToAdd.find(n => n.toAccountId === acc.id);
+      return nudge ? { ...acc, lastNudgeDate: now.toISOString() } : acc;
+    }));
+  }, [accounts, primaryAccountId]);
+
+
   // Tick for timers
   useEffect(() => {
     const interval = setInterval(() => setFriends(prev => [...prev]), 60000); 
@@ -134,8 +195,17 @@ const App: React.FC = () => {
 
   const themeColors = THEMES[settings.theme];
   const textSizeClass = settings.textSize === 'large' ? 'text-lg' : settings.textSize === 'xl' ? 'text-xl' : 'text-base';
+  const primaryAccountId = settings.accountAccess.username || 'local-user';
 
   const handleSaveFriend = (friend: Friend) => {
+    if (editingFriend?.linkedAccountId && editingFriend.linkedAccountId !== friend.linkedAccountId) {
+      detachFriendFromAccount(friend.id, editingFriend.linkedAccountId);
+    }
+
+    if (friend.linkedAccountId) {
+      linkFriendToAccount(friend.id, friend.linkedAccountId);
+    }
+
     if (editingFriend) {
       setFriends(prev => prev.map(f => f.id === friend.id ? friend : f));
     } else {
@@ -148,7 +218,44 @@ const App: React.FC = () => {
     if (!categories.includes(newCat)) setCategories(prev => [...prev, newCat]);
   };
 
-  const deleteFriend = (id: string) => setFriends(prev => prev.filter(f => f.id !== id));
+  const addGardenAccount = (displayName: string, username: string, password?: string) => {
+    const account: GardenAccount = {
+      id: generateId(),
+      displayName,
+      username,
+      password,
+      connections: primaryAccountId ? [primaryAccountId] : [],
+      linkedFriendIds: []
+    };
+    setAccounts(prev => [account, ...prev]);
+    return account;
+  };
+
+  const linkFriendToAccount = (friendId: string, accountId?: string) => {
+    if (!accountId) return;
+    setAccounts(prev => prev.map(acc => {
+      if (acc.id !== accountId) return acc;
+      const linkedFriendIds = Array.from(new Set([...(acc.linkedFriendIds || []), friendId]));
+      const connections = acc.connections.includes(primaryAccountId)
+        ? acc.connections
+        : [...acc.connections, primaryAccountId];
+      return { ...acc, linkedFriendIds, connections };
+    }));
+  };
+
+  const detachFriendFromAccount = (friendId: string, accountId?: string) => {
+    if (!accountId) return;
+    setAccounts(prev => prev.map(acc => {
+      if (acc.id !== accountId) return acc;
+      return { ...acc, linkedFriendIds: acc.linkedFriendIds.filter(id => id !== friendId) };
+    }));
+  };
+
+  const deleteFriend = (id: string) => {
+    const friend = friends.find(f => f.id === id);
+    if (friend?.linkedAccountId) detachFriendFromAccount(id, friend.linkedAccountId);
+    setFriends(prev => prev.filter(f => f.id !== id));
+  };
 
   const markContacted = (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK') => {
     setFriends(prev => prev.map(f => {
@@ -273,7 +380,7 @@ const App: React.FC = () => {
   const handleRequestMeeting = (friend: Friend) => {
     setMeetingRequests(prev => [{
       id: generateId(), name: friend.name, phone: friend.phone, email: friend.email, photo: friend.photo,
-      status: 'REQUESTED', dateAdded: new Date().toISOString(), linkedFriendId: friend.id
+      status: 'REQUESTED', dateAdded: new Date().toISOString(), linkedFriendId: friend.id, category: friend.category === 'Family' ? 'Family' : 'Friend'
     }, ...prev]);
     setActiveTab(Tab.MEETINGS);
   };
@@ -289,12 +396,19 @@ const App: React.FC = () => {
   // Computed
   const filteredFriends = friends.filter(f => {
     const matchesCategory = selectedCategory === 'All' || f.category === selectedCategory;
-    const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           f.notes?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   const sortedFriends = [...filteredFriends].sort((a, b) => calculateTimeStatus(a.lastContacted, a.frequencyDays).percentageLeft - calculateTimeStatus(b.lastContacted, b.frequencyDays).percentageLeft);
+
+  const accountLookup = accounts.reduce<Record<string, GardenAccount>>((acc, account) => {
+    acc[account.id] = account;
+    return acc;
+  }, {});
+
+  const communityGardenFriends = friends.filter(f => f.linkedAccountId && accountLookup[f.linkedAccountId]?.connections.includes(primaryAccountId));
 
   return (
     <div className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
@@ -343,6 +457,16 @@ const App: React.FC = () => {
                    <button key={cat} onClick={() => setSelectedCategory(cat)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat ? `${themeColors.primary} text-white border-transparent` : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}>{cat}</button>
                 ))}
              </div>
+
+             <div className="flex justify-between items-center text-xs font-bold text-slate-600 px-1 mt-2">
+               <button
+                 onClick={() => setIsBulkImportOpen(true)}
+                 className="underline decoration-dotted underline-offset-4"
+               >
+                 Import contacts into your garden
+               </button>
+               <button onClick={openAddModal} className="text-emerald-700">New plant</button>
+             </div>
            </div>
         )}
       </header>
@@ -350,10 +474,13 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 pb-32 max-w-2xl mx-auto w-full">
         {activeTab === Tab.HOME ? (
-           <HomeView 
+           <HomeView
              friends={friends}
              meetingRequests={meetingRequests}
              settings={settings}
+             accounts={accounts}
+             communityGardenFriends={communityGardenFriends}
+             communityNudges={communityNudges}
              onNavigate={setActiveTab}
            />
         ) : activeTab === Tab.LIST ? (
@@ -376,9 +503,10 @@ const App: React.FC = () => {
                  )}
 
                  {sortedFriends.map(friend => (
-                   <FriendCard 
-                     key={friend.id} 
-                     friend={friend} 
+                   <FriendCard
+                     key={friend.id}
+                     friend={friend}
+                     accountName={friend.linkedAccountId ? accountLookup[friend.linkedAccountId]?.displayName : undefined}
                      onContact={markContacted}
                      onDelete={deleteFriend}
                      onEdit={openEditModal}
@@ -430,14 +558,16 @@ const App: React.FC = () => {
           <button onClick={() => setActiveTab(Tab.MEETINGS)} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.MEETINGS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Requests</button>
       </div>
 
-      <FriendModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSave={handleSaveFriend} 
+      <FriendModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveFriend}
         onDeleteLog={deleteLog}
         initialData={editingFriend}
         categories={categories}
         onAddCategory={handleAddCategory}
+        accounts={accounts}
+        onCreateAccount={addGardenAccount}
       />
 
       <SettingsModal 

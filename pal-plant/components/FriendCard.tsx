@@ -5,13 +5,14 @@ import { calculateTimeStatus, getProgressBarColor, getStatusColor, getPlantStage
 
 interface FriendCardProps {
   friend: Friend;
+  accountName?: string;
   onContact: (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK') => void;
   onDelete: (id: string) => void;
   onEdit: (friend: Friend) => void;
   onRequestMeeting: (friend: Friend) => void;
 }
 
-const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, onEdit, onRequestMeeting }) => {
+const FriendCard: React.FC<FriendCardProps> = ({ friend, accountName, onContact, onDelete, onEdit, onRequestMeeting }) => {
   const { percentageLeft, daysLeft, isOverdue } = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
   
   // Clamp percentage for the visual bar (0 to 100)
@@ -77,7 +78,11 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
           <div>
             <h3 className="font-bold text-slate-800 text-lg leading-tight truncate max-w-[150px]">{friend.name}</h3>
             <p className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${plantStage.color}`}>{plantStage.label}</p>
-            
+
+            {accountName && (
+              <p className="text-[11px] text-emerald-700 font-semibold mt-1">Linked account: {accountName}</p>
+            )}
+
             {/* Quick Contact Actions */}
             <div className="flex items-center gap-3 mt-2">
                {friend.phone && (

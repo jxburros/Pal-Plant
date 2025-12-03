@@ -3,8 +3,26 @@ export interface ContactLog {
   date: string; // ISO string
   type: 'REGULAR' | 'DEEP' | 'QUICK';
   daysWaitGoal: number;
-  percentageRemaining: number; 
+  percentageRemaining: number;
   scoreDelta?: number; // How much this interaction changed the score
+}
+
+export interface GardenAccount {
+  id: string;
+  displayName: string;
+  username: string;
+  password?: string;
+  connections: string[];
+  linkedFriendIds: string[];
+  lastNudgeDate?: string;
+}
+
+export interface CommunityNudge {
+  id: string;
+  fromAccountId: string;
+  toAccountId: string;
+  createdAt: string;
+  message: string;
 }
 
 export interface Friend {
@@ -13,12 +31,14 @@ export interface Friend {
   phone?: string;
   email?: string;
   category: string;
-  photo?: string; 
+  photo?: string;
   notes?: string;
-  birthday?: string; 
-  frequencyDays: number; 
+  birthday?: string;
+  frequencyDays: number;
   lastContacted: string; // ISO string
-  
+
+  linkedAccountId?: string;
+
   // Scoring & Mechanics
   individualScore: number; // 0 to 100
   lastDeepConnection?: string; // ISO
@@ -37,15 +57,16 @@ export interface MeetingRequest {
   organization?: string;
   phone?: string;
   email?: string;
-  photo?: string; 
+  photo?: string;
   notes?: string;
   status: MeetingStatus;
   dateAdded: string; // ISO
-  
+  category?: 'Friend' | 'Family' | 'Business' | 'Other';
+
   // For Scheduled status
   scheduledDate?: string; // ISO
   location?: string;
-  
+
   // Verification
   verified?: boolean; // Has the user confirmed attendance?
   
@@ -67,11 +88,11 @@ export interface ReminderSettings {
   email?: string;
 }
 
-export interface CloudSyncSettings {
-  enabled: boolean;
-  provider?: 'google' | 'custom';
-  lastSyncDate?: string;
-  syncEmail?: string;
+export interface AccountAccessSettings {
+  username: string;
+  password: string;
+  storageProviderHint?: string;
+  lastUpdated?: string;
 }
 
 export interface AppSettings {
@@ -80,7 +101,7 @@ export interface AppSettings {
   highContrast: boolean;
   reducedMotion: boolean;
   reminders: ReminderSettings;
-  cloudSync: CloudSyncSettings;
+  accountAccess: AccountAccessSettings;
   hasSeenOnboarding: boolean;
 }
 

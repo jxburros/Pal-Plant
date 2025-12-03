@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, User, Phone, Calendar, RefreshCw, Mail, Upload, Tags, FileText, History, Trash2, Gift } from 'lucide-react';
-import { Friend, ContactLog } from '../types';
+import { Friend, ContactLog, GardenAccount } from '../types';
 import { generateId, fileToBase64, calculateTimeStatus } from '../utils/helpers';
 
 interface FriendModalProps {
@@ -11,6 +11,8 @@ interface FriendModalProps {
   initialData?: Friend | null;
   categories: string[];
   onAddCategory: (category: string) => void;
+  accounts: GardenAccount[];
+  onCreateAccount: (displayName: string, username: string, password?: string) => GardenAccount;
 }
 
 const FriendModal: React.FC<FriendModalProps> = ({ 
@@ -20,7 +22,9 @@ const FriendModal: React.FC<FriendModalProps> = ({
   onDeleteLog,
   initialData, 
   categories, 
-  onAddCategory 
+  onAddCategory,
+  accounts,
+  onCreateAccount
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -32,6 +36,10 @@ const FriendModal: React.FC<FriendModalProps> = ({
   const [photo, setPhoto] = useState<string>('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [linkedAccountId, setLinkedAccountId] = useState('');
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountUsername, setNewAccountUsername] = useState('');
+  const [newAccountPassword, setNewAccountPassword] = useState('');
   
   // Birthday State
   const [bdayMonth, setBdayMonth] = useState('1');
@@ -51,7 +59,8 @@ const FriendModal: React.FC<FriendModalProps> = ({
         setNotes(initialData.notes || '');
         setAvatarSeed(initialData.avatarSeed || Math.floor(Math.random() * 1000));
         setPhoto(initialData.photo || '');
-        
+        setLinkedAccountId(initialData.linkedAccountId || '');
+
         if (initialData.birthday) {
           setHasBirthday(true);
           const [m, d] = initialData.birthday.split('-');
@@ -71,9 +80,13 @@ const FriendModal: React.FC<FriendModalProps> = ({
         setAvatarSeed(Math.floor(Math.random() * 1000));
         setPhoto('');
         setHasBirthday(false);
+        setLinkedAccountId('');
       }
       setIsAddingCategory(false);
       setNewCategoryName('');
+      setNewAccountName('');
+      setNewAccountUsername('');
+      setNewAccountPassword('');
     }
   }, [isOpen, initialData, categories]);
 
@@ -82,6 +95,17 @@ const FriendModal: React.FC<FriendModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    let resolvedAccountId = linkedAccountId || undefined;
+
+    if (linkedAccountId === 'new') {
+      if (!newAccountName.trim() || !newAccountUsername.trim()) {
+        alert('Please provide a name and username for the new account.');
+        return;
+      }
+      const created = onCreateAccount(newAccountName.trim(), newAccountUsername.trim(), newAccountPassword);
+      resolvedAccountId = created.id;
+    }
 
     const baseData = initialData || {
       id: generateId(),
@@ -102,7 +126,8 @@ const FriendModal: React.FC<FriendModalProps> = ({
       avatarSeed,
       photo,
       notes,
-      birthday: hasBirthday ? `${bdayMonth.padStart(2, '0')}-${bdayDay.padStart(2, '0')}` : undefined
+      birthday: hasBirthday ? `${bdayMonth.padStart(2, '0')}-${bdayDay.padStart(2, '0')}` : undefined,
+      linkedAccountId: resolvedAccountId
     };
 
     onSave(friendToSave);
@@ -276,6 +301,59 @@ const FriendModal: React.FC<FriendModalProps> = ({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Linked Account */}
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Attach Account</p>
+                <p className="text-[11px] text-slate-500">Connect this plant to its owner.</p>
+              </div>
+              <User className="text-slate-400" size={16} />
+            </div>
+            <select
+              value={linkedAccountId}
+              onChange={(e) => setLinkedAccountId(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-3 text-sm mb-3"
+            >
+              <option value="">No account attached</option>
+              {accounts.map(acc => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.displayName} ({acc.username})
+                </option>
+              ))}
+              <option value="new">+ Create new garden account</option>
+            </select>
+
+            {linkedAccountId === 'new' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input
+                  placeholder="Display name"
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm"
+                />
+                <input
+                  placeholder="Username"
+                  value={newAccountUsername}
+                  onChange={(e) => setNewAccountUsername(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm"
+                />
+                <input
+                  placeholder="Temporary password"
+                  value={newAccountPassword}
+                  onChange={(e) => setNewAccountPassword(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm"
+                />
+              </div>
+            )}
+
+            {linkedAccountId && linkedAccountId !== 'new' && (
+              <p className="text-[11px] text-emerald-700 font-semibold mt-2">
+                Linked to {accounts.find(acc => acc.id === linkedAccountId)?.displayName || 'community profile'}.
+              </p>
+            )}
           </div>
 
           {/* Category */}
