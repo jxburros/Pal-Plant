@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Calendar, UserPlus, X, Check, MapPin, Briefcase, Mail, Phone, Upload, Clock, Download } from 'lucide-react';
+import { Calendar, UserPlus, X, Check, MapPin, Briefcase, Mail, Phone, Upload, Clock, Download, Users } from 'lucide-react';
 import { MeetingRequest } from '../types';
 import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent } from '../utils/helpers';
 import { AppSettings } from '../types';
@@ -26,11 +26,12 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [photo, setPhoto] = useState('');
+  const [category, setCategory] = useState<'Friend' | 'Family' | 'Business' | 'Other'>('Friend');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
-    setName(''); setOrg(''); setPhone(''); setEmail(''); setNotes(''); setPhoto('');
+    setName(''); setOrg(''); setPhone(''); setEmail(''); setNotes(''); setPhoto(''); setCategory('Friend');
     setEditingId(null);
     setIsAdding(false);
   };
@@ -44,7 +45,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
       if (existing) {
         onUpdateRequest({
           ...existing,
-          name, organization: org, phone, email, notes, photo
+          name, organization: org, phone, email, notes, photo, category
         });
       }
     } else {
@@ -56,6 +57,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
         email,
         notes,
         photo,
+        category,
         status: 'REQUESTED',
         dateAdded: new Date().toISOString()
       });
@@ -70,6 +72,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
     setEmail(req.email || '');
     setNotes(req.notes || '');
     setPhoto(req.photo || '');
+    setCategory(req.category || 'Friend');
     setEditingId(req.id);
     setIsAdding(true);
   };
@@ -146,8 +149,18 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                 <input placeholder="Phone" value={phone} onChange={e => setPhone(e.target.value)} className="w-1/2 p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all" />
               </div>
               <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all" />
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as any)}
+                className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all"
+              >
+                <option value="Friend">Friend</option>
+                <option value="Family">Family</option>
+                <option value="Business">Business</option>
+                <option value="Other">Other</option>
+              </select>
               <textarea placeholder="Notes..." value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all h-20 resize-none" />
-              
+
               <button type="submit" className={`w-full ${theme.primary} ${theme.primaryText} py-3 rounded-xl font-bold`}>
                 {editingId ? 'Update Request' : 'Add Request'}
               </button>
@@ -242,10 +255,16 @@ const MeetingCard: React.FC<{
              </div>
              
              {req.organization && (
-               <div className="flex items-center gap-1.5 mt-1 text-xs font-medium opacity-60">
-                 <Briefcase size={12} /> {req.organization}
-               </div>
-             )}
+             <div className="flex items-center gap-1.5 mt-1 text-xs font-medium opacity-60">
+               <Briefcase size={12} /> {req.organization}
+             </div>
+            )}
+
+            {req.category && (
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md inline-flex items-center gap-1">
+                <Users size={12} /> {req.category}
+              </div>
+            )}
 
              <div className="flex gap-3 mt-2">
                 {req.phone && <a href={`tel:${req.phone}`} className="text-slate-400 hover:text-green-600"><Phone size={14}/></a>}

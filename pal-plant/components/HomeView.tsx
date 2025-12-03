@@ -1,5 +1,5 @@
 import React from 'react';
-import { Friend, MeetingRequest, AppSettings } from '../types';
+import { Friend, MeetingRequest, AppSettings, GardenAccount, CommunityNudge } from '../types';
 import { calculateSocialGardenScore, calculateTimeStatus, getUpcomingBirthdays, THEMES } from '../utils/helpers';
 import { Trophy, Calendar, AlertTriangle, Gift, Sprout, Leaf } from 'lucide-react';
 
@@ -7,15 +7,22 @@ interface HomeViewProps {
   friends: Friend[];
   meetingRequests: MeetingRequest[];
   settings: AppSettings;
+  accounts: GardenAccount[];
+  communityGardenFriends: Friend[];
+  communityNudges: CommunityNudge[];
   onNavigate: (tab: any) => void;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings, onNavigate }) => {
+const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings, accounts, communityGardenFriends, communityNudges, onNavigate }) => {
   const theme = THEMES[settings.theme];
   // Updated to use the new complex algorithm
   const score = calculateSocialGardenScore(friends, meetingRequests);
   const birthdays = getUpcomingBirthdays(friends);
   const meetings = meetingRequests.filter(m => m.status === 'SCHEDULED').sort((a,b) => new Date(a.scheduledDate || '').getTime() - new Date(b.scheduledDate || '').getTime());
+
+  const primaryAccountId = settings.accountAccess.username || 'local-user';
+  const linkedAccounts = accounts.filter(acc => acc.connections.includes(primaryAccountId));
+  const recentNudges = communityNudges.slice(0, 3);
   
   // Find expiring timers (Less than 2 days)
   const withering = friends.filter(f => {
@@ -136,6 +143,50 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
             )}
          </div>
 
+      </div>
+
+      {/* Community Garden */}
+      <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`}>
+        <div className={`flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
+          <Sprout size={16} /> Community Garden
+        </div>
+        {communityGardenFriends.length === 0 ? (
+          <p className="text-sm opacity-60">Link accounts to plants to build a shared garden.</p>
+        ) : (
+          <div className="space-y-2">
+            {communityGardenFriends.slice(0, 5).map(friend => (
+              <div key={friend.id} className="p-3 bg-white rounded-xl border border-slate-100 flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-slate-800">{friend.name}</p>
+                  <p className="text-xs text-slate-500">Linked to {friend.category}</p>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md">Shared</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {linkedAccounts.length > 0 && (
+          <p className="text-[11px] text-slate-500 mt-2">Connected accounts: {linkedAccounts.map(a => a.displayName).join(', ')}</p>
+        )}
+      </div>
+
+      {/* Garden Taps */}
+      <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`}>
+        <div className={`flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
+          <AlertTriangle size={16} /> Garden Taps
+        </div>
+        {recentNudges.length === 0 ? (
+          <p className="text-sm opacity-60">Community reminders will appear here every few days.</p>
+        ) : (
+          <div className="space-y-2">
+            {recentNudges.map(nudge => (
+              <div key={nudge.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-sm">
+                <p className="font-bold text-slate-800">{accounts.find(acc => acc.id === nudge.toAccountId)?.displayName || 'Friend'} {nudge.message}</p>
+                <p className="text-[11px] text-slate-500 mt-1">{new Date(nudge.createdAt).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
     </div>

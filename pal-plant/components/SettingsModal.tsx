@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Cloud, Users, Mail, Clock, Keyboard, HelpCircle } from 'lucide-react';
+import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Users, Mail, Clock, Keyboard, HelpCircle, Shield } from 'lucide-react';
 import { AppSettings, ThemeId, Friend, MeetingRequest } from '../types';
 import { THEMES } from '../utils/helpers';
 
@@ -17,7 +17,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen, onClose, settings, onUpdate, onOpenBulkImport, onShowOnboarding, onShowShortcuts 
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [syncEmail, setSyncEmail] = useState(settings.cloudSync?.syncEmail || '');
 
   if (!isOpen) return null;
 
@@ -68,41 +67,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     reader.readAsText(file);
   };
 
-  const handleCloudSync = () => {
-    if (!settings.cloudSync?.enabled) {
-      // Enable cloud sync
-      if (syncEmail && syncEmail.includes('@')) {
-        onUpdate({
-          ...settings,
-          cloudSync: {
-            enabled: true,
-            syncEmail: syncEmail,
-            lastSyncDate: new Date().toISOString()
-          }
-        });
-        // Simulate sync
-        alert('Cloud sync enabled! Your data will be backed up automatically.');
-      } else {
-        alert('Please enter a valid email address for cloud sync.');
-      }
-    } else {
-      // Disable cloud sync
-      onUpdate({
-        ...settings,
-        cloudSync: {
-          ...settings.cloudSync,
-          enabled: false
-        }
-      });
-    }
-  };
-
   const updateReminders = (updates: Partial<typeof settings.reminders>) => {
     onUpdate({
       ...settings,
       reminders: {
         ...settings.reminders,
         ...updates
+      }
+    });
+  };
+
+  const updateAccountAccess = (updates: Partial<typeof settings.accountAccess>) => {
+    onUpdate({
+      ...settings,
+      accountAccess: {
+        ...settings.accountAccess,
+        ...updates,
+        lastUpdated: new Date().toISOString()
       }
     });
   };
@@ -203,51 +184,37 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </section>
 
-          {/* Cloud Sync */}
+          {/* Account Access */}
           <section>
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Cloud size={16} /> Cloud Sync
+              <Shield size={16} /> Account Access
             </h3>
-            
-            <div className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-xl">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-medium text-slate-700">Enable Cloud Backup</span>
-                  <button 
-                    onClick={handleCloudSync}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${settings.cloudSync?.enabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
-                  >
-                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.cloudSync?.enabled ? 'left-7' : 'left-1'}`} />
-                  </button>
-                </div>
-                
-                {!settings.cloudSync?.enabled && (
-                  <input 
-                    type="email"
-                    placeholder="Enter email for cloud sync"
-                    value={syncEmail}
-                    onChange={(e) => setSyncEmail(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-slate-200 text-sm"
-                  />
-                )}
 
-                {settings.cloudSync?.enabled && (
-                  <div className="text-sm text-slate-600">
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                      Synced to {settings.cloudSync.syncEmail}
-                    </p>
-                    {settings.cloudSync.lastSyncDate && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        Last sync: {new Date(settings.cloudSync.lastSyncDate).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                )}
+            <div className="bg-slate-50 p-4 rounded-xl space-y-3 border border-slate-100">
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">Username</label>
+                <input
+                  type="text"
+                  value={settings.accountAccess.username}
+                  onChange={(e) => updateAccountAccess({ username: e.target.value })}
+                  className="w-full p-2 rounded-lg border border-slate-200 text-sm mt-1"
+                  placeholder="Choose a username"
+                />
               </div>
-              <p className="text-[10px] text-slate-400 text-center">
-                Cloud sync stores an encrypted backup of your data that syncs across devices.
-              </p>
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">Password</label>
+                <input
+                  type="password"
+                  value={settings.accountAccess.password}
+                  onChange={(e) => updateAccountAccess({ password: e.target.value })}
+                  className="w-full p-2 rounded-lg border border-slate-200 text-sm mt-1"
+                  placeholder="Secure password"
+                />
+              </div>
+              <p className="text-[10px] text-slate-500">Credentials are saved locally today and ready to sync to AWS once cloud storage is connected.</p>
+              {settings.accountAccess.lastUpdated && (
+                <p className="text-[10px] text-slate-400">Last updated {new Date(settings.accountAccess.lastUpdated).toLocaleString()}</p>
+              )}
             </div>
           </section>
 
