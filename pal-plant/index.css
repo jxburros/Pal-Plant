@@ -1,2 +1,13 @@
 /* Pal Plant - Global Styles */
 /* Tailwind CSS is loaded via CDN in index.html */
+
+/* Safe area insets for native Android/iOS status bar and navigation bar */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+body {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+}

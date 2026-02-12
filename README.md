@@ -47,6 +47,7 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **React 19** – UI framework
 - **TypeScript** – Type-safe JavaScript
 - **Vite** – Fast build tool and dev server
+- **Capacitor** – Native Android app packaging
 - **Tailwind CSS** – Utility-first styling (via CDN)
 - **Lucide React** – Beautiful icons
 - **Recharts** – Data visualization
@@ -89,6 +90,27 @@ npm run build
 ```bash
 npm run preview
 ```
+
+### Build for Android
+
+This project uses [Capacitor](https://capacitorjs.com/) to package the web app as a native Android application.
+
+**Prerequisites:**
+- [Android Studio](https://developer.android.com/studio) installed
+
+**Steps:**
+
+1. Build the web app and sync with Android:
+   ```bash
+   npm run cap:sync
+   ```
+
+2. Open the Android project in Android Studio:
+   ```bash
+   npm run cap:open:android
+   ```
+
+3. In Android Studio, click **Run** to launch on an emulator or connected device, or use **Build > Build APK(s)** to generate an APK.
 
 ## 📖 How It Works
 
@@ -142,6 +164,8 @@ pal-plant/
 ├── types.ts              # TypeScript type definitions
 ├── index.tsx             # Application entry point
 ├── index.html            # HTML template
+├── android/              # Native Android project (Capacitor)
+├── capacitor.config.ts   # Capacitor configuration
 ├── package.json          # Dependencies and scripts
 ├── tsconfig.json         # TypeScript configuration
 └── vite.config.ts        # Vite configuration
