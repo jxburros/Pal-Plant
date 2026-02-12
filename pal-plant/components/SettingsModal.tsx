@@ -155,7 +155,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <Mail size={20} className="text-slate-400" />
-                  <span className="font-medium text-slate-700">Email Reminders</span>
+                  <span className="font-medium text-slate-700">Email Reminders (planned)</span>
                 </div>
                 <button
                   onClick={() => updateReminders({ emailEnabled: !settings.reminders?.emailEnabled })}
@@ -165,6 +165,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
               </div>
 
+
+              <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                Push reminders are active through browser notifications when permission is granted.
+                Email reminders are not yet delivered and are shown as a planned feature.
+              </p>
               {(settings.reminders?.pushEnabled || settings.reminders?.emailEnabled) && (
                 <div className="bg-slate-50 p-3 rounded-xl">
                   <div className="flex items-center gap-2 mb-2">
