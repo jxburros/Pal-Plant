@@ -20,8 +20,8 @@ interface ParsedContact {
   category?: string;
 }
 
-const BulkImportModal: React.FC<BulkImportModalProps> = ({ 
-  isOpen, onClose, onImport, existingFriends, categories, settings 
+const BulkImportModal: React.FC<BulkImportModalProps> = ({
+  isOpen, onClose, onImport, existingFriends, categories, settings
 }) => {
   const [step, setStep] = useState<'upload' | 'review' | 'duplicates'>('upload');
   const [parsedContacts, setParsedContacts] = useState<ParsedContact[]>([]);
@@ -30,7 +30,8 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
   const [defaultCategory, setDefaultCategory] = useState(categories[0] || 'Friends');
   const [defaultFrequency, setDefaultFrequency] = useState(7);
   const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
-  
+  const [parseError, setParseError] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const theme = THEMES[settings.theme];
 
@@ -40,26 +41,29 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setParseError('');
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
       const contacts = parseCSVContacts(content);
-      
+
       if (contacts.length === 0) {
-        alert('No valid contacts found. Please ensure your CSV has a "name" column.');
+        setParseError('No valid contacts found. Please ensure your CSV has a "name" column.');
         return;
       }
 
       setParsedContacts(contacts);
       setSelectedContacts(new Set(contacts.map((_, i) => i)));
-      
+
       // Check for duplicates
       const dupes = detectDuplicates(contacts, existingFriends);
       setDuplicates(dupes);
-      
+
       setStep('review');
     };
     reader.readAsText(file);
+    // Reset file input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleToggleContact = (index: number) => {
@@ -82,10 +86,10 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
   const handleImport = () => {
     const contactsToImport = parsedContacts.filter((_, i) => selectedContacts.has(i));
-    
+
     // Check for duplicates one more time
     const dupes = detectDuplicates(contactsToImport, existingFriends);
-    
+
     if (dupes.length > 0 && step !== 'duplicates') {
       setDuplicates(dupes);
       setStep('duplicates');
@@ -116,6 +120,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
     setParsedContacts([]);
     setSelectedContacts(new Set());
     setDuplicates([]);
+    setParseError('');
     onClose();
   };
 
@@ -124,7 +129,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={resetAndClose} />
-      
+
       <div className={`bg-white w-full max-w-lg rounded-3xl p-6 relative z-10 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[80vh] overflow-y-auto`}>
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
@@ -148,7 +153,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
         {/* Upload Step */}
         {step === 'upload' && (
           <div className="space-y-6">
-            <div 
+            <div
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
             >
@@ -157,13 +162,21 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
               <p className="text-sm text-slate-500 mt-2">Required: name column</p>
               <p className="text-sm text-slate-500">Optional: phone, email, category</p>
             </div>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
-              accept=".csv" 
-              className="hidden" 
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept=".csv"
+              className="hidden"
             />
+
+            {/* Inline error instead of alert */}
+            {parseError && (
+              <div className="bg-red-50 border border-red-200 p-3 rounded-xl text-sm font-medium text-red-700 flex items-center gap-2">
+                <AlertTriangle size={16} />
+                {parseError}
+              </div>
+            )}
 
             <div className="bg-slate-50 p-4 rounded-xl">
               <h4 className="font-bold text-sm text-slate-700 mb-2">CSV Format Example:</h4>
@@ -183,7 +196,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
             <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl">
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">Default Category</label>
-                <select 
+                <select
                   value={defaultCategory}
                   onChange={(e) => setDefaultCategory(e.target.value)}
                   className="w-full mt-1 p-2 rounded-lg border border-slate-200 text-sm"
@@ -193,7 +206,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">Contact Frequency</label>
-                <select 
+                <select
                   value={defaultFrequency}
                   onChange={(e) => setDefaultFrequency(Number(e.target.value))}
                   className="w-full mt-1 p-2 rounded-lg border border-slate-200 text-sm"
@@ -208,7 +221,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
             {/* Duplicate warning */}
             {duplicates.length > 0 && (
-              <div 
+              <div
                 className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl cursor-pointer"
                 onClick={() => setShowDuplicateDetails(!showDuplicateDetails)}
               >
@@ -233,7 +246,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
             {/* Select all */}
             <div className="flex items-center justify-between">
-              <button 
+              <button
                 onClick={handleSelectAll}
                 className="text-sm font-medium text-blue-600 hover:text-blue-700"
               >
@@ -249,11 +262,11 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
               {parsedContacts.map((contact, index) => {
                 const isDuplicate = duplicateNames.has(contact.name.toLowerCase());
                 return (
-                  <div 
+                  <div
                     key={index}
                     onClick={() => handleToggleContact(index)}
                     className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
-                      selectedContacts.has(index) 
+                      selectedContacts.has(index)
                         ? isDuplicate ? 'bg-yellow-50 border border-yellow-200' : 'bg-blue-50 border border-blue-200'
                         : 'bg-slate-50 border border-transparent'
                     }`}
@@ -279,13 +292,13 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
             {/* Actions */}
             <div className="flex gap-3 pt-4">
-              <button 
+              <button
                 onClick={() => setStep('upload')}
                 className="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50"
               >
                 Back
               </button>
-              <button 
+              <button
                 onClick={handleImport}
                 disabled={selectedContacts.size === 0}
                 className={`flex-1 py-3 rounded-xl font-bold text-white transition-colors ${
@@ -323,13 +336,13 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
             </div>
 
             <div className="flex gap-3 pt-4">
-              <button 
+              <button
                 onClick={() => setStep('review')}
                 className="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50"
               >
                 Go Back
               </button>
-              <button 
+              <button
                 onClick={() => {
                   // Skip duplicates from selection
                   const newSelected = new Set(selectedContacts);
@@ -346,9 +359,9 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
               >
                 Skip Duplicates
               </button>
-              <button 
+              <button
                 onClick={() => {
-                  // Import anyway - just call the parent import
+                  // Import anyway
                   const contactsToImport = parsedContacts.filter((_, i) => selectedContacts.has(i));
                   const newFriends: Friend[] = contactsToImport.map(contact => ({
                     id: generateId(),

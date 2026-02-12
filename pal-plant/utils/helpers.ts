@@ -2,24 +2,59 @@ import { Friend, ThemeId, ThemeColors, MeetingRequest, ContactLog } from '../typ
 import { Sprout, Flower, Trees, Leaf, Skull } from 'lucide-react';
 import React from 'react';
 
+// ─── Avatar Helpers ───────────────────────────────────────────────
+
+export const getInitials = (name: string): string => {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+};
+
+export const getAvatarColor = (name: string): string => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 55%, 55%)`;
+};
+
+// ─── Input Validation ─────────────────────────────────────────────
+
+export const sanitizeText = (text: string, maxLength: number = 200): string => {
+  return text.trim().slice(0, maxLength);
+};
+
+export const sanitizePhone = (phone: string): string => {
+  return phone.replace(/[^0-9+\-() .ext]/gi, '').trim().slice(0, 30);
+};
+
+export const isValidEmail = (email: string): boolean => {
+  if (!email) return true; // empty is OK (optional)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+// ─── ICS Calendar ─────────────────────────────────────────────────
+
 /**
  * Generate an ICS calendar event for a meeting
  */
 export const generateICSEvent = (meeting: MeetingRequest): string => {
   if (!meeting.scheduledDate) return '';
-  
+
   const startDate = new Date(meeting.scheduledDate);
   const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hour duration
-  
+
   const formatDate = (d: Date) => {
     return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   };
-  
+
   const uid = `${meeting.id}@palplant`;
   const dtstamp = formatDate(new Date());
   const dtstart = formatDate(startDate);
   const dtend = formatDate(endDate);
-  
+
   const icsContent = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -35,7 +70,7 @@ export const generateICSEvent = (meeting: MeetingRequest): string => {
     'END:VEVENT',
     'END:VCALENDAR'
   ].join('\r\n');
-  
+
   return icsContent;
 };
 
@@ -45,7 +80,7 @@ export const generateICSEvent = (meeting: MeetingRequest): string => {
 export const downloadCalendarEvent = (meeting: MeetingRequest): void => {
   const icsContent = generateICSEvent(meeting);
   if (!icsContent) return;
-  
+
   const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -57,41 +92,43 @@ export const downloadCalendarEvent = (meeting: MeetingRequest): void => {
   URL.revokeObjectURL(url);
 };
 
+// ─── Streaks ──────────────────────────────────────────────────────
+
 /**
  * Calculate streak data - consecutive days with at least one interaction
  */
 export const calculateStreaks = (friends: Friend[]): { currentStreak: number; longestStreak: number; streakDates: string[] } => {
   // Collect all interaction dates
   const allDates = new Set<string>();
-  
+
   friends.forEach(f => {
     f.logs.forEach(log => {
       const date = new Date(log.date).toISOString().split('T')[0];
       allDates.add(date);
     });
   });
-  
+
   if (allDates.size === 0) {
     return { currentStreak: 0, longestStreak: 0, streakDates: [] };
   }
-  
+
   // Sort dates
   const sortedDates = Array.from(allDates).sort();
-  
+
   // Calculate streaks
   let currentStreak = 0;
   let longestStreak = 0;
   let tempStreak = 1;
   const streakDates: string[] = [];
-  
+
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-  
+
   for (let i = 1; i < sortedDates.length; i++) {
     const prevDate = new Date(sortedDates[i - 1]);
     const currDate = new Date(sortedDates[i]);
     const diffDays = Math.floor((currDate.getTime() - prevDate.getTime()) / 86400000);
-    
+
     if (diffDays === 1) {
       tempStreak++;
     } else {
@@ -100,14 +137,14 @@ export const calculateStreaks = (friends: Friend[]): { currentStreak: number; lo
     }
   }
   longestStreak = Math.max(longestStreak, tempStreak);
-  
+
   // Check if current streak is still active (last interaction was today or yesterday)
   const lastDate = sortedDates[sortedDates.length - 1];
   if (lastDate === today || lastDate === yesterday) {
     // Count backwards from today
     let checkDate = lastDate === today ? today : yesterday;
     let streak = 0;
-    
+
     for (let i = sortedDates.length - 1; i >= 0; i--) {
       if (sortedDates[i] === checkDate) {
         streak++;
@@ -120,8 +157,47 @@ export const calculateStreaks = (friends: Friend[]): { currentStreak: number; lo
     }
     currentStreak = streak;
   }
-  
+
   return { currentStreak, longestStreak, streakDates };
+};
+
+// ─── CSV Parsing ──────────────────────────────────────────────────
+
+/**
+ * Parse a single CSV line respecting quoted fields
+ */
+const parseCSVLine = (line: string): string[] => {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++; // skip escaped quote
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+  }
+  values.push(current.trim());
+  return values;
 };
 
 /**
@@ -130,32 +206,35 @@ export const calculateStreaks = (friends: Friend[]): { currentStreak: number; lo
 export const parseCSVContacts = (csvContent: string): Array<{ name: string; phone?: string; email?: string; category?: string }> => {
   const lines = csvContent.trim().split('\n');
   if (lines.length < 2) return [];
-  
-  const headers = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
+
+  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/"/g, ''));
   const nameIndex = headers.findIndex(h => h === 'name' || h === 'full name' || h === 'fullname');
   const phoneIndex = headers.findIndex(h => h === 'phone' || h === 'mobile' || h === 'telephone');
   const emailIndex = headers.findIndex(h => h === 'email' || h === 'e-mail');
   const categoryIndex = headers.findIndex(h => h === 'category' || h === 'group' || h === 'type');
-  
+
   if (nameIndex === -1) return [];
-  
+
   const contacts: Array<{ name: string; phone?: string; email?: string; category?: string }> = [];
-  
+
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-    const name = values[nameIndex];
+    if (!lines[i].trim()) continue;
+    const values = parseCSVLine(lines[i]);
+    const name = sanitizeText(values[nameIndex] || '', 100);
     if (!name) continue;
-    
+
     contacts.push({
       name,
-      phone: phoneIndex !== -1 ? values[phoneIndex] : undefined,
-      email: emailIndex !== -1 ? values[emailIndex] : undefined,
-      category: categoryIndex !== -1 ? values[categoryIndex] : undefined
+      phone: phoneIndex !== -1 ? sanitizePhone(values[phoneIndex] || '') : undefined,
+      email: emailIndex !== -1 ? sanitizeText(values[emailIndex] || '', 254) : undefined,
+      category: categoryIndex !== -1 ? sanitizeText(values[categoryIndex] || '', 50) : undefined
     });
   }
-  
+
   return contacts;
 };
+
+// ─── Duplicate Detection ──────────────────────────────────────────
 
 /**
  * Detect duplicate contacts based on name similarity
@@ -165,47 +244,49 @@ export const detectDuplicates = (
   existingFriends: Friend[]
 ): Array<{ newContact: { name: string; phone?: string; email?: string }; existingFriend: Friend; similarity: number }> => {
   const duplicates: Array<{ newContact: { name: string; phone?: string; email?: string }; existingFriend: Friend; similarity: number }> = [];
-  
+
   const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
-  
+
   newContacts.forEach(newContact => {
     const normalizedNew = normalize(newContact.name);
-    
+
     existingFriends.forEach(existing => {
       const normalizedExisting = normalize(existing.name);
-      
+
       // Check for exact match
       if (normalizedNew === normalizedExisting) {
         duplicates.push({ newContact, existingFriend: existing, similarity: 100 });
         return;
       }
-      
+
       // Check for partial match (one contains the other)
       if (normalizedNew.includes(normalizedExisting) || normalizedExisting.includes(normalizedNew)) {
         duplicates.push({ newContact, existingFriend: existing, similarity: 80 });
         return;
       }
-      
+
       // Check by email match
       if (newContact.email && existing.email && newContact.email.toLowerCase() === existing.email.toLowerCase()) {
         duplicates.push({ newContact, existingFriend: existing, similarity: 95 });
         return;
       }
-      
+
       // Check by phone match
       if (newContact.phone && existing.phone) {
         const normalizedNewPhone = newContact.phone.replace(/\D/g, '');
         const normalizedExistingPhone = existing.phone.replace(/\D/g, '');
-        if (normalizedNewPhone.length >= 7 && normalizedExistingPhone.length >= 7 && 
+        if (normalizedNewPhone.length >= 7 && normalizedExistingPhone.length >= 7 &&
             (normalizedNewPhone.includes(normalizedExistingPhone) || normalizedExistingPhone.includes(normalizedNewPhone))) {
           duplicates.push({ newContact, existingFriend: existing, similarity: 90 });
         }
       }
     });
   });
-  
+
   return duplicates;
 };
+
+// ─── Core Utilities ───────────────────────────────────────────────
 
 export const generateId = (): string => {
   return Math.random().toString(36).substring(2, 9);
@@ -224,16 +305,16 @@ export const calculateTimeStatus = (lastContacted: string, frequencyDays: number
   const lastDate = new Date(lastContacted);
   const now = new Date();
   const goalDate = new Date(lastDate.getTime() + frequencyDays * 24 * 60 * 60 * 1000);
-  
+
   const totalDurationMs = goalDate.getTime() - lastDate.getTime();
   const timeRemainingMs = goalDate.getTime() - now.getTime();
-  
+
   // Percentage of the "battery" left
   let percentageLeft = (timeRemainingMs / totalDurationMs) * 100;
-  
+
   // Cap for UI purposes, but keep raw for logic
   const daysLeft = Math.ceil(timeRemainingMs / (1000 * 60 * 60 * 24));
-  
+
   return {
     percentageLeft,
     daysLeft,
@@ -242,17 +323,19 @@ export const calculateTimeStatus = (lastContacted: string, frequencyDays: number
   };
 };
 
+// ─── Stats ────────────────────────────────────────────────────────
+
 /**
  * Group friends by category and calculate category-specific stats
  */
-export const getCohortStats = (friends: Friend[]): Record<string, { 
-  count: number; 
-  avgScore: number; 
+export const getCohortStats = (friends: Friend[]): Record<string, {
+  count: number;
+  avgScore: number;
   totalInteractions: number;
   overdueCount: number;
 }> => {
   const cohorts: Record<string, { count: number; totalScore: number; totalInteractions: number; overdueCount: number }> = {};
-  
+
   friends.forEach(f => {
     if (!cohorts[f.category]) {
       cohorts[f.category] = { count: 0, totalScore: 0, totalInteractions: 0, overdueCount: 0 };
@@ -260,15 +343,15 @@ export const getCohortStats = (friends: Friend[]): Record<string, {
     cohorts[f.category].count++;
     cohorts[f.category].totalScore += f.individualScore || 50;
     cohorts[f.category].totalInteractions += f.logs.length;
-    
+
     const status = calculateTimeStatus(f.lastContacted, f.frequencyDays);
     if (status.isOverdue) {
       cohorts[f.category].overdueCount++;
     }
   });
-  
+
   const result: Record<string, { count: number; avgScore: number; totalInteractions: number; overdueCount: number }> = {};
-  
+
   Object.entries(cohorts).forEach(([category, data]) => {
     result[category] = {
       count: data.count,
@@ -277,9 +360,11 @@ export const getCohortStats = (friends: Friend[]): Record<string, {
       overdueCount: data.overdueCount
     };
   });
-  
+
   return result;
 };
+
+// ─── Visual Helpers ───────────────────────────────────────────────
 
 export const getStatusColor = (percentage: number): string => {
   if (percentage <= 0) return 'text-red-600 bg-red-100 border-red-200'; // Overdue
@@ -312,10 +397,10 @@ export const getMeetingUrgency = (dateAdded: string) => {
   const maxDays = 14;
 
   const ratio = Math.min(daysPassed / maxDays, 1);
-  
-  const hue = 150 - (ratio * 150); 
+
+  const hue = 150 - (ratio * 150);
   const color = `hsl(${hue}, 70%, 50%)`;
-  
+
   return {
     daysPassed: Math.floor(daysPassed),
     ratio,
@@ -323,12 +408,14 @@ export const getMeetingUrgency = (dateAdded: string) => {
   };
 };
 
+// ─── Scoring ──────────────────────────────────────────────────────
+
 /**
  * Calculates the score for a single interaction event
  */
 export const calculateInteractionScore = (
   type: 'REGULAR' | 'DEEP' | 'QUICK',
-  percentageRemaining: number, 
+  percentageRemaining: number,
   daysOverdue: number
 ): number => {
   if (type === 'QUICK') return 2; // Small bonus for quick touches
@@ -374,14 +461,14 @@ export const calculateIndividualFriendScore = (logs: ContactLog[]): number => {
  */
 export const calculateSocialGardenScore = (friends: Friend[], meetings: MeetingRequest[]): number => {
   if (friends.length === 0) return 0;
-  
+
   // 1. Average of Individual Friend Scores
   const totalFriendScore = friends.reduce((acc, f) => acc + f.individualScore, 0);
   const avgFriendScore = totalFriendScore / friends.length;
 
   // 2. Meeting Bonuses/Penalties
   let meetingScore = 0;
-  
+
   meetings.forEach(m => {
     if (m.status === 'COMPLETE' && m.verified) {
       meetingScore += 5; // +5 for every completed, verified meeting
@@ -406,33 +493,38 @@ export const getUpcomingBirthdays = (friends: Friend[]) => {
   return friends.filter(f => {
     if (!f.birthday) return false;
     const [m, d] = f.birthday.split('-').map(Number);
-    
+
     // Create date object for this year
     const bdayThisYear = new Date(today.getFullYear(), m - 1, d);
-    
+
     // Check if it's in the next 30 days
     // Handle year wrapping (e.g. Dec to Jan)
     let bdayNext = bdayThisYear;
     if (bdayThisYear < today) {
        bdayNext = new Date(today.getFullYear() + 1, m - 1, d);
     }
-    
+
     const diffTime = bdayNext.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return diffDays >= 0 && diffDays <= 30;
   }).sort((a, b) => {
-     // Sort by closest
      const [m1, d1] = a.birthday!.split('-').map(Number);
      const [m2, d2] = b.birthday!.split('-').map(Number);
-     // Simplified sort, ideally needs year awareness logic above repeated
-     return (m1 * 31 + d1) - (today.getMonth() * 31 + today.getDate()); 
+     const getDaysUntil = (m: number, d: number) => {
+       let bday = new Date(today.getFullYear(), m - 1, d);
+       if (bday < today) bday = new Date(today.getFullYear() + 1, m - 1, d);
+       return bday.getTime() - today.getTime();
+     };
+     return getDaysUntil(m1, d1) - getDaysUntil(m2, d2);
   });
 };
 
+// ─── Themes ───────────────────────────────────────────────────────
+
 export const THEMES: Record<ThemeId, ThemeColors> = {
   plant: {
-    bg: 'bg-[#f4f7f4]', cardBg: 'bg-white', textMain: 'text-[#2c3e2e]', textSub: 'text-[#6b7c6d]', 
+    bg: 'bg-[#f4f7f4]', cardBg: 'bg-white', textMain: 'text-[#2c3e2e]', textSub: 'text-[#6b7c6d]',
     primary: 'bg-[#4a674e]', primaryText: 'text-white', accent: 'bg-[#8fb394]', border: 'border-[#e0e8e0]'
   },
   midnight: {

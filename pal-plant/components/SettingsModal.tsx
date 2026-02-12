@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Users, Mail, Clock, Keyboard, HelpCircle, Shield } from 'lucide-react';
-import { AppSettings, ThemeId, Friend, MeetingRequest } from '../types';
+import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Users, Mail, Clock, Keyboard, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { AppSettings, ThemeId } from '../types';
 import { THEMES } from '../utils/helpers';
 
 interface SettingsModalProps {
@@ -13,10 +13,12 @@ interface SettingsModalProps {
   onShowShortcuts?: () => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ 
-  isOpen, onClose, settings, onUpdate, onOpenBulkImport, onShowOnboarding, onShowShortcuts 
+const SettingsModal: React.FC<SettingsModalProps> = ({
+  isOpen, onClose, settings, onUpdate, onOpenBulkImport, onShowOnboarding, onShowShortcuts
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [importMessage, setImportMessage] = useState('');
 
   if (!isOpen) return null;
 
@@ -26,9 +28,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       meetings: JSON.parse(localStorage.getItem('friendkeep_meetings') || '[]'),
       categories: JSON.parse(localStorage.getItem('friendkeep_categories') || '[]'),
       settings: JSON.parse(localStorage.getItem('friendkeep_settings') || '{}'),
-      exportDate: new Date().toISOString()
+      exportDate: new Date().toISOString(),
+      version: 2
     };
-    
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -41,6 +44,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleImportClick = () => {
+    setImportStatus('idle');
+    setImportMessage('');
     fileInputRef.current?.click();
   };
 
@@ -55,16 +60,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         if (json.friends) localStorage.setItem('friendkeep_data', JSON.stringify(json.friends));
         if (json.meetings) localStorage.setItem('friendkeep_meetings', JSON.stringify(json.meetings));
         if (json.categories) localStorage.setItem('friendkeep_categories', JSON.stringify(json.categories));
-        if (json.settings) localStorage.setItem('friendkeep_settings', JSON.stringify(json.settings));
-        
-        alert('Data restored successfully! The app will reload.');
-        window.location.reload();
+        if (json.settings) {
+          // Strip old accountAccess from imported settings
+          const { accountAccess, ...cleanSettings } = json.settings;
+          localStorage.setItem('friendkeep_settings', JSON.stringify(cleanSettings));
+        }
+
+        setImportStatus('success');
+        setImportMessage('Data restored successfully! Reloading...');
+        setTimeout(() => window.location.reload(), 1500);
       } catch (err) {
-        alert('Invalid backup file.');
+        setImportStatus('error');
+        setImportMessage('Invalid backup file. Please check the file format.');
         console.error(err);
       }
     };
     reader.readAsText(file);
+    // Reset file input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const updateReminders = (updates: Partial<typeof settings.reminders>) => {
@@ -77,21 +90,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     });
   };
 
-  const updateAccountAccess = (updates: Partial<typeof settings.accountAccess>) => {
-    onUpdate({
-      ...settings,
-      accountAccess: {
-        ...settings.accountAccess,
-        ...updates,
-        lastUpdated: new Date().toISOString()
-      }
-    });
-  };
-
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      
+
       <div className={`bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 relative z-10 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[80vh] overflow-y-auto ${settings.highContrast ? 'contrast-125' : ''}`}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-slate-900">App Settings</h2>
@@ -125,14 +127,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
               <Bell size={16} /> Reminders
             </h3>
-            
+
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <Bell size={20} className="text-slate-400" />
                   <span className="font-medium text-slate-700">Push Notifications</span>
                 </div>
-                <button 
+                <button
                   onClick={() => {
                     if (!settings.reminders?.pushEnabled && 'Notification' in window) {
                       Notification.requestPermission().then(permission => {
@@ -155,7 +157,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <Mail size={20} className="text-slate-400" />
                   <span className="font-medium text-slate-700">Email Reminders</span>
                 </div>
-                <button 
+                <button
                   onClick={() => updateReminders({ emailEnabled: !settings.reminders?.emailEnabled })}
                   className={`w-12 h-6 rounded-full transition-colors relative ${settings.reminders?.emailEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
                 >
@@ -169,7 +171,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <Clock size={16} className="text-slate-400" />
                     <span className="text-sm font-medium text-slate-600">Remind me</span>
                   </div>
-                  <select 
+                  <select
                     value={settings.reminders?.reminderHoursBefore || 24}
                     onChange={(e) => updateReminders({ reminderHoursBefore: Number(e.target.value) })}
                     className="w-full p-2 rounded-lg border border-slate-200 text-sm"
@@ -184,46 +186,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </section>
 
-          {/* Account Access */}
-          <section>
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Shield size={16} /> Account Access
-            </h3>
-
-            <div className="bg-slate-50 p-4 rounded-xl space-y-3 border border-slate-100">
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">Username</label>
-                <input
-                  type="text"
-                  value={settings.accountAccess.username}
-                  onChange={(e) => updateAccountAccess({ username: e.target.value })}
-                  className="w-full p-2 rounded-lg border border-slate-200 text-sm mt-1"
-                  placeholder="Choose a username"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">Password</label>
-                <input
-                  type="password"
-                  value={settings.accountAccess.password}
-                  onChange={(e) => updateAccountAccess({ password: e.target.value })}
-                  className="w-full p-2 rounded-lg border border-slate-200 text-sm mt-1"
-                  placeholder="Secure password"
-                />
-              </div>
-              <p className="text-[10px] text-slate-500">Credentials are saved locally today and ready to sync to AWS once cloud storage is connected.</p>
-              {settings.accountAccess.lastUpdated && (
-                <p className="text-[10px] text-slate-400">Last updated {new Date(settings.accountAccess.lastUpdated).toLocaleString()}</p>
-              )}
-            </div>
-          </section>
-
           {/* Accessibility */}
           <section>
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
               <Eye size={16} /> Accessibility
             </h3>
-            
+
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -248,7 +216,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                    <Moon size={20} className="text-slate-400" />
                    <span className="font-medium text-slate-700">High Contrast</span>
                 </div>
-                <button 
+                <button
                   onClick={() => onUpdate({ ...settings, highContrast: !settings.highContrast })}
                   className={`w-12 h-6 rounded-full transition-colors relative ${settings.highContrast ? 'bg-slate-900' : 'bg-slate-200'}`}
                 >
@@ -261,7 +229,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                    <Monitor size={20} className="text-slate-400" />
                    <span className="font-medium text-slate-700">Reduced Motion</span>
                 </div>
-                <button 
+                <button
                   onClick={() => onUpdate({ ...settings, reducedMotion: !settings.reducedMotion })}
                   className={`w-12 h-6 rounded-full transition-colors relative ${settings.reducedMotion ? 'bg-slate-900' : 'bg-slate-200'}`}
                 >
@@ -271,7 +239,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
               {/* Keyboard Shortcuts Button */}
               {onShowShortcuts && (
-                <button 
+                <button
                   onClick={onShowShortcuts}
                   className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
                 >
@@ -291,32 +259,43 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <Database size={16} /> Data Management
             </h3>
             <div className="grid grid-cols-2 gap-3">
-               <button 
+               <button
                  onClick={handleExport}
                  className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
                >
                   <Download size={20} className="text-slate-700 mb-2" />
                   <span className="text-xs font-bold text-slate-700">Backup Data</span>
                </button>
-               <button 
+               <button
                  onClick={handleImportClick}
                  className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
                >
                   <Upload size={20} className="text-slate-700 mb-2" />
                   <span className="text-xs font-bold text-slate-700">Restore Data</span>
                </button>
-               <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept=".json" 
-                  className="hidden" 
+               <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept=".json"
+                  className="hidden"
                />
             </div>
 
+            {/* Import status feedback */}
+            {importStatus !== 'idle' && (
+              <div className={`mt-3 p-3 rounded-xl text-sm font-medium flex items-center gap-2 ${
+                importStatus === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {importStatus === 'success' && <CheckCircle2 size={16} />}
+                {importMessage}
+              </div>
+            )}
+
             {/* Bulk Import Button */}
             {onOpenBulkImport && (
-              <button 
+              <button
                 onClick={() => { onClose(); onOpenBulkImport(); }}
                 className="w-full mt-3 flex items-center justify-center gap-2 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
               >
@@ -334,7 +313,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <HelpCircle size={16} /> Help
               </h3>
-              <button 
+              <button
                 onClick={() => { onShowOnboarding(); onClose(); }}
                 className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
               >

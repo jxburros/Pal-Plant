@@ -12,13 +12,13 @@ interface MeetingRequestsViewProps {
   settings: AppSettings;
 }
 
-const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({ 
-  requests, onAddRequest, onUpdateRequest, onDeleteRequest, settings 
+const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
+  requests, onAddRequest, onUpdateRequest, onDeleteRequest, settings
 }) => {
   const theme = THEMES[settings.theme];
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
   // Form State
   const [name, setName] = useState('');
   const [org, setOrg] = useState('');
@@ -27,7 +27,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
   const [notes, setNotes] = useState('');
   const [photo, setPhoto] = useState('');
   const [category, setCategory] = useState<'Friend' | 'Family' | 'Business' | 'Other'>('Friend');
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
@@ -94,14 +94,18 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
   };
 
   const handleComplete = (req: MeetingRequest) => {
-    if (window.confirm('Mark this meeting as complete? It will be removed from the list.')) {
-      onUpdateRequest({ ...req, status: 'COMPLETE' });
-      // In a real app, maybe archive it instead of deleting, but prompt says "disappears"
-      setTimeout(() => onDeleteRequest(req.id), 500);
-    }
+    onUpdateRequest({ ...req, status: 'COMPLETE', verified: true });
   };
 
   const activeRequests = requests.filter(r => r.status !== 'COMPLETE');
+
+  // Past-due scheduled meetings that need verification
+  const pastDueMeetings = requests.filter(m =>
+    m.status === 'SCHEDULED' &&
+    m.scheduledDate &&
+    new Date(m.scheduledDate) < new Date() &&
+    !m.verified
+  );
 
   return (
     <div className="pb-32">
@@ -114,9 +118,42 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
             <h2 className="text-xl font-bold">Meeting Requests</h2>
           </div>
           <p className="text-sm opacity-80 leading-relaxed">
-             Manage hangouts and business meetings. Watch the timer—don't keep them waiting!
+             Manage hangouts and business meetings. Watch the timer — don't keep them waiting!
           </p>
        </div>
+
+       {/* Inline Past-Due Verification Banner */}
+       {pastDueMeetings.length > 0 && (
+         <div className="mb-6 space-y-3">
+           {pastDueMeetings.map(m => (
+             <div key={m.id} className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl">
+               <p className="text-sm font-bold text-yellow-800 mb-2">
+                 Did you attend your meeting with {m.name} on {new Date(m.scheduledDate!).toLocaleDateString()}?
+               </p>
+               <div className="flex gap-2">
+                 <button
+                   onClick={() => onUpdateRequest({ ...m, status: 'COMPLETE', verified: true })}
+                   className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl"
+                 >
+                   Yes, completed
+                 </button>
+                 <button
+                   onClick={() => onUpdateRequest({ ...m, verified: false })}
+                   className="px-4 py-2 bg-blue-100 text-blue-700 text-xs font-bold rounded-xl"
+                 >
+                   Reschedule
+                 </button>
+                 <button
+                   onClick={() => onDeleteRequest(m.id)}
+                   className="px-4 py-2 bg-red-100 text-red-600 text-xs font-bold rounded-xl"
+                 >
+                   Delete
+                 </button>
+               </div>
+             </div>
+           ))}
+         </div>
+       )}
 
        {/* Add / Edit Form */}
        {isAdding ? (
@@ -127,10 +164,10 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
              </h3>
              <button onClick={resetForm} className="p-1 hover:bg-slate-100 rounded-full"><X size={18}/></button>
            </div>
-           
+
            <form onSubmit={handleSave} className="space-y-4">
               <div className="flex items-center justify-center mb-2">
-                 <div 
+                 <div
                    onClick={() => fileInputRef.current?.click()}
                    className="w-20 h-20 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden cursor-pointer hover:border-slate-500 transition-colors"
                  >
@@ -143,12 +180,12 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                  <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*" />
               </div>
 
-              <input placeholder="Name *" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all" autoFocus />
+              <input placeholder="Name *" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all" autoFocus maxLength={100} />
               <div className="flex gap-2">
-                <input placeholder="Organization" value={org} onChange={e => setOrg(e.target.value)} className="w-1/2 p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all" />
-                <input placeholder="Phone" value={phone} onChange={e => setPhone(e.target.value)} className="w-1/2 p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all" />
+                <input placeholder="Organization" value={org} onChange={e => setOrg(e.target.value)} className="w-1/2 p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all" maxLength={100} />
+                <input placeholder="Phone" value={phone} onChange={e => setPhone(e.target.value)} className="w-1/2 p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all" maxLength={30} />
               </div>
-              <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all" />
+              <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all" maxLength={254} />
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as any)}
@@ -159,7 +196,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                 <option value="Business">Business</option>
                 <option value="Other">Other</option>
               </select>
-              <textarea placeholder="Notes..." value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all h-20 resize-none" />
+              <textarea placeholder="Notes..." value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all h-20 resize-none" maxLength={500} />
 
               <button type="submit" className={`w-full ${theme.primary} ${theme.primaryText} py-3 rounded-xl font-bold`}>
                 {editingId ? 'Update Request' : 'Add Request'}
@@ -167,7 +204,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
            </form>
          </div>
        ) : (
-         <button 
+         <button
            onClick={() => setIsAdding(true)}
            className={`w-full py-4 border-2 border-dashed ${theme.border} rounded-2xl ${theme.textSub} font-bold text-sm hover:bg-white transition-all mb-6 flex items-center justify-center gap-2`}
          >
@@ -185,13 +222,14 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
          )}
 
          {activeRequests.map(req => (
-           <MeetingCard 
-             key={req.id} 
-             req={req} 
+           <MeetingCard
+             key={req.id}
+             req={req}
              theme={theme}
              onEdit={() => startEdit(req)}
              onSchedule={(date, loc) => handleSchedule(req, date, loc)}
              onComplete={() => handleComplete(req)}
+             onDelete={() => onDeleteRequest(req.id)}
            />
          ))}
        </div>
@@ -206,13 +244,16 @@ const MeetingCard: React.FC<{
   onEdit: () => void;
   onSchedule: (date: string, loc: string) => void;
   onComplete: () => void;
-}> = ({ req, theme, onEdit, onSchedule, onComplete }) => {
+  onDelete: () => void;
+}> = ({ req, theme, onEdit, onSchedule, onComplete, onDelete }) => {
   const [isScheduling, setIsScheduling] = useState(false);
   const [schedDate, setSchedDate] = useState(req.scheduledDate || '');
   const [schedLoc, setSchedLoc] = useState(req.location || '');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmComplete, setConfirmComplete] = useState(false);
 
   const urgency = getMeetingUrgency(req.dateAdded);
-  
+
   const saveSchedule = () => {
     if (schedDate && schedLoc) {
       onSchedule(schedDate, schedLoc);
@@ -225,13 +266,13 @@ const MeetingCard: React.FC<{
       {/* Top Timer Bar (Only for Requested) */}
       {req.status === 'REQUESTED' && (
         <div className="h-2 bg-slate-100 w-full relative">
-           <div 
-             className="h-full transition-all duration-500" 
+           <div
+             className="h-full transition-all duration-500"
              style={{ width: `${urgency.ratio * 100}%`, backgroundColor: urgency.color }}
            />
         </div>
       )}
-      
+
       <div className="p-4">
         <div className="flex gap-4">
            {/* Avatar */}
@@ -253,7 +294,7 @@ const MeetingCard: React.FC<{
                   {req.status}
                 </span>
              </div>
-             
+
              {req.organization && (
              <div className="flex items-center gap-1.5 mt-1 text-xs font-medium opacity-60">
                <Briefcase size={12} /> {req.organization}
@@ -295,8 +336,8 @@ const MeetingCard: React.FC<{
              <div className="flex gap-2 mt-2">
                <button onClick={() => setIsScheduling(true)} className="text-[10px] text-blue-500 font-bold uppercase">Change</button>
                <span className="text-slate-300">|</span>
-               <button 
-                 onClick={() => downloadCalendarEvent(req)} 
+               <button
+                 onClick={() => downloadCalendarEvent(req)}
                  className="text-[10px] text-purple-500 font-bold uppercase flex items-center gap-1"
                >
                  <Download size={10} />
@@ -312,7 +353,7 @@ const MeetingCard: React.FC<{
               <label className="text-xs font-bold text-slate-400 uppercase">When</label>
               <input type="datetime-local" value={schedDate} onChange={e => setSchedDate(e.target.value)} className="w-full p-2 mb-2 rounded border border-slate-200 text-sm" />
               <label className="text-xs font-bold text-slate-400 uppercase">Where</label>
-              <input type="text" value={schedLoc} onChange={e => setSchedLoc(e.target.value)} className="w-full p-2 mb-3 rounded border border-slate-200 text-sm" placeholder="Location..." />
+              <input type="text" value={schedLoc} onChange={e => setSchedLoc(e.target.value)} className="w-full p-2 mb-3 rounded border border-slate-200 text-sm" placeholder="Location..." maxLength={200} />
               <div className="flex gap-2">
                  <button onClick={saveSchedule} className="flex-1 bg-blue-600 text-white text-xs font-bold py-2 rounded">Save</button>
                  <button onClick={() => setIsScheduling(false)} className="px-3 bg-slate-200 text-slate-600 text-xs font-bold rounded">Cancel</button>
@@ -328,11 +369,17 @@ const MeetingCard: React.FC<{
              </button>
            )}
            {req.status === 'SCHEDULED' && (
-             <button onClick={onComplete} className="col-span-1 bg-green-50 text-green-600 hover:bg-green-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
-               Complete
-             </button>
+             confirmComplete ? (
+               <div className="col-span-1 flex gap-1">
+                 <button onClick={() => { onComplete(); setConfirmComplete(false); }} className="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-xs font-bold">Yes</button>
+                 <button onClick={() => setConfirmComplete(false)} className="flex-1 bg-slate-200 text-slate-600 py-2.5 rounded-xl text-xs font-bold">No</button>
+               </div>
+             ) : (
+               <button onClick={() => setConfirmComplete(true)} className="col-span-1 bg-green-50 text-green-600 hover:bg-green-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
+                 Complete
+               </button>
+             )
            )}
-           {/* If Requested, we can allow complete directly or force schedule first? Prompt implies flow. Let's allow Complete from Requested too if they met impromptu */}
            {req.status === 'REQUESTED' && (
               <button onClick={onComplete} className="col-span-1 bg-green-50 text-green-600 hover:bg-green-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
                 Done
@@ -343,7 +390,16 @@ const MeetingCard: React.FC<{
              Edit
            </button>
 
-           <div className="col-span-1" /> {/* Spacer if needed or 3rd button */}
+           {confirmDelete ? (
+             <div className="col-span-1 flex gap-1">
+               <button onClick={() => { onDelete(); setConfirmDelete(false); }} className="flex-1 bg-red-500 text-white py-2.5 rounded-xl text-xs font-bold">Yes</button>
+               <button onClick={() => setConfirmDelete(false)} className="flex-1 bg-slate-200 text-slate-600 py-2.5 rounded-xl text-xs font-bold">No</button>
+             </div>
+           ) : (
+             <button onClick={() => setConfirmDelete(true)} className="col-span-1 bg-red-50 text-red-500 hover:bg-red-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
+               Delete
+             </button>
+           )}
         </div>
       </div>
     </div>

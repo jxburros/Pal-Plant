@@ -1,29 +1,21 @@
 import React from 'react';
-import { Friend, MeetingRequest, AppSettings, GardenAccount, CommunityNudge } from '../types';
-import { calculateSocialGardenScore, calculateTimeStatus, getUpcomingBirthdays, THEMES } from '../utils/helpers';
+import { Friend, MeetingRequest, AppSettings } from '../types';
+import { calculateSocialGardenScore, calculateTimeStatus, getUpcomingBirthdays, getInitials, getAvatarColor, THEMES } from '../utils/helpers';
 import { Trophy, Calendar, AlertTriangle, Gift, Sprout, Leaf } from 'lucide-react';
 
 interface HomeViewProps {
   friends: Friend[];
   meetingRequests: MeetingRequest[];
   settings: AppSettings;
-  accounts: GardenAccount[];
-  communityGardenFriends: Friend[];
-  communityNudges: CommunityNudge[];
   onNavigate: (tab: any) => void;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings, accounts, communityGardenFriends, communityNudges, onNavigate }) => {
+const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings, onNavigate }) => {
   const theme = THEMES[settings.theme];
-  // Updated to use the new complex algorithm
   const score = calculateSocialGardenScore(friends, meetingRequests);
   const birthdays = getUpcomingBirthdays(friends);
   const meetings = meetingRequests.filter(m => m.status === 'SCHEDULED').sort((a,b) => new Date(a.scheduledDate || '').getTime() - new Date(b.scheduledDate || '').getTime());
 
-  const primaryAccountId = settings.accountAccess.username || 'local-user';
-  const linkedAccounts = accounts.filter(acc => acc.connections.includes(primaryAccountId));
-  const recentNudges = communityNudges.slice(0, 3);
-  
   // Find expiring timers (Less than 2 days)
   const withering = friends.filter(f => {
     const status = calculateTimeStatus(f.lastContacted, f.frequencyDays);
@@ -32,15 +24,15 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
     return calculateTimeStatus(a.lastContacted, a.frequencyDays).daysLeft - calculateTimeStatus(b.lastContacted, b.frequencyDays).daysLeft;
   });
 
-  // Random Photo
-  const friendsWithPhotos = friends.filter(f => f.photo || f.avatarSeed);
-  const randomFriend = friendsWithPhotos.length > 0 
-    ? friendsWithPhotos[Math.floor(Math.random() * friendsWithPhotos.length)] 
+  // Featured friend (pick one with a photo, or first friend)
+  const friendsWithPhotos = friends.filter(f => f.photo);
+  const randomFriend = friendsWithPhotos.length > 0
+    ? friendsWithPhotos[Math.floor(Math.random() * friendsWithPhotos.length)]
     : null;
 
   return (
     <div className="space-y-6 pb-24 animate-in fade-in duration-500">
-      
+
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-50 to-emerald-100 p-6 border border-emerald-100 shadow-sm">
         <div className="relative z-10">
@@ -58,12 +50,12 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
         <Leaf className="absolute -bottom-8 -right-8 text-emerald-200 opacity-50 rotate-12" size={140} />
       </div>
 
-      {/* Featured Photo */}
-      {randomFriend && (
+      {/* Featured Photo (only if user has uploaded photos) */}
+      {randomFriend && randomFriend.photo && (
          <div className="relative group rounded-3xl overflow-hidden aspect-[16/9] shadow-md border border-slate-100">
-            <img 
-               src={randomFriend.photo || `https://picsum.photos/seed/${randomFriend.avatarSeed}/500/300`} 
-               alt="Featured" 
+            <img
+               src={randomFriend.photo}
+               alt="Featured"
                className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
@@ -77,7 +69,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
 
       {/* Alerts Grid */}
       <div className="grid grid-cols-1 gap-4">
-         
+
          {/* Withering Plants */}
          {withering.length > 0 && (
            <div className="bg-red-50 border border-red-100 p-4 rounded-2xl">
@@ -108,8 +100,15 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
                <div className="space-y-2">
                  {birthdays.map(f => (
                     <div key={f.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl transition-colors">
-                       <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden">
-                          <img src={f.photo || `https://picsum.photos/seed/${f.avatarSeed}/100`} className="w-full h-full object-cover" />
+                       <div
+                         className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                         style={{ backgroundColor: getAvatarColor(f.name) }}
+                       >
+                         {f.photo ? (
+                           <img src={f.photo} className="w-full h-full object-cover rounded-full" alt={f.name} />
+                         ) : (
+                           getInitials(f.name)
+                         )}
                        </div>
                        <div>
                           <p className={`font-bold text-sm ${theme.textMain}`}>{f.name}</p>
@@ -143,50 +142,6 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
             )}
          </div>
 
-      </div>
-
-      {/* Community Garden */}
-      <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`}>
-        <div className={`flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
-          <Sprout size={16} /> Community Garden
-        </div>
-        {communityGardenFriends.length === 0 ? (
-          <p className="text-sm opacity-60">Link accounts to plants to build a shared garden.</p>
-        ) : (
-          <div className="space-y-2">
-            {communityGardenFriends.slice(0, 5).map(friend => (
-              <div key={friend.id} className="p-3 bg-white rounded-xl border border-slate-100 flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-slate-800">{friend.name}</p>
-                  <p className="text-xs text-slate-500">Linked to {friend.category}</p>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md">Shared</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {linkedAccounts.length > 0 && (
-          <p className="text-[11px] text-slate-500 mt-2">Connected accounts: {linkedAccounts.map(a => a.displayName).join(', ')}</p>
-        )}
-      </div>
-
-      {/* Garden Taps */}
-      <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`}>
-        <div className={`flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
-          <AlertTriangle size={16} /> Garden Taps
-        </div>
-        {recentNudges.length === 0 ? (
-          <p className="text-sm opacity-60">Community reminders will appear here every few days.</p>
-        ) : (
-          <div className="space-y-2">
-            {recentNudges.map(nudge => (
-              <div key={nudge.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-sm">
-                <p className="font-bold text-slate-800">{accounts.find(acc => acc.id === nudge.toAccountId)?.displayName || 'Friend'} {nudge.message}</p>
-                <p className="text-[11px] text-slate-500 mt-1">{new Date(nudge.createdAt).toLocaleString()}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
     </div>
