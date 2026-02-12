@@ -64,8 +64,8 @@ const FriendModal: React.FC<FriendModalProps> = ({
         if (initialData.birthday) {
           setHasBirthday(true);
           const [m, d] = initialData.birthday.split('-');
-          setBdayMonth(m);
-          setBdayDay(d);
+          setBdayMonth(String(parseInt(m, 10)));
+          setBdayDay(String(parseInt(d, 10)));
         } else {
           setHasBirthday(false);
         }

@@ -94,10 +94,8 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
   };
 
   const handleComplete = (req: MeetingRequest) => {
-    if (window.confirm('Mark this meeting as complete? It will be removed from the list.')) {
-      onUpdateRequest({ ...req, status: 'COMPLETE' });
-      // In a real app, maybe archive it instead of deleting, but prompt says "disappears"
-      setTimeout(() => onDeleteRequest(req.id), 500);
+    if (window.confirm('Mark this meeting as complete?')) {
+      onUpdateRequest({ ...req, status: 'COMPLETE', verified: true });
     }
   };
 
@@ -185,13 +183,14 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
          )}
 
          {activeRequests.map(req => (
-           <MeetingCard 
-             key={req.id} 
-             req={req} 
+           <MeetingCard
+             key={req.id}
+             req={req}
              theme={theme}
              onEdit={() => startEdit(req)}
              onSchedule={(date, loc) => handleSchedule(req, date, loc)}
              onComplete={() => handleComplete(req)}
+             onDelete={() => onDeleteRequest(req.id)}
            />
          ))}
        </div>
@@ -206,7 +205,8 @@ const MeetingCard: React.FC<{
   onEdit: () => void;
   onSchedule: (date: string, loc: string) => void;
   onComplete: () => void;
-}> = ({ req, theme, onEdit, onSchedule, onComplete }) => {
+  onDelete: () => void;
+}> = ({ req, theme, onEdit, onSchedule, onComplete, onDelete }) => {
   const [isScheduling, setIsScheduling] = useState(false);
   const [schedDate, setSchedDate] = useState(req.scheduledDate || '');
   const [schedLoc, setSchedLoc] = useState(req.location || '');
@@ -343,7 +343,9 @@ const MeetingCard: React.FC<{
              Edit
            </button>
 
-           <div className="col-span-1" /> {/* Spacer if needed or 3rd button */}
+           <button onClick={() => { if (window.confirm(`Delete request for ${req.name}?`)) onDelete(); }} className="col-span-1 bg-red-50 text-red-500 hover:bg-red-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
+             Delete
+           </button>
         </div>
       </div>
     </div>

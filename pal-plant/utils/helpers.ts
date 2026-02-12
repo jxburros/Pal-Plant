@@ -422,11 +422,14 @@ export const getUpcomingBirthdays = (friends: Friend[]) => {
     
     return diffDays >= 0 && diffDays <= 30;
   }).sort((a, b) => {
-     // Sort by closest
      const [m1, d1] = a.birthday!.split('-').map(Number);
      const [m2, d2] = b.birthday!.split('-').map(Number);
-     // Simplified sort, ideally needs year awareness logic above repeated
-     return (m1 * 31 + d1) - (today.getMonth() * 31 + today.getDate()); 
+     const getDaysUntil = (m: number, d: number) => {
+       let bday = new Date(today.getFullYear(), m - 1, d);
+       if (bday < today) bday = new Date(today.getFullYear() + 1, m - 1, d);
+       return bday.getTime() - today.getTime();
+     };
+     return getDaysUntil(m1, d1) - getDaysUntil(m2, d2);
   });
 };
 

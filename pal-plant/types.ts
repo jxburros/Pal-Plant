@@ -76,6 +76,7 @@ export interface MeetingRequest {
 export enum Tab {
   HOME = 'HOME',
   LIST = 'LIST',
+  STATS = 'STATS',
   MEETINGS = 'MEETINGS'
 }
 

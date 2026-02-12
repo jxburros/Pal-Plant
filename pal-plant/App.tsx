@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search } from 'lucide-react';
+import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3 } from 'lucide-react';
 import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, GardenAccount, CommunityNudge } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
 import SettingsModal from './components/SettingsModal';
 import HomeView from './components/HomeView';
+import StatsView from './components/StatsView';
 import OnboardingTooltips from './components/OnboardingTooltips';
 import { useKeyboardShortcuts } from './components/KeyboardShortcuts';
 import BulkImportModal from './components/BulkImportModal';
@@ -147,6 +148,8 @@ const App: React.FC = () => {
   }, [meetingRequests.length]); // Depend on length so it doesn't loop infinitely if we don't update verified status, but we do update it.
 
 
+  const primaryAccountId = settings.accountAccess.username || 'local-user';
+
   const nudgeMessages = [
     'sent a gentle leaf tap from the community garden.',
     'shared a sunshine ping to check in.',
@@ -195,7 +198,6 @@ const App: React.FC = () => {
 
   const themeColors = THEMES[settings.theme];
   const textSizeClass = settings.textSize === 'large' ? 'text-lg' : settings.textSize === 'xl' ? 'text-xl' : 'text-base';
-  const primaryAccountId = settings.accountAccess.username || 'local-user';
 
   const handleSaveFriend = (friend: Friend) => {
     if (editingFriend?.linkedAccountId && editingFriend.linkedAccountId !== friend.linkedAccountId) {
@@ -293,14 +295,16 @@ const App: React.FC = () => {
       }
 
       // --- REGULAR & DEEP LOGIC (Resets Timer) ---
-      
+
       // Check for "Too Early" Pattern (Only for Regular)
+      let updatedFrequencyDays = f.frequencyDays;
       if (type === 'REGULAR' && percentageLeft > 80) {
          // Check if last log was also early
          const lastLog = f.logs[0];
          if (lastLog && lastLog.percentageRemaining > 80) {
-            if (window.confirm(`${f.name} seems to be contacted very frequently! Do you want to shorten their timer to ${Math.max(1, Math.floor(f.frequencyDays / 2))} days?`)) {
-               f.frequencyDays = Math.max(1, Math.floor(f.frequencyDays / 2));
+            const shortenedDays = Math.max(1, Math.floor(f.frequencyDays / 2));
+            if (window.confirm(`${f.name} seems to be contacted very frequently! Do you want to shorten their timer to ${shortenedDays} days?`)) {
+               updatedFrequencyDays = shortenedDays;
             }
          }
       }
@@ -308,11 +312,11 @@ const App: React.FC = () => {
       const daysOverdue = daysLeft < 0 ? Math.abs(daysLeft) : 0;
       const scoreChange = calculateInteractionScore(type, percentageLeft, daysOverdue);
       
-      const newLogs: ContactLog[] = [{ 
-         id: generateId(), 
-         date: now.toISOString(), 
+      const newLogs: ContactLog[] = [{
+         id: generateId(),
+         date: now.toISOString(),
          type: type,
-         daysWaitGoal: f.frequencyDays, 
+         daysWaitGoal: updatedFrequencyDays,
          percentageRemaining: percentageLeft,
          scoreDelta: scoreChange
       }, ...f.logs];
@@ -349,6 +353,7 @@ const App: React.FC = () => {
 
       return {
         ...f,
+        frequencyDays: updatedFrequencyDays,
         lastContacted: new Date(now.getTime() + extraWaitTime).toISOString(),
         logs: newLogs,
         individualScore: newScore,
@@ -422,7 +427,7 @@ const App: React.FC = () => {
               Pal Plant
             </h1>
             <p className={`text-xs font-bold uppercase tracking-widest mt-0.5 opacity-60`}>
-               {activeTab === Tab.HOME ? 'Dashboard' : activeTab === Tab.LIST ? 'Your Garden' : 'Meeting Requests'}
+               {activeTab === Tab.HOME ? 'Dashboard' : activeTab === Tab.LIST ? 'Your Garden' : activeTab === Tab.STATS ? 'Statistics' : 'Meeting Requests'}
             </p>
           </button>
           <div className="flex gap-2">
@@ -524,8 +529,10 @@ const App: React.FC = () => {
               <Plus size={28} strokeWidth={3} />
             </button>
           </>
+        ) : activeTab === Tab.STATS ? (
+           <StatsView friends={friends} />
         ) : (
-           <MeetingRequestsView 
+           <MeetingRequestsView
               requests={meetingRequests}
               onAddRequest={(req) => setMeetingRequests(prev => [req, ...prev])}
               onUpdateRequest={(req) => setMeetingRequests(prev => prev.map(r => r.id === req.id ? req : r))}
@@ -537,15 +544,19 @@ const App: React.FC = () => {
 
       {/* Bottom Nav (Mobile) */}
       <nav className={`fixed bottom-0 w-full ${themeColors.cardBg} border-t ${themeColors.border} px-6 py-4 pb-6 z-40 flex justify-between items-center sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300`}>
-        <button onClick={() => setActiveTab(Tab.HOME)} className={`flex flex-col items-center gap-1 w-1/3 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110' : 'opacity-40'}`}>
+        <button onClick={() => setActiveTab(Tab.HOME)} className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110' : 'opacity-40'}`}>
           <Home size={24} strokeWidth={activeTab === Tab.HOME ? 2.5 : 2} />
           <span className="text-[10px] font-bold">Home</span>
         </button>
-        <button onClick={() => setActiveTab(Tab.LIST)} className={`flex flex-col items-center gap-1 w-1/3 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110' : 'opacity-40'}`}>
+        <button onClick={() => setActiveTab(Tab.LIST)} className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110' : 'opacity-40'}`}>
           <Users size={24} strokeWidth={activeTab === Tab.LIST ? 2.5 : 2} />
           <span className="text-[10px] font-bold">Garden</span>
         </button>
-         <button onClick={() => setActiveTab(Tab.MEETINGS)} className={`flex flex-col items-center gap-1 w-1/3 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110' : 'opacity-40'}`}>
+        <button onClick={() => setActiveTab(Tab.STATS)} className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.STATS ? 'opacity-100 scale-110' : 'opacity-40'}`}>
+          <BarChart3 size={24} strokeWidth={activeTab === Tab.STATS ? 2.5 : 2} />
+          <span className="text-[10px] font-bold">Stats</span>
+        </button>
+        <button onClick={() => setActiveTab(Tab.MEETINGS)} className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110' : 'opacity-40'}`}>
           <Calendar size={24} strokeWidth={activeTab === Tab.MEETINGS ? 2.5 : 2} />
           <span className="text-[10px] font-bold">Requests</span>
         </button>
@@ -555,6 +566,7 @@ const App: React.FC = () => {
       <div className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${themeColors.cardBg}/90 backdrop-blur-md border ${themeColors.border} shadow-xl rounded-full px-2 py-2 gap-2 z-40`}>
           <button onClick={() => setActiveTab(Tab.HOME)} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.HOME ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Home</button>
           <button onClick={() => setActiveTab(Tab.LIST)} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.LIST ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Garden</button>
+          <button onClick={() => setActiveTab(Tab.STATS)} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.STATS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Stats</button>
           <button onClick={() => setActiveTab(Tab.MEETINGS)} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.MEETINGS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Requests</button>
       </div>
 
