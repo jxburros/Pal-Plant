@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3 } from 'lucide-react';
-import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, GardenAccount, CommunityNudge } from './types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X } from 'lucide-react';
+import { Friend, Tab, ContactLog, MeetingRequest, AppSettings } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
@@ -12,6 +12,37 @@ import { useKeyboardShortcuts } from './components/KeyboardShortcuts';
 import BulkImportModal from './components/BulkImportModal';
 import { generateId, calculateTimeStatus, THEMES, calculateInteractionScore, calculateIndividualFriendScore } from './utils/helpers';
 
+// ─── Toast System ─────────────────────────────────────────────────
+
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'info' | 'warning';
+}
+
+const ToastContainer: React.FC<{ toasts: Toast[]; onDismiss: (id: string) => void }> = ({ toasts, onDismiss }) => {
+  if (toasts.length === 0) return null;
+  return (
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-[90%] max-w-sm pointer-events-none">
+      {toasts.map(t => (
+        <div
+          key={t.id}
+          className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium animate-in slide-in-from-top fade-in duration-300 ${
+            t.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+            t.type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
+            'bg-blue-50 border-blue-200 text-blue-800'
+          }`}
+        >
+          <span className="flex-1">{t.message}</span>
+          <button onClick={() => onDismiss(t.id)} className="opacity-60 hover:opacity-100"><X size={14} /></button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─── Main App ─────────────────────────────────────────────────────
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.HOME);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,7 +52,19 @@ const App: React.FC = () => {
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // Toast helpers
+  const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
+    const id = generateId();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
   // Settings State
   const [settings, setSettings] = useState<AppSettings>(() => {
     const saved = localStorage.getItem('friendkeep_settings');
@@ -35,23 +78,13 @@ const App: React.FC = () => {
         emailEnabled: false,
         reminderHoursBefore: 24
       },
-      accountAccess: {
-        username: '',
-        password: '',
-        storageProviderHint: 'Ready for secure cloud storage',
-        lastUpdated: new Date().toISOString()
-      },
       hasSeenOnboarding: false
     };
     if (saved) {
       const parsed = JSON.parse(saved);
-      const migratedAccount = parsed.accountAccess || {
-        username: parsed.cloudSync?.syncEmail || '',
-        password: '',
-        storageProviderHint: 'Migrated from cloud sync',
-        lastUpdated: new Date().toISOString()
-      };
-      return { ...defaults, ...parsed, accountAccess: migratedAccount };
+      // Strip old accountAccess if present
+      const { accountAccess, ...cleanParsed } = parsed;
+      return { ...defaults, ...cleanParsed };
     }
     return defaults;
   });
@@ -59,17 +92,12 @@ const App: React.FC = () => {
   // Data States
   const [friends, setFriends] = useState<Friend[]>(() => {
     const saved = localStorage.getItem('friendkeep_data');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [accounts, setAccounts] = useState<GardenAccount[]>(() => {
-    const saved = localStorage.getItem('friendkeep_accounts');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [communityNudges, setCommunityNudges] = useState<CommunityNudge[]>(() => {
-    const saved = localStorage.getItem('friendkeep_nudges');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    // Strip old linkedAccountId from friends on load
+    return JSON.parse(saved).map((f: any) => {
+      const { linkedAccountId, ...rest } = f;
+      return rest;
+    });
   });
 
   const [categories, setCategories] = useState<string[]>(() => {
@@ -84,11 +112,15 @@ const App: React.FC = () => {
 
   // Persistence
   useEffect(() => { localStorage.setItem('friendkeep_data', JSON.stringify(friends)); }, [friends]);
-  useEffect(() => { localStorage.setItem('friendkeep_accounts', JSON.stringify(accounts)); }, [accounts]);
-  useEffect(() => { localStorage.setItem('friendkeep_nudges', JSON.stringify(communityNudges)); }, [communityNudges]);
   useEffect(() => { localStorage.setItem('friendkeep_categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('friendkeep_meetings', JSON.stringify(meetingRequests)); }, [meetingRequests]);
   useEffect(() => { localStorage.setItem('friendkeep_settings', JSON.stringify(settings)); }, [settings]);
+
+  // Clean up old localStorage keys from removed multi-user features
+  useEffect(() => {
+    localStorage.removeItem('friendkeep_accounts');
+    localStorage.removeItem('friendkeep_nudges');
+  }, []);
 
   // Check for first-run onboarding
   useEffect(() => {
@@ -111,88 +143,9 @@ const App: React.FC = () => {
     () => setIsSettingsOpen(true)
   );
 
-  // Meeting Verification Logic (Check on Load)
-  useEffect(() => {
-    const verifyMeetings = () => {
-      const now = new Date();
-      // Find scheduled meetings where date has passed and not verified
-      const passedMeetings = meetingRequests.filter(m => 
-        m.status === 'SCHEDULED' && 
-        m.scheduledDate && 
-        new Date(m.scheduledDate) < now &&
-        !m.verified
-      );
-
-      if (passedMeetings.length > 0) {
-        // Just verify the first one for simplicity of UI
-        const meeting = passedMeetings[0];
-        if (window.confirm(`Did you attend your meeting with ${meeting.name} on ${new Date(meeting.scheduledDate!).toLocaleDateString()}?`)) {
-          // Yes -> Complete and Verify
-           setMeetingRequests(prev => prev.map(m => m.id === meeting.id ? { ...m, status: 'COMPLETE', verified: true } : m));
-           alert("Great! This will boost your social score.");
-        } else {
-           // No -> Ask to reschedule or cancel
-           if (window.confirm("Do you want to reschedule it? Cancel to delete request.")) {
-             // Keep as scheduled but let them change date (user has to do it manually in UI for now, just don't verify)
-             alert("Please update the time in the Requests tab.");
-           } else {
-             setMeetingRequests(prev => prev.filter(m => m.id !== meeting.id));
-           }
-        }
-      }
-    };
-    
-    // Slight delay to allow UI to render first
-    const timer = setTimeout(verifyMeetings, 1000);
-    return () => clearTimeout(timer);
-  }, [meetingRequests.length]); // Depend on length so it doesn't loop infinitely if we don't update verified status, but we do update it.
-
-
-  const primaryAccountId = settings.accountAccess.username || 'local-user';
-
-  const nudgeMessages = [
-    'sent a gentle leaf tap from the community garden.',
-    'shared a sunshine ping to check in.',
-    'dropped a watering reminder in your patch.',
-    'waved a breezy hello from their planter.'
-  ];
-
-  // Automated "pokes" renamed to Garden Taps
-  useEffect(() => {
-    const now = new Date();
-    const linkedAccounts = accounts.filter(acc => acc.connections.includes(primaryAccountId));
-
-    const nudgesToAdd: CommunityNudge[] = [];
-
-    linkedAccounts.forEach(acc => {
-      const lastNudge = acc.lastNudgeDate ? new Date(acc.lastNudgeDate) : undefined;
-      const daysSinceNudge = lastNudge ? (now.getTime() - lastNudge.getTime()) / (1000 * 60 * 60 * 24) : Infinity;
-
-      if (daysSinceNudge >= 3) {
-        const message = nudgeMessages[Math.floor(Math.random() * nudgeMessages.length)];
-        nudgesToAdd.push({
-          id: generateId(),
-          fromAccountId: primaryAccountId,
-          toAccountId: acc.id,
-          createdAt: now.toISOString(),
-          message
-        });
-      }
-    });
-
-    if (nudgesToAdd.length === 0) return;
-
-    setCommunityNudges(prev => [...nudgesToAdd, ...prev].slice(0, 50));
-    setAccounts(prev => prev.map(acc => {
-      const nudge = nudgesToAdd.find(n => n.toAccountId === acc.id);
-      return nudge ? { ...acc, lastNudgeDate: now.toISOString() } : acc;
-    }));
-  }, [accounts, primaryAccountId]);
-
-
   // Tick for timers
   useEffect(() => {
-    const interval = setInterval(() => setFriends(prev => [...prev]), 60000); 
+    const interval = setInterval(() => setFriends(prev => [...prev]), 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -200,14 +153,6 @@ const App: React.FC = () => {
   const textSizeClass = settings.textSize === 'large' ? 'text-lg' : settings.textSize === 'xl' ? 'text-xl' : 'text-base';
 
   const handleSaveFriend = (friend: Friend) => {
-    if (editingFriend?.linkedAccountId && editingFriend.linkedAccountId !== friend.linkedAccountId) {
-      detachFriendFromAccount(friend.id, editingFriend.linkedAccountId);
-    }
-
-    if (friend.linkedAccountId) {
-      linkFriendToAccount(friend.id, friend.linkedAccountId);
-    }
-
     if (editingFriend) {
       setFriends(prev => prev.map(f => f.id === friend.id ? friend : f));
     } else {
@@ -220,42 +165,7 @@ const App: React.FC = () => {
     if (!categories.includes(newCat)) setCategories(prev => [...prev, newCat]);
   };
 
-  const addGardenAccount = (displayName: string, username: string, password?: string) => {
-    const account: GardenAccount = {
-      id: generateId(),
-      displayName,
-      username,
-      password,
-      connections: primaryAccountId ? [primaryAccountId] : [],
-      linkedFriendIds: []
-    };
-    setAccounts(prev => [account, ...prev]);
-    return account;
-  };
-
-  const linkFriendToAccount = (friendId: string, accountId?: string) => {
-    if (!accountId) return;
-    setAccounts(prev => prev.map(acc => {
-      if (acc.id !== accountId) return acc;
-      const linkedFriendIds = Array.from(new Set([...(acc.linkedFriendIds || []), friendId]));
-      const connections = acc.connections.includes(primaryAccountId)
-        ? acc.connections
-        : [...acc.connections, primaryAccountId];
-      return { ...acc, linkedFriendIds, connections };
-    }));
-  };
-
-  const detachFriendFromAccount = (friendId: string, accountId?: string) => {
-    if (!accountId) return;
-    setAccounts(prev => prev.map(acc => {
-      if (acc.id !== accountId) return acc;
-      return { ...acc, linkedFriendIds: acc.linkedFriendIds.filter(id => id !== friendId) };
-    }));
-  };
-
   const deleteFriend = (id: string) => {
-    const friend = friends.find(f => f.id === id);
-    if (friend?.linkedAccountId) detachFriendFromAccount(id, friend.linkedAccountId);
     setFriends(prev => prev.filter(f => f.id !== id));
   };
 
@@ -268,27 +178,21 @@ const App: React.FC = () => {
 
       // --- QUICK TOUCH LOGIC ---
       if (type === 'QUICK') {
-        // Adds 30 minutes to lastContacted (extends timer)
-        // Does NOT reset the timer.
-        // Needs 1 availability per 2 cycles.
-        if ((f.quickTouchesAvailable || 0) <= 0) return f; // Should be handled in UI but safety check
+        if ((f.quickTouchesAvailable || 0) <= 0) return f;
 
         const newLastContacted = new Date(new Date(f.lastContacted).getTime() + (30 * 60 * 1000)).toISOString();
-        
-        // Log it (but maybe don't change 'lastContacted' fully? Prompt says "Extend timer". 
-        // If I physically move lastContacted forward, the goal date moves forward.)
-        
+
         return {
           ...f,
           lastContacted: newLastContacted,
           quickTouchesAvailable: f.quickTouchesAvailable - 1,
-          logs: [{ 
-             id: generateId(), 
-             date: now.toISOString(), 
+          logs: [{
+             id: generateId(),
+             date: now.toISOString(),
              type: 'QUICK',
-             daysWaitGoal: f.frequencyDays, 
+             daysWaitGoal: f.frequencyDays,
              percentageRemaining: percentageLeft,
-             scoreDelta: 2 
+             scoreDelta: 2
           }, ...f.logs],
           individualScore: Math.min(100, (f.individualScore || 50) + 2)
         };
@@ -296,22 +200,19 @@ const App: React.FC = () => {
 
       // --- REGULAR & DEEP LOGIC (Resets Timer) ---
 
-      // Check for "Too Early" Pattern (Only for Regular)
+      // Auto-shorten frequency if contacting very early twice in a row
       let updatedFrequencyDays = f.frequencyDays;
       if (type === 'REGULAR' && percentageLeft > 80) {
-         // Check if last log was also early
          const lastLog = f.logs[0];
          if (lastLog && lastLog.percentageRemaining > 80) {
-            const shortenedDays = Math.max(1, Math.floor(f.frequencyDays / 2));
-            if (window.confirm(`${f.name} seems to be contacted very frequently! Do you want to shorten their timer to ${shortenedDays} days?`)) {
-               updatedFrequencyDays = shortenedDays;
-            }
+            updatedFrequencyDays = Math.max(1, Math.floor(f.frequencyDays / 2));
+            showToast(`${f.name}'s timer shortened to ${updatedFrequencyDays} days (frequent contact detected).`, 'info');
          }
       }
 
       const daysOverdue = daysLeft < 0 ? Math.abs(daysLeft) : 0;
       const scoreChange = calculateInteractionScore(type, percentageLeft, daysOverdue);
-      
+
       const newLogs: ContactLog[] = [{
          id: generateId(),
          date: now.toISOString(),
@@ -326,28 +227,17 @@ const App: React.FC = () => {
       // Deep Connection Mechanics
       let newLastDeep = f.lastDeepConnection;
       let extraWaitTime = 0;
-      
+
       if (type === 'DEEP') {
          newLastDeep = now.toISOString();
-         // "Grant extra half a day on your timer"
-         // This implies next due date is later. 
-         // Implementation: We reset LastContacted to now, but effectively we want the *next* period to be longer.
-         // Easy way: Add 0.5 to frequencyDays just for this one calc? No, that persists.
-         // Better way: Set lastContacted 12 hours into the future? No, that messes up history.
-         // Best way: Just let the score bonus be the reward, and maybe the user manually adjusts if they want. 
-         // BUT Prompt says: "Grant you an extra half a day on your timer".
-         // Solution: Set lastContacted to Now, but artificially add 0.5 days to the log logic next time? 
-         // Simpler: Just set lastContacted to `Now + 0.5 Days`. It's a "Banked" time.
          extraWaitTime = 12 * 60 * 60 * 1000;
       }
 
       // Quick Touch Reset Logic: 1 per 2 cycles.
-      // We increment a counter "cyclesSinceLastQuickTouch".
-      // If it hits 2, we grant a token.
       let newCycles = (f.cyclesSinceLastQuickTouch || 0) + 1;
       let newTokens = (f.quickTouchesAvailable || 0);
       if (newCycles >= 2) {
-         newTokens = 1; // Cap at 1? Prompt says "1 time per 2 timer cycles". Implies cap.
+         newTokens = 1;
          newCycles = 0;
       }
 
@@ -370,9 +260,9 @@ const App: React.FC = () => {
        const updatedLogs = f.logs.filter(l => l.id !== logId);
        const newScore = calculateIndividualFriendScore(updatedLogs);
        const sortedLogs = [...updatedLogs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-       return { 
-         ...f, 
-         logs: updatedLogs, 
+       return {
+         ...f,
+         logs: updatedLogs,
          lastContacted: sortedLogs.length > 0 ? sortedLogs[0].date : f.lastContacted,
          individualScore: newScore
        };
@@ -395,7 +285,7 @@ const App: React.FC = () => {
   // Bulk import handler
   const handleBulkImport = (newFriends: Friend[]) => {
     setFriends(prev => [...newFriends, ...prev]);
-    alert(`Successfully imported ${newFriends.length} contacts!`);
+    showToast(`Successfully imported ${newFriends.length} contacts!`);
   };
 
   // Computed
@@ -408,16 +298,12 @@ const App: React.FC = () => {
 
   const sortedFriends = [...filteredFriends].sort((a, b) => calculateTimeStatus(a.lastContacted, a.frequencyDays).percentageLeft - calculateTimeStatus(b.lastContacted, b.frequencyDays).percentageLeft);
 
-  const accountLookup = accounts.reduce<Record<string, GardenAccount>>((acc, account) => {
-    acc[account.id] = account;
-    return acc;
-  }, {});
-
-  const communityGardenFriends = friends.filter(f => f.linkedAccountId && accountLookup[f.linkedAccountId]?.connections.includes(primaryAccountId));
-
   return (
     <div className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
-      
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
       {/* Top Bar */}
       <header className={`px-6 pt-8 pb-4 ${themeColors.bg}/95 backdrop-blur-md sticky top-0 z-30 border-b ${themeColors.border} transition-colors duration-300`}>
         <div className="flex justify-between items-center mb-4">
@@ -431,7 +317,7 @@ const App: React.FC = () => {
             </p>
           </button>
           <div className="flex gap-2">
-            <button 
+            <button
                 onClick={() => setIsSettingsOpen(true)}
                 className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm border ${themeColors.border} ${themeColors.cardBg} active:scale-95 transition-transform`}
               >
@@ -446,9 +332,9 @@ const App: React.FC = () => {
              {/* Search Bar */}
              <div className="relative">
                 <Search className={`absolute left-3 top-2.5 ${themeColors.textSub}`} size={16} />
-                <input 
-                  type="text" 
-                  placeholder="Search your garden..." 
+                <input
+                  type="text"
+                  placeholder="Search your garden..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={`w-full ${themeColors.cardBg} pl-10 pr-4 py-2 rounded-xl text-sm border ${themeColors.border} focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all`}
@@ -483,9 +369,6 @@ const App: React.FC = () => {
              friends={friends}
              meetingRequests={meetingRequests}
              settings={settings}
-             accounts={accounts}
-             communityGardenFriends={communityGardenFriends}
-             communityNudges={communityNudges}
              onNavigate={setActiveTab}
            />
         ) : activeTab === Tab.LIST ? (
@@ -511,7 +394,6 @@ const App: React.FC = () => {
                    <FriendCard
                      key={friend.id}
                      friend={friend}
-                     accountName={friend.linkedAccountId ? accountLookup[friend.linkedAccountId]?.displayName : undefined}
                      onContact={markContacted}
                      onDelete={deleteFriend}
                      onEdit={openEditModal}
@@ -520,9 +402,9 @@ const App: React.FC = () => {
                  ))}
               </div>
             )}
-            
+
             {/* Floating Action Button for List View */}
-            <button 
+            <button
               onClick={openAddModal}
               className={`fixed bottom-24 right-6 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
             >
@@ -578,11 +460,9 @@ const App: React.FC = () => {
         initialData={editingFriend}
         categories={categories}
         onAddCategory={handleAddCategory}
-        accounts={accounts}
-        onCreateAccount={addGardenAccount}
       />
 
-      <SettingsModal 
+      <SettingsModal
          isOpen={isSettingsOpen}
          onClose={() => setIsSettingsOpen(false)}
          settings={settings}
@@ -603,7 +483,7 @@ const App: React.FC = () => {
 
       {/* Onboarding Tooltips */}
       {showOnboarding && (
-        <OnboardingTooltips 
+        <OnboardingTooltips
           settings={settings}
           onComplete={handleOnboardingComplete}
         />

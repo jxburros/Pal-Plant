@@ -1,42 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Phone, CheckCircle2, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, Heart, Zap } from 'lucide-react';
 import { Friend } from '../types';
-import { calculateTimeStatus, getProgressBarColor, getStatusColor, getPlantStage } from '../utils/helpers';
+import { calculateTimeStatus, getProgressBarColor, getStatusColor, getPlantStage, getInitials, getAvatarColor } from '../utils/helpers';
 
 interface FriendCardProps {
   friend: Friend;
-  accountName?: string;
   onContact: (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK') => void;
   onDelete: (id: string) => void;
   onEdit: (friend: Friend) => void;
   onRequestMeeting: (friend: Friend) => void;
 }
 
-const FriendCard: React.FC<FriendCardProps> = ({ friend, accountName, onContact, onDelete, onEdit, onRequestMeeting }) => {
+const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, onEdit, onRequestMeeting }) => {
   const { percentageLeft, daysLeft, isOverdue } = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
-  
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   // Clamp percentage for the visual bar (0 to 100)
   const visualPercentage = Math.min(Math.max(percentageLeft, 0), 100);
   const statusColorClass = getStatusColor(percentageLeft);
   const progressColorClass = getProgressBarColor(percentageLeft);
-  
+
   // Get Plant Metaphor
   const plantStage = getPlantStage(percentageLeft);
   const PlantIcon = plantStage.icon;
 
   // Logic for Special Buttons
-  // Quick Touch: Allowed if available > 0
   const canQuickTouch = (friend.quickTouchesAvailable || 0) > 0;
-  
-  // Deep Connection: Allowed if not used recently (simple logic: check if lastDeepConnection is recent)
-  // Let's implement cooldown visually. If they used it today, disable it.
-  const isDeepCooldown = friend.lastDeepConnection 
+
+  const isDeepCooldown = friend.lastDeepConnection
     ? (new Date().getTime() - new Date(friend.lastDeepConnection).getTime()) < (24 * 60 * 60 * 1000)
     : false;
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-200 hover:shadow-md mb-4 group">
-      
+
       {/* Right Side Info Column */}
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
          <div className="flex items-center gap-1">
@@ -48,26 +45,35 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, accountName, onContact,
                 {friend.category}
             </span>
          </div>
-         
+
          <div className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 w-fit ${statusColorClass}`}>
           {isOverdue ? <AlertCircle size={10} /> : <Droplets size={10} />}
-          {isOverdue 
-            ? `${Math.abs(daysLeft)}d late` 
+          {isOverdue
+            ? `${Math.abs(daysLeft)}d late`
             : `${daysLeft}d water`
           }
         </div>
       </div>
 
-      <div className="flex justify-between items-start mb-3 mt-1 mr-24"> 
+      <div className="flex justify-between items-start mb-3 mt-1 mr-24">
         <div className="flex items-center gap-4">
           {/* Avatar Container */}
           <div className="relative">
              <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden flex-shrink-0 border-4 border-white shadow-sm relative group-hover:scale-105 transition-transform z-0">
-               <img 
-                 src={friend.photo || `https://picsum.photos/seed/${friend.avatarSeed || friend.id}/200`} 
-                 alt={friend.name}
-                 className="w-full h-full object-cover"
-               />
+               {friend.photo ? (
+                 <img
+                   src={friend.photo}
+                   alt={friend.name}
+                   className="w-full h-full object-cover"
+                 />
+               ) : (
+                 <div
+                   className="w-full h-full flex items-center justify-center text-white font-bold text-xl"
+                   style={{ backgroundColor: getAvatarColor(friend.name) }}
+                 >
+                   {getInitials(friend.name)}
+                 </div>
+               )}
              </div>
              {/* Plant Stage Badge */}
              <div className={`absolute -bottom-1 -right-1 w-8 h-8 rounded-full ${plantStage.bg} border-2 border-white shadow-sm flex items-center justify-center z-10`} title={plantStage.label}>
@@ -78,10 +84,6 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, accountName, onContact,
           <div>
             <h3 className="font-bold text-slate-800 text-lg leading-tight truncate max-w-[150px]">{friend.name}</h3>
             <p className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${plantStage.color}`}>{plantStage.label}</p>
-
-            {accountName && (
-              <p className="text-[11px] text-emerald-700 font-semibold mt-1">Linked account: {accountName}</p>
-            )}
 
             {/* Quick Contact Actions */}
             <div className="flex items-center gap-3 mt-2">
@@ -118,7 +120,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, accountName, onContact,
             <span>Thriving</span>
          </div>
          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-50">
-           <div 
+           <div
              className={`h-full transition-all duration-500 ease-out relative ${progressColorClass}`}
              style={{ width: `${visualPercentage}%` }}
            >
@@ -130,23 +132,17 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, accountName, onContact,
 
       <div className="flex gap-2 mt-4">
         {/* Main Water Button */}
-        <button 
+        <button
           onClick={() => onContact(friend.id, 'REGULAR')}
           className="flex-1 bg-slate-900 text-white py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-slate-900/10 hover:bg-slate-800"
         >
           <CheckCircle2 size={16} />
           Water
         </button>
-        
+
         {/* Deep Connection Button */}
         <button
-          onClick={() => {
-             if(isDeepCooldown) {
-               alert("You can't force a deep connection! Give it some time.");
-               return;
-             }
-             onContact(friend.id, 'DEEP');
-          }}
+          onClick={() => { if(!isDeepCooldown) onContact(friend.id, 'DEEP'); }}
           className={`px-3 py-2 rounded-xl transition-colors border ${isDeepCooldown ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'text-pink-400 hover:bg-pink-50 hover:text-pink-600 border-slate-100 hover:border-pink-200'}`}
           title={isDeepCooldown ? "Used recently" : "Deep Connection (Extends timer & Boosts score)"}
         >
@@ -155,13 +151,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, accountName, onContact,
 
          {/* Quick Touch Button */}
         <button
-          onClick={() => {
-             if(!canQuickTouch) {
-               alert("You've used your Quick Touch for this cycle (1 per 2 cycles).");
-               return;
-             }
-             onContact(friend.id, 'QUICK');
-          }}
+          onClick={() => { if(canQuickTouch) onContact(friend.id, 'QUICK'); }}
           className={`px-3 py-2 rounded-xl transition-colors border ${!canQuickTouch ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'text-yellow-500 hover:bg-yellow-50 hover:text-yellow-600 border-slate-100 hover:border-yellow-200'}`}
           title={!canQuickTouch ? "Not available yet" : "Quick Touch (+30 mins, small boost)"}
         >
@@ -184,15 +174,33 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, accountName, onContact,
           <Edit2 size={20} />
         </button>
 
-        <button
-          onClick={() => {
-              if(window.confirm(`Delete ${friend.name}?`)) onDelete(friend.id);
-          }}
-          className="px-3 py-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors border border-slate-100 hover:border-red-100"
-          title="Delete"
-        >
-          <Trash2 size={20} />
-        </button>
+        {/* Two-step delete: first click shows confirm, second click deletes */}
+        {confirmDelete ? (
+          <div className="flex gap-1">
+            <button
+              onClick={() => { onDelete(friend.id); setConfirmDelete(false); }}
+              className="px-2 py-2 rounded-xl bg-red-500 text-white text-[10px] font-bold transition-colors"
+              title="Confirm Delete"
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="px-2 py-2 rounded-xl bg-slate-200 text-slate-600 text-[10px] font-bold transition-colors"
+              title="Cancel"
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="px-3 py-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors border border-slate-100 hover:border-red-100"
+            title="Delete"
+          >
+            <Trash2 size={20} />
+          </button>
+        )}
       </div>
     </div>
   );

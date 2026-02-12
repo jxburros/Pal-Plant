@@ -7,24 +7,6 @@ export interface ContactLog {
   scoreDelta?: number; // How much this interaction changed the score
 }
 
-export interface GardenAccount {
-  id: string;
-  displayName: string;
-  username: string;
-  password?: string;
-  connections: string[];
-  linkedFriendIds: string[];
-  lastNudgeDate?: string;
-}
-
-export interface CommunityNudge {
-  id: string;
-  fromAccountId: string;
-  toAccountId: string;
-  createdAt: string;
-  message: string;
-}
-
 export interface Friend {
   id: string;
   name: string;
@@ -37,16 +19,14 @@ export interface Friend {
   frequencyDays: number;
   lastContacted: string; // ISO string
 
-  linkedAccountId?: string;
-
   // Scoring & Mechanics
   individualScore: number; // 0 to 100
   lastDeepConnection?: string; // ISO
   quickTouchesAvailable: number; // 1 available per 2 full cycles
-  cyclesSinceLastQuickTouch: number; 
+  cyclesSinceLastQuickTouch: number;
 
   logs: ContactLog[];
-  avatarSeed?: number; 
+  avatarSeed?: number;
 }
 
 export type MeetingStatus = 'REQUESTED' | 'SCHEDULED' | 'COMPLETE';
@@ -69,7 +49,7 @@ export interface MeetingRequest {
 
   // Verification
   verified?: boolean; // Has the user confirmed attendance?
-  
+
   linkedFriendId?: string;
 }
 
@@ -89,20 +69,12 @@ export interface ReminderSettings {
   email?: string;
 }
 
-export interface AccountAccessSettings {
-  username: string;
-  password: string;
-  storageProviderHint?: string;
-  lastUpdated?: string;
-}
-
 export interface AppSettings {
   theme: ThemeId;
   textSize: 'normal' | 'large' | 'xl';
   highContrast: boolean;
   reducedMotion: boolean;
   reminders: ReminderSettings;
-  accountAccess: AccountAccessSettings;
   hasSeenOnboarding: boolean;
 }
 
