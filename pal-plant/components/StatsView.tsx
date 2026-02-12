@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, Tooltip
 import { Friend, ContactLog } from '../types';
 import { calculateTimeStatus, calculateStreaks, getCohortStats } from '../utils/helpers';
 import { Trophy, Zap, AlertTriangle, Flame, Users, TrendingUp } from 'lucide-react';
+import { getAnalyticsSummary } from '../utils/analytics';
 
 interface StatsViewProps {
   friends: Friend[];
@@ -34,6 +35,7 @@ const StatsView: React.FC<StatsViewProps> = ({ friends }) => {
 
   // Streaks data
   const streakData = calculateStreaks(friends);
+  const analyticsSummary = getAnalyticsSummary(7);
   
   // Cohort data
   const cohortData = getCohortStats(friends);
@@ -111,6 +113,24 @@ const StatsView: React.FC<StatsViewProps> = ({ friends }) => {
       {/* Overview Mode */}
       {viewMode === 'overview' && (
         <>
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <h3 className="text-sm font-bold text-slate-700 mb-2">Last 7 Days Activity</h3>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="bg-white rounded-lg p-2 border border-slate-100">
+                <p className="text-slate-500">Contacts Logged</p>
+                <p className="font-black text-slate-800 text-lg">{analyticsSummary.CONTACT_LOGGED}</p>
+              </div>
+              <div className="bg-white rounded-lg p-2 border border-slate-100">
+                <p className="text-slate-500">Meetings Closed</p>
+                <p className="font-black text-slate-800 text-lg">{analyticsSummary.MEETING_COMPLETED + analyticsSummary.MEETING_CLOSED}</p>
+              </div>
+              <div className="bg-white rounded-lg p-2 border border-slate-100">
+                <p className="text-slate-500">Friends Added</p>
+                <p className="font-black text-slate-800 text-lg">{analyticsSummary.FRIEND_ADDED}</p>
+              </div>
+            </div>
+          </div>
+
           {/* Header Stats */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">

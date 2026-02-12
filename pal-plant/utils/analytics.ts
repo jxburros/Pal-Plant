@@ -1,0 +1,71 @@
+export type AnalyticsEventType =
+  | 'FRIEND_ADDED'
+  | 'FRIEND_EDITED'
+  | 'FRIEND_DELETED'
+  | 'CONTACT_LOGGED'
+  | 'MEETING_CREATED'
+  | 'MEETING_SCHEDULED'
+  | 'MEETING_COMPLETED'
+  | 'MEETING_CLOSED'
+  | 'BULK_IMPORT';
+
+export interface AnalyticsEvent {
+  id: string;
+  type: AnalyticsEventType;
+  timestamp: string;
+  metadata?: Record<string, string | number | boolean | undefined>;
+}
+
+const EVENT_KEY = 'friendkeep_analytics_events';
+const EVENT_LIMIT = 500;
+
+const generateEventId = (): string => `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+export const getAnalyticsEvents = (): AnalyticsEvent[] => {
+  try {
+    const raw = localStorage.getItem(EVENT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+export const trackEvent = (type: AnalyticsEventType, metadata?: AnalyticsEvent['metadata']): void => {
+  const current = getAnalyticsEvents();
+  const next: AnalyticsEvent[] = [
+    {
+      id: generateEventId(),
+      type,
+      timestamp: new Date().toISOString(),
+      metadata
+    },
+    ...current
+  ].slice(0, EVENT_LIMIT);
+
+  localStorage.setItem(EVENT_KEY, JSON.stringify(next));
+};
+
+export const getAnalyticsSummary = (days = 7): Record<AnalyticsEventType, number> => {
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const summary = {
+    FRIEND_ADDED: 0,
+    FRIEND_EDITED: 0,
+    FRIEND_DELETED: 0,
+    CONTACT_LOGGED: 0,
+    MEETING_CREATED: 0,
+    MEETING_SCHEDULED: 0,
+    MEETING_COMPLETED: 0,
+    MEETING_CLOSED: 0,
+    BULK_IMPORT: 0
+  } satisfies Record<AnalyticsEventType, number>;
+
+  getAnalyticsEvents().forEach(event => {
+    if (new Date(event.timestamp).getTime() >= cutoff) {
+      summary[event.type] += 1;
+    }
+  });
+
+  return summary;
+};

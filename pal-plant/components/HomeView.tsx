@@ -7,10 +7,11 @@ interface HomeViewProps {
   friends: Friend[];
   meetingRequests: MeetingRequest[];
   settings: AppSettings;
-  onNavigate: (tab: any) => void;
+  onNavigateToFriend: (friendName: string) => void;
+  onNavigateToMeetings: () => void;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings, onNavigate }) => {
+const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings, onNavigateToFriend, onNavigateToMeetings }) => {
   const theme = THEMES[settings.theme];
   const score = calculateSocialGardenScore(friends, meetingRequests);
   const birthdays = getUpcomingBirthdays(friends);
@@ -78,12 +79,16 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
               </div>
               <div className="space-y-2">
                  {withering.slice(0, 3).map(f => (
-                   <div key={f.id} className="flex justify-between items-center bg-white/60 p-2 rounded-xl">
+                   <button
+                     key={f.id}
+                     onClick={() => onNavigateToFriend(f.name)}
+                     className="w-full flex justify-between items-center bg-white/60 p-2 rounded-xl hover:bg-white transition-colors"
+                   >
                       <span className="font-bold text-slate-700">{f.name}</span>
                       <span className="text-xs font-bold text-red-500">
                         {calculateTimeStatus(f.lastContacted, f.frequencyDays).daysLeft} days
                       </span>
-                   </div>
+                   </button>
                  ))}
               </div>
            </div>
@@ -99,7 +104,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
             ) : (
                <div className="space-y-2">
                  {birthdays.map(f => (
-                    <div key={f.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl transition-colors">
+                    <button key={f.id} onClick={() => onNavigateToFriend(f.name)} className="w-full text-left flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl transition-colors">
                        <div
                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                          style={{ backgroundColor: getAvatarColor(f.name) }}
@@ -114,7 +119,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
                           <p className={`font-bold text-sm ${theme.textMain}`}>{f.name}</p>
                           <p className="text-xs opacity-60">Born {f.birthday}</p>
                        </div>
-                    </div>
+                    </button>
                  ))}
                </div>
             )}
@@ -130,13 +135,13 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
             ) : (
                <div className="space-y-2">
                  {meetings.slice(0, 3).map(m => (
-                    <div key={m.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <button key={m.id} onClick={onNavigateToMeetings} className="w-full text-left p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition-colors">
                        <p className="font-bold text-sm text-slate-800">{m.name}</p>
                        <div className="flex justify-between mt-1 text-xs text-slate-500">
                           <span>{new Date(m.scheduledDate!).toLocaleDateString()}</span>
                           <span>{m.location}</span>
                        </div>
-                    </div>
+                    </button>
                  ))}
                </div>
             )}

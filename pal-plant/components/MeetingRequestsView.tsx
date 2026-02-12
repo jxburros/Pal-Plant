@@ -93,8 +93,12 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
     });
   };
 
-  const handleComplete = (req: MeetingRequest) => {
+  const handleMarkAttended = (req: MeetingRequest) => {
     onUpdateRequest({ ...req, status: 'COMPLETE', verified: true });
+  };
+
+  const handleCloseWithoutMeeting = (req: MeetingRequest) => {
+    onUpdateRequest({ ...req, status: 'COMPLETE', verified: false });
   };
 
   const activeRequests = requests.filter(r => r.status !== 'COMPLETE');
@@ -135,7 +139,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                    onClick={() => onUpdateRequest({ ...m, status: 'COMPLETE', verified: true })}
                    className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl"
                  >
-                   Yes, completed
+                   Yes, attended
                  </button>
                  <button
                    onClick={() => onUpdateRequest({ ...m, verified: false })}
@@ -228,7 +232,8 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
              theme={theme}
              onEdit={() => startEdit(req)}
              onSchedule={(date, loc) => handleSchedule(req, date, loc)}
-             onComplete={() => handleComplete(req)}
+             onMarkAttended={() => handleMarkAttended(req)}
+             onCloseWithoutMeeting={() => handleCloseWithoutMeeting(req)}
              onDelete={() => onDeleteRequest(req.id)}
            />
          ))}
@@ -243,9 +248,10 @@ const MeetingCard: React.FC<{
   theme: any;
   onEdit: () => void;
   onSchedule: (date: string, loc: string) => void;
-  onComplete: () => void;
+  onMarkAttended: () => void;
+  onCloseWithoutMeeting: () => void;
   onDelete: () => void;
-}> = ({ req, theme, onEdit, onSchedule, onComplete, onDelete }) => {
+}> = ({ req, theme, onEdit, onSchedule, onMarkAttended, onCloseWithoutMeeting, onDelete }) => {
   const [isScheduling, setIsScheduling] = useState(false);
   const [schedDate, setSchedDate] = useState(req.scheduledDate || '');
   const [schedLoc, setSchedLoc] = useState(req.location || '');
@@ -371,18 +377,18 @@ const MeetingCard: React.FC<{
            {req.status === 'SCHEDULED' && (
              confirmComplete ? (
                <div className="col-span-1 flex gap-1">
-                 <button onClick={() => { onComplete(); setConfirmComplete(false); }} className="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-xs font-bold">Yes</button>
+                 <button onClick={() => { onMarkAttended(); setConfirmComplete(false); }} className="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-xs font-bold">Yes</button>
                  <button onClick={() => setConfirmComplete(false)} className="flex-1 bg-slate-200 text-slate-600 py-2.5 rounded-xl text-xs font-bold">No</button>
                </div>
              ) : (
                <button onClick={() => setConfirmComplete(true)} className="col-span-1 bg-green-50 text-green-600 hover:bg-green-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
-                 Complete
+                 Mark Attended
                </button>
              )
            )}
            {req.status === 'REQUESTED' && (
-              <button onClick={onComplete} className="col-span-1 bg-green-50 text-green-600 hover:bg-green-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
-                Done
+              <button onClick={onCloseWithoutMeeting} className="col-span-1 bg-amber-50 text-amber-700 hover:bg-amber-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
+                Close Request
               </button>
            )}
 
