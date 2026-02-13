@@ -37,5 +37,17 @@
 
     <!-- Permissions -->
 
+    <!-- Required for network access (calendar integration, etc.) -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Required for notifications on Android 13+ (API 33+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Optional: Uncomment if adding contact sync feature -->
+    <!-- <uses-permission android:name="android.permission.READ_CONTACTS" /> -->
+    <!-- <uses-permission android:name="android.permission.WRITE_CONTACTS" /> -->
+
+    <!-- Optional: Uncomment if adding photo capture feature -->
+    <!-- <uses-permission android:name="android.permission.CAMERA" /> -->
+    <!-- <uses-feature android:name="android.hardware.camera" android:required="false" /> -->
 </manifest>
