@@ -33,14 +33,22 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **CSV Import** – Import contacts from spreadsheets or other apps
 - **Duplicate Detection** – Automatically identifies potential duplicates
 
+### 💾 Data Management
+- **Backup Data** – Export a full JSON backup of friends, meetings, categories, and settings
+- **Restore Data** – Restore from a previously exported JSON backup
+
 ### 🎨 Themes & Accessibility
 - **6 Color Themes** – Plant, Midnight, Forest, Ocean, Sunset, Berry
 - **Text Size Options** – Normal, Large, Extra Large
 - **High Contrast Mode** – Improved visibility
 - **Reduced Motion** – Disable animations
 
+### 🔔 Reminders
+- **Push Notifications** – Browser notifications for overdue contacts and upcoming scheduled meetings
+- **Email Reminders** – Visible in settings as a planned feature (not delivered yet)
+
 ### ⌨️ Keyboard Shortcuts
-- Navigate quickly with keyboard shortcuts for power users
+- `H` Home, `G` Garden, `M` Meetings, `N` New Friend, `S` Settings, `?` Shortcuts, `Esc` Close dialog
 
 ## 🛠️ Tech Stack
 
@@ -132,6 +140,7 @@ Your **Social Garden Score** is calculated based on:
 - Individual friend scores (based on interaction timing and consistency)
 - Verified completed meetings (+5 points each)
 - Stale meeting requests (−2 points if pending > 14 days)
+- Clamped to a final score between 0 and 100
 
 ### Interaction Scoring
 
@@ -141,7 +150,7 @@ Your **Social Garden Score** is calculated based on:
 | Regular contact (normal) | +5 | When 50-80% time remaining |
 | Regular contact (too early) | −2 | When >80% time remaining |
 | Deep connection | +15 | Also grants +12 hours to timer |
-| Quick touch | +2 | Limited to 1 per 2 cycles |
+| Quick touch | +2 | Adds a small timer extension and is limited to 1 per 2 cycles |
 | Overdue contact | −5/day | Up to −30 maximum |
 
 ## 📁 Project Structure

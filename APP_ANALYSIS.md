@@ -36,9 +36,9 @@ The app is fully client-side and stores all data in `localStorage`.
 
 ### Limitations and quality concerns
 
-1. **No real reminder delivery despite reminder settings**
-   - Reminder toggles exist in settings but no scheduling/notification implementation was found.
-   - This can create expectation mismatch: users think reminders are active when they are not.
+1. **Reminder implementation is partial (push works, email is planned)**
+   - Browser push notifications are implemented for overdue contacts and upcoming scheduled meetings.
+   - Email reminders are still labeled as planned and are not delivered yet.
 
 2. **All data is browser-local only**
    - Good for privacy and simplicity, but limits cross-device continuity unless users manually export/import.
@@ -51,8 +51,8 @@ The app is fully client-side and stores all data in `localStorage`.
    - Build output reports a large JS chunk (>500 kB), suggesting room for lazy-loading heavy views/charts.
 
 5. **Minor UX rough edges**
-   - Home view receives `onNavigate` prop but does not use it; cards could be more actionable.
-   - Meeting action labels (“Done”, “Complete”) can be semantically ambiguous depending on status.
+   - Quick touch and cadence-shortening rules are still relatively advanced for new users.
+   - Meeting lifecycle clarity can continue improving around reschedule/close outcomes.
 
 ## 3) Usefulness assessment
 
@@ -69,7 +69,7 @@ The app is fully client-side and stores all data in `localStorage`.
 
 **Where usefulness declines:**
 
-- Users expecting automatic reminders/push notifications.
+- Users expecting fully automated reminder channels (especially email delivery).
 - Users needing team sharing, sync, or integrations (calendar two-way sync, messaging apps, etc.).
 
 Overall usefulness is **high for individual, privacy-first users**, and **moderate** for users expecting automation and multi-device continuity out of the box.
@@ -130,26 +130,25 @@ Overall usefulness is **high for individual, privacy-first users**, and **modera
 
 ## P0 (highest impact)
 
-1. **Implement real reminders or relabel current settings**
-   - Either wire browser notifications + scheduled checks, or rename settings to indicate “planned feature”.
-   - Add explicit status text (“Reminders unavailable in this version”) until implemented.
+1. **Complete the reminder channel roadmap**
+   - Keep existing push reminders and add real email delivery, or hide email toggles until implemented.
+   - Continue making reminder behavior explicit in settings copy.
 
 2. **Clarify scoring and timer mechanics in-context**
    - Add a small “Why score changed?” expandable section after each interaction.
    - Explain quick touch token reset and early-contact cadence shortening in UI microcopy.
 
-3. **Add actionable navigation from Home cards**
-   - Make “Withering Plants”, “Upcoming Birthdays”, and “Upcoming Meetings” rows clickable to open Garden/Meetings with filters.
+3. **Deepen actionability from Home insights**
+   - Continue improving shortcuts from overview cards into filtered Garden/Meetings workflows.
 
 ## P1 (important)
 
 4. **Improve meeting action semantics**
-   - Replace “Done” with state-specific verbs (e.g., “Mark Complete”, “Archive Request”).
-   - Separate “attended” vs “closed without meeting” outcomes.
+   - Continue refining state-specific verbs and messaging around attendance vs closure outcomes.
 
-5. **Performance optimization via code splitting**
-   - Lazy-load non-critical views (Stats + Recharts, onboarding modal, import modal).
-   - This should reduce first-load JS cost.
+5. **Continue performance optimization**
+   - The app already lazy-loads Stats, onboarding, and bulk import views.
+   - Further splitting or chart-level optimization could reduce first-load cost even more.
 
 6. **Add lightweight event instrumentation (local analytics)**
    - Track key events locally (contacted, skipped, overdue trend) to power richer insights without cloud dependency.
@@ -168,4 +167,4 @@ Overall usefulness is **high for individual, privacy-first users**, and **modera
 
 ## 6) Bottom line
 
-Pal-Plant is a thoughtfully designed local-first relationship nurturer with genuinely useful daily workflow mechanics. Its largest gap is automation credibility: reminder controls imply functionality that isn’t actually delivered. Addressing reminder implementation/communication plus a few UX clarity improvements would materially increase trust and long-term retention.
+Pal-Plant is a thoughtfully designed local-first relationship nurturer with useful daily workflow mechanics. Core product loops (contacts, requests, stats, import/export, onboarding, shortcuts) are implemented and cohesive. The most visible remaining gap is finishing the email reminder path so all reminder controls map to fully delivered behavior.
