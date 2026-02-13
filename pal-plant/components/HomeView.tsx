@@ -25,6 +25,32 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
     return calculateTimeStatus(a.lastContacted, a.frequencyDays).daysLeft - calculateTimeStatus(b.lastContacted, b.frequencyDays).daysLeft;
   });
 
+
+  const staleRequests = meetingRequests.filter(m => m.status === 'REQUESTED').sort((a, b) =>
+    new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime()
+  );
+
+  const suggestedOutreach = [
+    ...withering.slice(0, 2).map(f => ({
+      id: `friend_${f.id}`,
+      label: `Check in with ${f.name}`,
+      detail: `${Math.max(0, Math.abs(calculateTimeStatus(f.lastContacted, f.frequencyDays).daysLeft))} day urgency`,
+      action: () => onNavigateToFriend(f.name)
+    })),
+    ...birthdays.slice(0, 1).map(f => ({
+      id: `birthday_${f.id}`,
+      label: `Birthday coming up: ${f.name}`,
+      detail: `Prep a message this week`,
+      action: () => onNavigateToFriend(f.name)
+    })),
+    ...staleRequests.slice(0, 1).map(m => ({
+      id: `meeting_${m.id}`,
+      label: `Follow up meeting request for ${m.name}`,
+      detail: `${Math.floor((Date.now() - new Date(m.dateAdded).getTime()) / (1000 * 60 * 60 * 24))} days waiting`,
+      action: onNavigateToMeetings
+    }))
+  ].slice(0, 4);
+
   // Featured friend (pick one with a photo, or first friend)
   const friendsWithPhotos = friends.filter(f => f.photo);
   const randomFriend = friendsWithPhotos.length > 0
@@ -49,6 +75,26 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
           </div>
         </div>
         <Leaf className="absolute -bottom-8 -right-8 text-emerald-200 opacity-50 rotate-12" size={140} />
+      </div>
+
+
+      {/* Suggested Outreach Queue */}
+      <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`}>
+        <div className={`flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
+          <Sprout size={16} /> Today's Suggested Outreach
+        </div>
+        {suggestedOutreach.length === 0 ? (
+          <p className="text-sm opacity-50 italic">You're all caught up for now.</p>
+        ) : (
+          <div className="space-y-2">
+            {suggestedOutreach.map(item => (
+              <button key={item.id} onClick={item.action} className="w-full text-left p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition-colors">
+                <p className="text-sm font-bold text-slate-800">{item.label}</p>
+                <p className="text-xs text-slate-500 mt-1">{item.detail}</p>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Featured Photo (only if user has uploaded photos) */}

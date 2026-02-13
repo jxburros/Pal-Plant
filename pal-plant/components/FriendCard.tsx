@@ -26,6 +26,10 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
   const canQuickTouch = (friend.quickTouchesAvailable || 0) > 0;
   const lastLog = friend.logs[0];
 
+  const previousLog = friend.logs[1];
+  const cadenceChanged = !!(lastLog && previousLog && lastLog.daysWaitGoal !== previousLog.daysWaitGoal);
+  const cyclesToNextToken = Math.max(0, 2 - (friend.cyclesSinceLastQuickTouch || 0));
+
   const isDeepCooldown = friend.lastDeepConnection
     ? (new Date().getTime() - new Date(friend.lastDeepConnection).getTime()) < (24 * 60 * 60 * 1000)
     : false;
@@ -121,9 +125,21 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
       </button>
 
       {showMechanics && (
-        <div className="mt-2 p-3 rounded-xl border border-slate-100 bg-white text-xs text-slate-600 space-y-1">
+        <div className="mt-2 p-3 rounded-xl border border-slate-100 bg-white text-xs text-slate-600 space-y-2">
           <p>{scoreReason}</p>
-          <p>Quick touch tokens: <span className="font-semibold">{friend.quickTouchesAvailable || 0}</span> available now.</p>
+          <p>
+            Last score delta: <span className="font-semibold">{lastLog?.scoreDelta ?? 0}</span>
+            {lastLog ? ` (${new Date(lastLog.date).toLocaleString()})` : ''}
+          </p>
+          <p>
+            Quick touch tokens: <span className="font-semibold">{friend.quickTouchesAvailable || 0}</span>
+            {friend.quickTouchesAvailable > 0 ? ' available now.' : ` (next token in ${cyclesToNextToken} regular/deep cycle(s)).`}
+          </p>
+          {cadenceChanged && (
+            <p>
+              Cadence update: <span className="font-semibold">{previousLog?.daysWaitGoal}d → {lastLog?.daysWaitGoal}d</span> from recent timing behavior.
+            </p>
+          )}
         </div>
       )}
 

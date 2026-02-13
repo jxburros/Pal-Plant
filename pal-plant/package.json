@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "cap:sync": "vite build && cap sync",
-    "cap:open:android": "cap open android"
+    "cap:open:android": "cap open android",
+    "test:rules": "rm -rf .rule-test-dist && tsc -p tsconfig.rules.json && echo '{\"type\":\"commonjs\"}' > .rule-test-dist/package.json && node .rule-test-dist/tests/rule-invariants.js"
   },
   "dependencies": {
     "@capacitor/core": "^8.1.0",

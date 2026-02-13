@@ -132,26 +132,27 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
            {pastDueMeetings.map(m => (
              <div key={m.id} className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl">
                <p className="text-sm font-bold text-yellow-800 mb-2">
-                 Did you attend your meeting with {m.name} on {new Date(m.scheduledDate!).toLocaleDateString()}?
+                 Confirm outcome for your meeting with {m.name} on {new Date(m.scheduledDate!).toLocaleDateString()}.
                </p>
+               <p className="text-[11px] text-yellow-700 mb-2">Attended meetings raise your score. Closing without attendance avoids false positives.</p>
                <div className="flex gap-2">
                  <button
                    onClick={() => onUpdateRequest({ ...m, status: 'COMPLETE', verified: true })}
                    className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl"
                  >
-                   Yes, attended
+                   Mark attended (+5 garden score)
                  </button>
                  <button
-                   onClick={() => onUpdateRequest({ ...m, verified: false })}
+                   onClick={() => onUpdateRequest({ ...m, status: 'REQUESTED', verified: false, scheduledDate: undefined, location: undefined })}
                    className="px-4 py-2 bg-blue-100 text-blue-700 text-xs font-bold rounded-xl"
                  >
-                   Reschedule
+                   Reschedule meeting
                  </button>
                  <button
                    onClick={() => onDeleteRequest(m.id)}
                    className="px-4 py-2 bg-red-100 text-red-600 text-xs font-bold rounded-xl"
                  >
-                   Delete
+                   Delete request
                  </button>
                </div>
              </div>
@@ -377,6 +378,11 @@ const MeetingCard: React.FC<{
            </div>
         )}
 
+
+        <p className="mt-3 text-[11px] text-slate-500">
+          Score impact: <span className="font-semibold text-green-600">attended +5</span> · <span className="font-semibold text-amber-700">closed without meeting +0</span>
+        </p>
+
         {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-2 mt-4">
            {req.status === 'REQUESTED' && (
@@ -392,13 +398,13 @@ const MeetingCard: React.FC<{
                </div>
              ) : (
                <button onClick={() => setConfirmComplete(true)} className="col-span-1 bg-green-50 text-green-600 hover:bg-green-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
-                 Mark Attended
+                 Mark attended (+5)
                </button>
              )
            )}
            {req.status === 'REQUESTED' && (
               <button onClick={onCloseWithoutMeeting} className="col-span-1 bg-amber-50 text-amber-700 hover:bg-amber-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
-                Close Request
+                Close without meeting
               </button>
            )}
 
@@ -413,7 +419,7 @@ const MeetingCard: React.FC<{
              </div>
            ) : (
              <button onClick={() => setConfirmDelete(true)} className="col-span-1 bg-red-50 text-red-500 hover:bg-red-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
-               Delete
+               Delete request
              </button>
            )}
         </div>
