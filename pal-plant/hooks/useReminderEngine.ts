@@ -1,4 +1,7 @@
 import { useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { Friend, MeetingRequest } from '../types';
 import { calculateTimeStatus } from '../utils/helpers';
 
@@ -19,16 +22,82 @@ interface ReminderEngineArgs {
 const BACKUP_KEY = 'friendkeep_last_backup_at';
 const BACKUP_REMINDER_KEY = 'friendkeep_last_backup_reminder_day';
 
-export const useReminderEngine = ({ friends, meetingRequests, reminders, onBackupReminder }: ReminderEngineArgs) => {
-  useEffect(() => {
-    if (!reminders.pushEnabled || !('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
+const isNative = () => Capacitor.isNativePlatform();
+
+// Helper to send notifications using the appropriate API
+const sendNotification = async (title: string, body: string) => {
+  if (isNative()) {
+    // Use native local notifications for Android/iOS
+    try {
+      // Create notification channel for Android
+      if (Capacitor.getPlatform() === 'android') {
+        await LocalNotifications.createChannel({
+          id: 'pal-plant-reminders',
+          name: 'Reminders',
+          description: 'Pal Plant reminders for contacts and meetings',
+          importance: 4,
+          visibility: 1,
+        });
+      }
+      
+      // Schedule a local notification
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title,
+            body,
+            id: Date.now(),
+            schedule: { at: new Date(Date.now() + 1000) }, // Send in 1 second
+            channelId: 'pal-plant-reminders',
+          },
+        ],
+      });
+    } catch (error) {
+      console.error('Failed to send native notification:', error);
     }
+  } else {
+    // Use web notifications
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body });
+    }
+  }
+};
+
+export const useReminderEngine = ({ friends, meetingRequests, reminders, onBackupReminder }: ReminderEngineArgs) => {
+  // Request permissions on mount
+  useEffect(() => {
+    if (!reminders.pushEnabled) return;
+    
+    const requestPermissions = async () => {
+      if (isNative()) {
+        // Request native push and local notification permissions
+        try {
+          const pushResult = await PushNotifications.checkPermissions();
+          if (pushResult.receive === 'prompt') {
+            await PushNotifications.requestPermissions();
+          }
+          
+          const localResult = await LocalNotifications.checkPermissions();
+          if (localResult.display === 'prompt') {
+            await LocalNotifications.requestPermissions();
+          }
+        } catch (error) {
+          console.error('Failed to request native permissions:', error);
+        }
+      } else {
+        // Request web notification permissions
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      }
+    };
+    
+    requestPermissions();
   }, [reminders.pushEnabled]);
 
+  // Check and send notifications periodically
   useEffect(() => {
-    if (!reminders.pushEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!reminders.pushEnabled) return;
 
     const REMINDER_KEY = 'friendkeep_last_reminders';
     const getReminderMap = (): Record<string, string> => {
@@ -39,36 +108,40 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
       }
     };
 
-    const maybeNotify = () => {
+    const maybeNotify = async () => {
       const now = new Date();
       const reminderMap = getReminderMap();
 
-      friends.forEach(friend => {
+      // Check for overdue friends
+      for (const friend of friends) {
         const status = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
         if (status.daysLeft <= 0) {
           const key = `friend_${friend.id}_${now.toISOString().split('T')[0]}`;
           if (!reminderMap[key]) {
-            new Notification(`Pal Plant reminder: ${friend.name}`, {
-              body: `${friend.name} is overdue for a check-in.`,
-            });
+            await sendNotification(
+              `Pal Plant reminder: ${friend.name}`,
+              `${friend.name} is overdue for a check-in.`
+            );
             reminderMap[key] = now.toISOString();
           }
         }
-      });
+      }
 
-      meetingRequests.forEach(req => {
-        if (req.status !== 'SCHEDULED' || !req.scheduledDate) return;
+      // Check for upcoming meetings
+      for (const req of meetingRequests) {
+        if (req.status !== 'SCHEDULED' || !req.scheduledDate) continue;
         const diffHours = (new Date(req.scheduledDate).getTime() - now.getTime()) / (1000 * 60 * 60);
         if (diffHours > 0 && diffHours <= reminders.reminderHoursBefore) {
           const key = `meeting_${req.id}_${new Date(req.scheduledDate).toISOString()}`;
           if (!reminderMap[key]) {
-            new Notification(`Upcoming meeting with ${req.name}`, {
-              body: `Starts in ${Math.max(1, Math.round(diffHours))} hour(s).`,
-            });
+            await sendNotification(
+              `Upcoming meeting with ${req.name}`,
+              `Starts in ${Math.max(1, Math.round(diffHours))} hour(s).`
+            );
             reminderMap[key] = now.toISOString();
           }
         }
-      });
+      }
 
       localStorage.setItem(REMINDER_KEY, JSON.stringify(reminderMap));
     };

@@ -9,10 +9,13 @@
     "preview": "vite preview",
     "cap:sync": "vite build && cap sync",
     "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios",
     "test:rules": "rm -rf .rule-test-dist && tsc -p tsconfig.rules.json && echo '{\"type\":\"commonjs\"}' > .rule-test-dist/package.json && node .rule-test-dist/tests/rule-invariants.js"
   },
   "dependencies": {
     "@capacitor/core": "^8.1.0",
+    "@capacitor/local-notifications": "^8.0.1",
+    "@capacitor/push-notifications": "^8.0.1",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -21,6 +24,7 @@
   "devDependencies": {
     "@capacitor/android": "^8.1.0",
     "@capacitor/cli": "^8.1.0",
+    "@capacitor/ios": "^8.1.0",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
