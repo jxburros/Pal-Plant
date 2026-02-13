@@ -44,7 +44,7 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **Reduced Motion** – Disable animations
 
 ### 🔔 Reminders
-- **Push Notifications** – Browser notifications for overdue contacts and upcoming scheduled meetings
+- **Push Notifications** – Browser notifications for web app, native push notifications for Android/iOS apps for overdue contacts and upcoming scheduled meetings
 
 ### ⌨️ Keyboard Shortcuts
 - `H` Home, `G` Garden, `M` Meetings, `N` New Friend, `S` Settings, `?` Shortcuts, `Esc` Close dialog
@@ -100,7 +100,7 @@ npm run preview
 
 ### Build for Android
 
-This project uses [Capacitor](https://capacitorjs.com/) to package the web app as a native Android application.
+This project uses [Capacitor](https://capacitorjs.com/) to package the web app as a native Android application with support for native push notifications.
 
 **Prerequisites:**
 - [Android Studio](https://developer.android.com/studio) installed
@@ -118,6 +118,25 @@ This project uses [Capacitor](https://capacitorjs.com/) to package the web app a
    ```
 
 3. In Android Studio, click **Run** to launch on an emulator or connected device, or use **Build > Build APK(s)** to generate an APK.
+
+### Build for iOS
+
+**Prerequisites:**
+- macOS with [Xcode](https://developer.apple.com/xcode/) installed
+
+**Steps:**
+
+1. Build the web app and sync with iOS:
+   ```bash
+   npm run cap:sync
+   ```
+
+2. Open the iOS project in Xcode:
+   ```bash
+   npm run cap:open:ios
+   ```
+
+3. In Xcode, select a target device or simulator and click **Run** to launch the app.
 
 ## 📖 How It Works
 
