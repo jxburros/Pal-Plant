@@ -21,6 +21,7 @@ interface ReminderEngineArgs {
 
 const BACKUP_KEY = 'friendkeep_last_backup_at';
 const BACKUP_REMINDER_KEY = 'friendkeep_last_backup_reminder_day';
+const NOTIFICATION_DELAY_MS = 1000; // Delay before showing notification (1 second)
 
 const isNative = () => Capacitor.isNativePlatform();
 
@@ -47,7 +48,7 @@ const sendNotification = async (title: string, body: string) => {
             title,
             body,
             id: Date.now(),
-            schedule: { at: new Date(Date.now() + 1000) }, // Send in 1 second
+            schedule: { at: new Date(Date.now() + NOTIFICATION_DELAY_MS) },
             channelId: 'pal-plant-reminders',
           },
         ],
