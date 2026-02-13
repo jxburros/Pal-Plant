@@ -336,7 +336,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             )}
 
-            <p className="text-[10px] text-slate-400 mt-2 text-center">Data is stored locally on your device. Backup regularly to avoid loss.</p>
+            {/* Data Persistence Warning */}
+            <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <div className="flex items-start gap-2">
+                <Database size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-amber-800 leading-relaxed">
+                  <p className="font-bold mb-1">⚠️ Important: Your Data Lives Here</p>
+                  <p className="mb-2">All contacts, meetings, and settings are stored locally on this device. Your data will be lost if you:</p>
+                  <ul className="list-disc list-inside space-y-0.5 ml-1">
+                    <li>Clear app data/cache</li>
+                    <li>Uninstall the app</li>
+                    <li>Reset your phone</li>
+                  </ul>
+                  <p className="mt-2 font-semibold">✓ Export backups regularly to stay safe!</p>
+                </div>
+              </div>
+            </div>
             <p className="text-[11px] text-slate-500 mt-2 text-center">Restore tip: tap "Restore Data", choose your latest backup JSON, and the app reloads automatically.</p>
           </section>
 

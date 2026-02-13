@@ -1,5 +1,9 @@
 /* Pal Plant - Global Styles */
-/* Tailwind CSS is loaded via CDN in index.html */
+
+/* Tailwind CSS base, components, and utilities */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Safe area insets for native Android/iOS status bar and navigation bar */
 :root {
