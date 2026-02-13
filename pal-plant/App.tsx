@@ -71,7 +71,6 @@ const App: React.FC = () => {
       reducedMotion: false,
       reminders: {
         pushEnabled: false,
-        emailEnabled: false,
         reminderHoursBefore: 24
       },
       hasSeenOnboarding: false

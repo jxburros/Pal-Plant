@@ -92,6 +92,24 @@ export const downloadCalendarEvent = (meeting: MeetingRequest): void => {
   URL.revokeObjectURL(url);
 };
 
+export const getGoogleCalendarUrl = (meeting: MeetingRequest): string => {
+  if (!meeting.scheduledDate) return '';
+
+  const startDate = new Date(meeting.scheduledDate);
+  const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+  const formatDate = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `Meeting with ${meeting.name}`,
+    dates: `${formatDate(startDate)}/${formatDate(endDate)}`,
+    details: meeting.notes || 'Meeting scheduled via Pal Plant',
+    location: meeting.location || 'TBD'
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+};
+
 // ─── Streaks ──────────────────────────────────────────────────────
 
 /**

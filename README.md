@@ -26,7 +26,7 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 ### 📅 Meeting Requests
 - **Track Pending Requests** – Monitor outreach attempts
 - **Schedule Meetings** – Set dates and locations
-- **Calendar Export** – Download `.ics` files for calendar apps
+- **Calendar Support** – Add scheduled meetings to Google Calendar or download `.ics` files
 - **Verification** – Confirm attendance to boost your score
 
 ### 📥 Bulk Import
@@ -45,7 +45,6 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 
 ### 🔔 Reminders
 - **Push Notifications** – Browser notifications for overdue contacts and upcoming scheduled meetings
-- **Email Reminders** – Visible in settings as a planned feature (not delivered yet)
 
 ### ⌨️ Keyboard Shortcuts
 - `H` Home, `G` Garden, `M` Meetings, `N` New Friend, `S` Settings, `?` Shortcuts, `Esc` Close dialog
