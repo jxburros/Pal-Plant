@@ -64,9 +64,7 @@ export type ThemeId = 'plant' | 'midnight' | 'forest' | 'ocean' | 'sunset' | 'be
 
 export interface ReminderSettings {
   pushEnabled: boolean;
-  emailEnabled: boolean;
   reminderHoursBefore: number;
-  email?: string;
 }
 
 export interface AppSettings {

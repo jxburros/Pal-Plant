@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Calendar, UserPlus, X, Check, MapPin, Briefcase, Mail, Phone, Upload, Clock, Download, Users } from 'lucide-react';
 import { MeetingRequest } from '../types';
-import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent } from '../utils/helpers';
+import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent, getGoogleCalendarUrl } from '../utils/helpers';
 import { AppSettings } from '../types';
 
 interface MeetingRequestsViewProps {
@@ -339,13 +339,23 @@ const MeetingCard: React.FC<{
                <MapPin size={16} className="text-red-500" />
                <span>{req.location}</span>
              </div>
-             <div className="flex gap-2 mt-2">
-               <button onClick={() => setIsScheduling(true)} className="text-[10px] text-blue-500 font-bold uppercase">Change</button>
-               <span className="text-slate-300">|</span>
-               <button
-                 onClick={() => downloadCalendarEvent(req)}
-                 className="text-[10px] text-purple-500 font-bold uppercase flex items-center gap-1"
-               >
+              <div className="flex gap-2 mt-2">
+                <button onClick={() => setIsScheduling(true)} className="text-[10px] text-blue-500 font-bold uppercase">Change</button>
+                <span className="text-slate-300">|</span>
+                <a
+                  href={getGoogleCalendarUrl(req)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-emerald-600 font-bold uppercase flex items-center gap-1"
+                >
+                  <Calendar size={10} />
+                  Add to Google
+                </a>
+                <span className="text-slate-300">|</span>
+                <button
+                  onClick={() => downloadCalendarEvent(req)}
+                  className="text-[10px] text-purple-500 font-bold uppercase flex items-center gap-1"
+                >
                  <Download size={10} />
                  Export to Calendar
                </button>

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Users, Mail, Clock, Keyboard, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Users, Clock, Keyboard, HelpCircle, CheckCircle2 } from 'lucide-react';
 import { AppSettings, ThemeId } from '../types';
 import { THEMES } from '../utils/helpers';
 
@@ -90,6 +90,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     });
   };
 
+  const notificationsSupported = typeof Notification !== 'undefined';
+  const notificationPermission = notificationsSupported ? Notification.permission : 'denied';
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -136,7 +139,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <button
                   onClick={() => {
-                    if (!settings.reminders?.pushEnabled && 'Notification' in window) {
+                    if (!notificationsSupported) return;
+                    if (!settings.reminders?.pushEnabled) {
                       Notification.requestPermission().then(permission => {
                         if (permission === 'granted') {
                           updateReminders({ pushEnabled: true });
@@ -146,31 +150,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       updateReminders({ pushEnabled: !settings.reminders?.pushEnabled });
                     }
                   }}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.reminders?.pushEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                  disabled={!notificationsSupported}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.reminders?.pushEnabled ? 'bg-emerald-500' : 'bg-slate-200'} disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.reminders?.pushEnabled ? 'left-7' : 'left-1'}`} />
                 </button>
               </div>
 
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <Mail size={20} className="text-slate-400" />
-                  <span className="font-medium text-slate-700">Email Reminders (planned)</span>
-                </div>
-                <button
-                  onClick={() => updateReminders({ emailEnabled: !settings.reminders?.emailEnabled })}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.reminders?.emailEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
-                >
-                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.reminders?.emailEnabled ? 'left-7' : 'left-1'}`} />
-                </button>
-              </div>
-
-
               <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                Push reminders are active through browser notifications when permission is granted.
-                Email reminders are not yet delivered and are shown as a planned feature.
+                {!notificationsSupported
+                  ? 'Push notifications are not supported on this device/browser.'
+                  : notificationPermission === 'denied'
+                  ? 'Push notifications are blocked. Re-enable notification permission in your browser settings.'
+                  : 'Push reminders are active through browser notifications when permission is granted.'}
               </p>
-              {(settings.reminders?.pushEnabled || settings.reminders?.emailEnabled) && (
+              {settings.reminders?.pushEnabled && (
                 <div className="bg-slate-50 p-3 rounded-xl">
                   <div className="flex items-center gap-2 mb-2">
                     <Clock size={16} className="text-slate-400" />
