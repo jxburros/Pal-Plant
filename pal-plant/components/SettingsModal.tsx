@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Users, Clock, Keyboard, HelpCircle, CheckCircle2 } from 'lucide-react';
 import { AppSettings, ThemeId } from '../types';
 import { THEMES } from '../utils/helpers';
+import { markBackupExportedNow } from '../hooks/useReminderEngine';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    markBackupExportedNow();
   };
 
   const handleImportClick = () => {
@@ -182,6 +184,37 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </select>
                 </div>
               )}
+
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-slate-700">Backup reminders</p>
+                    <p className="text-xs text-slate-500">Get nudges to export a JSON backup regularly.</p>
+                  </div>
+                  <button
+                    onClick={() => updateReminders({ backupReminderEnabled: !settings.reminders?.backupReminderEnabled })}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${settings.reminders?.backupReminderEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                  >
+                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.reminders?.backupReminderEnabled ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
+                {settings.reminders?.backupReminderEnabled && (
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Remind every</label>
+                    <select
+                      value={settings.reminders?.backupReminderDays || 7}
+                      onChange={(e) => updateReminders({ backupReminderDays: Number(e.target.value) })}
+                      className="w-full mt-2 p-2 rounded-lg border border-slate-200 text-sm bg-white"
+                    >
+                      <option value={3}>3 days</option>
+                      <option value={7}>7 days</option>
+                      <option value={14}>14 days</option>
+                      <option value={30}>30 days</option>
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
           </section>
 
@@ -304,6 +337,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
 
             <p className="text-[10px] text-slate-400 mt-2 text-center">Data is stored locally on your device. Backup regularly to avoid loss.</p>
+            <p className="text-[11px] text-slate-500 mt-2 text-center">Restore tip: tap "Restore Data", choose your latest backup JSON, and the app reloads automatically.</p>
           </section>
 
           {/* Help */}

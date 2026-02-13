@@ -7,8 +7,10 @@ import MeetingRequestsView from './components/MeetingRequestsView';
 import SettingsModal from './components/SettingsModal';
 import HomeView from './components/HomeView';
 import { useKeyboardShortcuts } from './components/KeyboardShortcuts';
-import { generateId, calculateTimeStatus, THEMES, calculateInteractionScore, calculateIndividualFriendScore } from './utils/helpers';
+import { generateId, calculateTimeStatus, THEMES } from './utils/helpers';
 import { trackEvent } from './utils/analytics';
+import { processContactAction, removeFriendLog } from './utils/friendEngine';
+import { useReminderEngine } from './hooks/useReminderEngine';
 
 const StatsView = lazy(() => import('./components/StatsView'));
 const OnboardingTooltips = lazy(() => import('./components/OnboardingTooltips'));
@@ -71,14 +73,23 @@ const App: React.FC = () => {
       reducedMotion: false,
       reminders: {
         pushEnabled: false,
-        reminderHoursBefore: 24
+        reminderHoursBefore: 24,
+        backupReminderEnabled: true,
+        backupReminderDays: 7
       },
       hasSeenOnboarding: false
     };
     if (saved) {
       const parsed = JSON.parse(saved);
       const { accountAccess, ...cleanParsed } = parsed;
-      return { ...defaults, ...cleanParsed };
+      return {
+        ...defaults,
+        ...cleanParsed,
+        reminders: {
+          ...defaults.reminders,
+          ...(cleanParsed.reminders || {})
+        }
+      };
     }
     return defaults;
   });
@@ -119,63 +130,13 @@ const App: React.FC = () => {
     }
   }, [settings.hasSeenOnboarding]);
 
-  useEffect(() => {
-    if (!settings.reminders.pushEnabled || !('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, [settings.reminders.pushEnabled]);
 
-  useEffect(() => {
-    if (!settings.reminders.pushEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
-
-    const REMINDER_KEY = 'friendkeep_last_reminders';
-    const getReminderMap = (): Record<string, string> => {
-      try {
-        return JSON.parse(localStorage.getItem(REMINDER_KEY) || '{}');
-      } catch {
-        return {};
-      }
-    };
-
-    const maybeNotify = () => {
-      const now = new Date();
-      const reminderMap = getReminderMap();
-
-      friends.forEach(friend => {
-        const status = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
-        if (status.daysLeft <= 0) {
-          const key = `friend_${friend.id}_${now.toISOString().split('T')[0]}`;
-          if (!reminderMap[key]) {
-            new Notification(`Pal Plant reminder: ${friend.name}`, {
-              body: `${friend.name} is overdue for a check-in.`,
-            });
-            reminderMap[key] = now.toISOString();
-          }
-        }
-      });
-
-      meetingRequests.forEach(req => {
-        if (req.status !== 'SCHEDULED' || !req.scheduledDate) return;
-        const diffHours = (new Date(req.scheduledDate).getTime() - now.getTime()) / (1000 * 60 * 60);
-        if (diffHours > 0 && diffHours <= settings.reminders.reminderHoursBefore) {
-          const key = `meeting_${req.id}_${new Date(req.scheduledDate).toISOString()}`;
-          if (!reminderMap[key]) {
-            new Notification(`Upcoming meeting with ${req.name}`, {
-              body: `Starts in ${Math.max(1, Math.round(diffHours))} hour(s).`,
-            });
-            reminderMap[key] = now.toISOString();
-          }
-        }
-      });
-
-      localStorage.setItem(REMINDER_KEY, JSON.stringify(reminderMap));
-    };
-
-    maybeNotify();
-    const interval = setInterval(maybeNotify, 15 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [friends, meetingRequests, settings.reminders.pushEnabled, settings.reminders.reminderHoursBefore]);
+  useReminderEngine({
+    friends,
+    meetingRequests,
+    reminders: settings.reminders,
+    onBackupReminder: (message) => showToast(message, 'info')
+  });
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
@@ -221,94 +182,27 @@ const App: React.FC = () => {
     setFriends(prev => prev.map(f => {
       if (f.id !== id) return f;
 
-      const { percentageLeft, daysLeft } = calculateTimeStatus(f.lastContacted, f.frequencyDays);
-      const now = new Date();
+      const result = processContactAction(f, type, new Date());
 
-      if (type === 'QUICK') {
-        if ((f.quickTouchesAvailable || 0) <= 0) return f;
-
-        const newLastContacted = new Date(new Date(f.lastContacted).getTime() + (30 * 60 * 1000)).toISOString();
-        trackEvent('CONTACT_LOGGED', { friendId: f.id, type: 'QUICK' });
-        return {
-          ...f,
-          lastContacted: newLastContacted,
-          quickTouchesAvailable: f.quickTouchesAvailable - 1,
-          logs: [{
-            id: generateId(),
-            date: now.toISOString(),
-            type: 'QUICK',
-            daysWaitGoal: f.frequencyDays,
-            percentageRemaining: percentageLeft,
-            scoreDelta: 2
-          }, ...f.logs],
-          individualScore: Math.min(100, (f.individualScore || 50) + 2)
-        };
+      if (result.cadenceShortened) {
+        showToast(`${f.name}'s timer shortened to ${result.friend.frequencyDays} days (frequent contact detected).`, 'info');
       }
 
-      let updatedFrequencyDays = f.frequencyDays;
-      if (type === 'REGULAR' && percentageLeft > 80) {
-        const lastLog = f.logs[0];
-        if (lastLog && lastLog.percentageRemaining > 80) {
-          updatedFrequencyDays = Math.max(1, Math.floor(f.frequencyDays / 2));
-          showToast(`${f.name}'s timer shortened to ${updatedFrequencyDays} days (frequent contact detected).`, 'info');
-        }
-      }
+      if (result.friend === f) return f;
 
-      const daysOverdue = daysLeft < 0 ? Math.abs(daysLeft) : 0;
-      const scoreChange = calculateInteractionScore(type, percentageLeft, daysOverdue);
+      const metadata: Record<string, string | number | boolean | undefined> = { friendId: f.id, type };
+      const latestLog = result.friend.logs[0];
+      if (latestLog?.scoreDelta !== undefined) metadata.scoreChange = latestLog.scoreDelta;
+      trackEvent('CONTACT_LOGGED', metadata);
 
-      const newLogs: ContactLog[] = [{
-        id: generateId(),
-        date: now.toISOString(),
-        type,
-        daysWaitGoal: updatedFrequencyDays,
-        percentageRemaining: percentageLeft,
-        scoreDelta: scoreChange
-      }, ...f.logs];
-
-      const newScore = calculateIndividualFriendScore(newLogs);
-
-      let newLastDeep = f.lastDeepConnection;
-      let extraWaitTime = 0;
-
-      if (type === 'DEEP') {
-        newLastDeep = now.toISOString();
-        extraWaitTime = 12 * 60 * 60 * 1000;
-      }
-
-      let newCycles = (f.cyclesSinceLastQuickTouch || 0) + 1;
-      let newTokens = (f.quickTouchesAvailable || 0);
-      if (newCycles >= 2) {
-        newTokens = 1;
-        newCycles = 0;
-      }
-
-      trackEvent('CONTACT_LOGGED', { friendId: f.id, type, scoreChange });
-      return {
-        ...f,
-        frequencyDays: updatedFrequencyDays,
-        lastContacted: new Date(now.getTime() + extraWaitTime).toISOString(),
-        logs: newLogs,
-        individualScore: newScore,
-        lastDeepConnection: newLastDeep,
-        cyclesSinceLastQuickTouch: newCycles,
-        quickTouchesAvailable: newTokens
-      };
+      return result.friend;
     }));
   };
 
   const deleteLog = (friendId: string, logId: string) => {
     setFriends(prev => prev.map(f => {
       if (f.id !== friendId) return f;
-      const updatedLogs = f.logs.filter(l => l.id !== logId);
-      const newScore = calculateIndividualFriendScore(updatedLogs);
-      const sortedLogs = [...updatedLogs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      return {
-        ...f,
-        logs: updatedLogs,
-        lastContacted: sortedLogs.length > 0 ? sortedLogs[0].date : f.lastContacted,
-        individualScore: newScore
-      };
+      return removeFriendLog(f, logId);
     }));
     if (editingFriend?.id === friendId) {
       setEditingFriend(prev => prev ? ({ ...prev, logs: prev.logs.filter(l => l.id !== logId) }) : null);
