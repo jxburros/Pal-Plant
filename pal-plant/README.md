@@ -35,10 +35,6 @@ Data is stored locally in the browser (`localStorage`), so backups are recommend
 
 ## Firebase SDK Setup
 
-Firebase is initialized at app startup when all `VITE_FIREBASE_*` values are defined.
+Firebase is initialized at app startup using the project's Pal-Plant web app configuration in `utils/firebase.ts`.
 
-1. Copy `.env.example` to `.env.local`.
-2. Fill in your Firebase Web App config values.
-3. Restart the dev server.
-
-If any value is missing, Firebase initialization is skipped.
+If you need to point the app at a different Firebase project, update the values in that file and restart the dev server.
