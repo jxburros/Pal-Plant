@@ -4,6 +4,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Friend, MeetingRequest } from '../types';
 import { calculateTimeStatus } from '../utils/helpers';
+import { initializeFCM, setupForegroundMessageHandler, getFCMToken } from '../utils/firebaseMessaging';
 
 interface ReminderConfig {
   pushEnabled: boolean;
@@ -40,7 +41,7 @@ const sendNotification = async (title: string, body: string) => {
           visibility: 1,
         });
       }
-      
+
       // Schedule a local notification
       await LocalNotifications.schedule({
         notifications: [
@@ -57,18 +58,23 @@ const sendNotification = async (title: string, body: string) => {
       // Silently fail if notification cannot be sent
     }
   } else {
-    // Use web notifications
+    // Use web notifications (FCM handles background, browser API for foreground)
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, { body });
+      new Notification(title, {
+        body,
+        icon: '/icon-192x192.png',
+        badge: '/badge-72x72.png',
+        tag: 'pal-plant-reminder',
+      });
     }
   }
 };
 
 export const useReminderEngine = ({ friends, meetingRequests, reminders, onBackupReminder }: ReminderEngineArgs) => {
-  // Request permissions on mount
+  // Request permissions and initialize FCM on mount
   useEffect(() => {
     if (!reminders.pushEnabled) return;
-    
+
     const requestPermissions = async () => {
       if (isNative()) {
         // Request native push and local notification permissions
@@ -77,7 +83,7 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
           if (pushResult.receive === 'prompt') {
             await PushNotifications.requestPermissions();
           }
-          
+
           const localResult = await LocalNotifications.checkPermissions();
           if (localResult.display === 'prompt') {
             await LocalNotifications.requestPermissions();
@@ -86,14 +92,32 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
           // Silently fail if permission request fails
         }
       } else {
-        // Request web notification permissions
-        if ('Notification' in window && Notification.permission === 'default') {
-          Notification.requestPermission();
+        // Initialize Firebase Cloud Messaging for web
+        try {
+          await initializeFCM();
+
+          // Set up foreground message handler for FCM
+          const cleanup = setupForegroundMessageHandler((payload) => {
+            // Display notification when app is in foreground
+            const title = payload.notification?.title || 'Pal Plant';
+            const body = payload.notification?.body || 'You have a new notification';
+            sendNotification(title, body);
+          });
+
+          // Return cleanup function
+          return cleanup || undefined;
+        } catch (error) {
+          console.warn('Failed to initialize FCM:', error);
+
+          // Fallback to requesting basic web notification permissions
+          if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+          }
         }
       }
     };
-    
-    requestPermissions();
+
+    return requestPermissions();
   }, [reminders.pushEnabled]);
 
   // Check and send notifications periodically
@@ -169,7 +193,7 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
 
     const daysSince = Math.floor((now.getTime() - new Date(lastBackupRaw).getTime()) / (1000 * 60 * 60 * 24));
     if (daysSince >= reminders.backupReminderDays) {
-      onBackupReminder(`It’s been ${daysSince} day(s) since your last backup. Open Settings to export a fresh backup.`);
+      onBackupReminder(`It's been ${daysSince} day(s) since your last backup. Open Settings to export a fresh backup.`);
       localStorage.setItem(BACKUP_REMINDER_KEY, todayKey);
     }
   }, [reminders.backupReminderEnabled, reminders.backupReminderDays, onBackupReminder]);
