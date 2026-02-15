@@ -81,13 +81,12 @@ const App: React.FC = () => {
     };
     if (saved) {
       const parsed = JSON.parse(saved);
-      const { accountAccess, ...cleanParsed } = parsed;
       return {
         ...defaults,
-        ...cleanParsed,
+        ...parsed,
         reminders: {
           ...defaults.reminders,
-          ...(cleanParsed.reminders || {})
+          ...(parsed.reminders || {})
         }
       };
     }
@@ -97,10 +96,7 @@ const App: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>(() => {
     const saved = localStorage.getItem('friendkeep_data');
     if (!saved) return [];
-    return JSON.parse(saved).map((f: any) => {
-      const { linkedAccountId, ...rest } = f;
-      return rest;
-    });
+    return JSON.parse(saved);
   });
 
   const [categories, setCategories] = useState<string[]>(() => {
@@ -211,8 +207,12 @@ const App: React.FC = () => {
 
   const handleRequestMeeting = (friend: Friend) => {
     setMeetingRequests(prev => [{
-      id: generateId(), name: friend.name, phone: friend.phone, email: friend.email, photo: friend.photo,
-      status: 'REQUESTED', dateAdded: new Date().toISOString(), linkedFriendId: friend.id, category: friend.category === 'Family' ? 'Family' : 'Friend'
+      id: generateId(),
+      name: friend.name,
+      status: 'REQUESTED',
+      dateAdded: new Date().toISOString(),
+      linkedFriendId: friend.id,
+      category: friend.category === 'Family' ? 'Family' : 'Friend'
     }, ...prev]);
     trackEvent('MEETING_CREATED', { friendId: friend.id });
     setActiveTab(Tab.MEETINGS);

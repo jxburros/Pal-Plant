@@ -53,8 +53,8 @@ const sendNotification = async (title: string, body: string) => {
           },
         ],
       });
-    } catch (error) {
-      console.error('Failed to send native notification:', error);
+    } catch {
+      // Silently fail if notification cannot be sent
     }
   } else {
     // Use web notifications
@@ -82,8 +82,8 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
           if (localResult.display === 'prompt') {
             await LocalNotifications.requestPermissions();
           }
-        } catch (error) {
-          console.error('Failed to request native permissions:', error);
+        } catch {
+          // Silently fail if permission request fails
         }
       } else {
         // Request web notification permissions

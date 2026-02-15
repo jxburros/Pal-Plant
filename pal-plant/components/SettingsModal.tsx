@@ -63,18 +63,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         if (json.meetings) localStorage.setItem('friendkeep_meetings', JSON.stringify(json.meetings));
         if (json.categories) localStorage.setItem('friendkeep_categories', JSON.stringify(json.categories));
         if (json.settings) {
-          // Strip old accountAccess from imported settings
-          const { accountAccess, ...cleanSettings } = json.settings;
-          localStorage.setItem('friendkeep_settings', JSON.stringify(cleanSettings));
+          localStorage.setItem('friendkeep_settings', JSON.stringify(json.settings));
         }
 
         setImportStatus('success');
         setImportMessage('Data restored successfully! Reloading...');
         setTimeout(() => window.location.reload(), 1500);
-      } catch (err) {
+      } catch {
         setImportStatus('error');
         setImportMessage('Invalid backup file. Please check the file format.');
-        console.error(err);
       }
     };
     reader.readAsText(file);
