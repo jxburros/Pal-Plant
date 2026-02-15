@@ -128,8 +128,7 @@ const FriendModal: React.FC<FriendModalProps> = ({
         setUploadError('');
         const base64 = await fileToBase64(e.target.files[0]);
         setPhoto(base64);
-      } catch (err) {
-        console.error("Failed to upload image", err);
+      } catch {
         setUploadError("Could not upload image.");
       }
     }
