@@ -32,3 +32,13 @@ Data is stored locally in the browser (`localStorage`), so backups are recommend
 | `npm run preview` | Preview production build locally |
 | `npm run cap:sync` | Build web assets and sync to Capacitor Android project |
 | `npm run cap:open:android` | Open the Android project in Android Studio |
+
+## Firebase SDK Setup
+
+Firebase is initialized at app startup when all `VITE_FIREBASE_*` values are defined.
+
+1. Copy `.env.example` to `.env.local`.
+2. Fill in your Firebase Web App config values.
+3. Restart the dev server.
+
+If any value is missing, Firebase initialization is skipped.
