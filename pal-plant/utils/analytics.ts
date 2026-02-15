@@ -1,3 +1,5 @@
+import { getFirebaseAnalytics } from './firebase';
+
 export type AnalyticsEventType =
   | 'FRIEND_ADDED'
   | 'FRIEND_EDITED'
@@ -20,6 +22,29 @@ const EVENT_KEY = 'friendkeep_analytics_events';
 const EVENT_LIMIT = 500;
 
 const generateEventId = (): string => `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+/**
+ * Sends an event to Firebase Analytics.
+ */
+const sendToFirebaseAnalytics = async (type: AnalyticsEventType, metadata?: AnalyticsEvent['metadata']): Promise<void> => {
+  try {
+    const analytics = getFirebaseAnalytics();
+    if (!analytics) {
+      return; // Firebase Analytics not initialized
+    }
+
+    // Import logEvent dynamically since analytics module was loaded via CDN
+    const { logEvent } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js');
+
+    // Convert event type to Firebase-friendly format (lowercase with underscores)
+    const eventName = type.toLowerCase();
+
+    // Send event to Firebase Analytics
+    logEvent(analytics, eventName, metadata || {});
+  } catch (error) {
+    console.warn('Failed to send event to Firebase Analytics:', error);
+  }
+};
 
 export const getAnalyticsEvents = (): AnalyticsEvent[] => {
   try {
@@ -45,6 +70,9 @@ export const trackEvent = (type: AnalyticsEventType, metadata?: AnalyticsEvent['
   ].slice(0, EVENT_LIMIT);
 
   localStorage.setItem(EVENT_KEY, JSON.stringify(next));
+
+  // Also send to Firebase Analytics
+  void sendToFirebaseAnalytics(type, metadata);
 };
 
 export const getAnalyticsSummary = (days = 7): Record<AnalyticsEventType, number> => {

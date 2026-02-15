@@ -1,5 +1,6 @@
 const FIREBASE_APP_CDN_URL = 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 const FIREBASE_ANALYTICS_CDN_URL = 'https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js';
+const FIREBASE_MESSAGING_CDN_URL = 'https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging.js';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCGKDTAi4dReXOYFs92xhDfSVduy_fntZg',
@@ -12,6 +13,8 @@ const firebaseConfig = {
 };
 
 let initialized = false;
+let messagingInstance: any = null;
+let analyticsInstance: any = null;
 
 /**
  * Initializes Firebase SDK from CDN at runtime.
@@ -22,16 +25,43 @@ export const initializeFirebase = async () => {
     return;
   }
 
-  const [{ initializeApp }, { getAnalytics, isSupported }] = await Promise.all([
+  const [{ initializeApp }, { getAnalytics, isSupported }, { getMessaging, isSupported: isMessagingSupported }] = await Promise.all([
     import(/* @vite-ignore */ FIREBASE_APP_CDN_URL),
     import(/* @vite-ignore */ FIREBASE_ANALYTICS_CDN_URL),
+    import(/* @vite-ignore */ FIREBASE_MESSAGING_CDN_URL),
   ]);
 
   const app = initializeApp(firebaseConfig);
 
+  // Initialize Analytics if supported
   if (await isSupported()) {
-    getAnalytics(app);
+    analyticsInstance = getAnalytics(app);
+  }
+
+  // Initialize Messaging if supported
+  if (await isMessagingSupported()) {
+    try {
+      messagingInstance = getMessaging(app);
+    } catch (error) {
+      console.warn('Firebase Messaging not available:', error);
+    }
   }
 
   initialized = true;
+};
+
+/**
+ * Gets the Firebase Messaging instance.
+ * Returns null if messaging is not supported or not initialized.
+ */
+export const getFirebaseMessaging = () => {
+  return messagingInstance;
+};
+
+/**
+ * Gets the Firebase Analytics instance.
+ * Returns null if analytics is not supported or not initialized.
+ */
+export const getFirebaseAnalytics = () => {
+  return analyticsInstance;
 };
