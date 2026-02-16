@@ -41,7 +41,7 @@ Firebase Cloud Messaging requires a VAPID key (Voluntary Application Server Iden
    - Copy the generated key
 
 4. **Update the Code:**
-   - Open `/home/runner/work/Pal-Plant/Pal-Plant/pal-plant/utils/firebaseMessaging.ts`
+   - Open `pal-plant/utils/firebaseMessaging.ts`
    - Replace `YOUR_VAPID_KEY_HERE` on line 4 with your actual VAPID key
 
    ```typescript
