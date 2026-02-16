@@ -137,16 +137,11 @@ const App: React.FC = () => {
           getSettings()
         ]);
 
-        // Update state with loaded data
-        if (loadedFriends.length > 0) {
-          setFriends(loadedFriends);
-        }
-        if (loadedMeetings.length > 0) {
-          setMeetingRequests(loadedMeetings);
-        }
-        if (loadedCategories.length > 0) {
-          setCategories(loadedCategories);
-        }
+        // Update state with loaded data (even if empty)
+        setFriends(loadedFriends);
+        setMeetingRequests(loadedMeetings);
+        setCategories(loadedCategories);
+        
         if (loadedSettings) {
           setSettings(prev => ({
             ...prev,

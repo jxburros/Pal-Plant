@@ -1,5 +1,5 @@
 import { getFirebaseMessaging } from './firebase';
-import { getMetadata, saveMetadata } from './storage';
+import { getMetadata, saveMetadata, removeMetadata } from './storage';
 
 const FCM_TOKEN_KEY = 'pal_plant_fcm_token';
 const VAPID_KEY = 'BJYgoCs1JF5LsEYA9OqllAkseQxZDOv-JpvyvrdWR41YWB3wyH2-NXa1x28MhFAiSQhqggGyq_TicN_HD2GOu4o';
@@ -115,7 +115,7 @@ export const getCachedFCMToken = async (): Promise<string | null> => {
  * Call this when the user logs out or disables notifications.
  */
 export const clearFCMToken = async (): Promise<void> => {
-  await saveMetadata(FCM_TOKEN_KEY, '');
+  await removeMetadata(FCM_TOKEN_KEY);
 };
 
 /**

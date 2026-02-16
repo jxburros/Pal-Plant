@@ -312,20 +312,23 @@ export async function saveFriends(friends: Friend[]): Promise<void> {
     const transaction = db.transaction(STORES.FRIENDS, 'readwrite');
     const store = transaction.objectStore(STORES.FRIENDS);
     
-    // Clear and repopulate
+    // Clear all existing records
     await new Promise<void>((resolve, reject) => {
       const clearRequest = store.clear();
       clearRequest.onsuccess = () => resolve();
       clearRequest.onerror = () => reject(clearRequest.error);
     });
 
-    for (const friend of friends) {
-      await new Promise<void>((resolve, reject) => {
+    // Batch all put operations without awaiting each one
+    const putPromises = friends.map(friend => 
+      new Promise<void>((resolve, reject) => {
         const putRequest = store.put(friend);
         putRequest.onsuccess = () => resolve();
         putRequest.onerror = () => reject(putRequest.error);
-      });
-    }
+      })
+    );
+
+    await Promise.all(putPromises);
   } catch (error) {
     console.error('Error saving friends:', error);
     localStorage.setItem(LEGACY_KEYS.FRIENDS, JSON.stringify(friends));
@@ -356,13 +359,16 @@ export async function saveMeetings(meetings: MeetingRequest[]): Promise<void> {
       clearRequest.onerror = () => reject(clearRequest.error);
     });
 
-    for (const meeting of meetings) {
-      await new Promise<void>((resolve, reject) => {
+    // Batch all put operations
+    const putPromises = meetings.map(meeting => 
+      new Promise<void>((resolve, reject) => {
         const putRequest = store.put(meeting);
         putRequest.onsuccess = () => resolve();
         putRequest.onerror = () => reject(putRequest.error);
-      });
-    }
+      })
+    );
+
+    await Promise.all(putPromises);
   } catch (error) {
     console.error('Error saving meetings:', error);
     localStorage.setItem(LEGACY_KEYS.MEETINGS, JSON.stringify(meetings));
@@ -408,13 +414,16 @@ export async function saveCategories(categories: string[]): Promise<void> {
       clearRequest.onerror = () => reject(clearRequest.error);
     });
 
-    for (let i = 0; i < categories.length; i++) {
-      await new Promise<void>((resolve, reject) => {
-        const putRequest = store.put({ id: i + 1, value: categories[i] });
+    // Batch all put operations
+    const putPromises = categories.map((category, i) => 
+      new Promise<void>((resolve, reject) => {
+        const putRequest = store.put({ id: i + 1, value: category });
         putRequest.onsuccess = () => resolve();
         putRequest.onerror = () => reject(putRequest.error);
-      });
-    }
+      })
+    );
+
+    await Promise.all(putPromises);
   } catch (error) {
     console.error('Error saving categories:', error);
     localStorage.setItem(LEGACY_KEYS.CATEGORIES, JSON.stringify(categories));
@@ -480,6 +489,20 @@ export async function saveMetadata(key: string, value: string): Promise<void> {
   } catch (error) {
     console.error(`Error saving metadata ${key}:`, error);
     localStorage.setItem(key, value);
+  }
+}
+
+export async function removeMetadata(key: string): Promise<void> {
+  if (useLocalStorageFallback) {
+    localStorage.removeItem(key);
+    return;
+  }
+
+  try {
+    await remove(STORES.METADATA, key);
+  } catch (error) {
+    console.error(`Error removing metadata ${key}:`, error);
+    localStorage.removeItem(key);
   }
 }
 

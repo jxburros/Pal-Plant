@@ -60,15 +60,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     reader.onload = async (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        await importAllData(json);
-
-        setImportStatus('success');
-        setImportMessage('Data restored successfully! Reloading...');
-        setTimeout(() => window.location.reload(), 1500);
-      } catch (error) {
-        console.error('Error importing data:', error);
+        
+        try {
+          await importAllData(json);
+          setImportStatus('success');
+          setImportMessage('Data restored successfully! Reloading...');
+          setTimeout(() => window.location.reload(), 1500);
+        } catch (storageError) {
+          console.error('Error importing data:', storageError);
+          setImportStatus('error');
+          setImportMessage('Failed to save imported data. Please try again.');
+        }
+      } catch (parseError) {
+        console.error('Error parsing backup file:', parseError);
         setImportStatus('error');
-        setImportMessage('Invalid backup file. Please check the file format.');
+        setImportMessage('Invalid backup file format. Please check the file.');
       }
     };
     reader.readAsText(file);
