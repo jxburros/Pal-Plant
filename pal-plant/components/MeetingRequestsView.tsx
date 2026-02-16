@@ -429,11 +429,29 @@ const MeetingCard: React.FC<{
 
            {/* Details */}
            <div className="flex-1 min-w-0">
-             <div className="flex justify-between items-start">
+             <div className="flex justify-between items-start gap-2">
                 <h3 className={`font-bold text-lg leading-tight ${theme.textMain}`}>{req.name}</h3>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide ${req.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
-                  {req.status}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide ${req.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' : req.status === 'CANCELLED' ? 'bg-slate-200 text-slate-600' : 'bg-slate-100 text-slate-500'}`}>
+                    {req.status}
+                  </span>
+                  {req.status === 'REQUESTED' && urgency.daysPassed > 3 && (
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                      urgency.daysPassed > timeframeMeta.staleDays * 1.2
+                        ? 'bg-red-100 text-red-700'
+                        : urgency.daysPassed > timeframeMeta.staleDays * 0.8
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {urgency.daysPassed}d waiting
+                    </span>
+                  )}
+                  {isOverdue && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 flex items-center gap-0.5">
+                      <AlertTriangle size={8} /> Overdue
+                    </span>
+                  )}
+                </div>
              </div>
 
              {req.organization && (

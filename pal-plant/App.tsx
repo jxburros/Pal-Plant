@@ -6,11 +6,13 @@ import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
 import SettingsModal from './components/SettingsModal';
 import HomeView from './components/HomeView';
+import DataWarningModal from './components/DataWarningModal';
 import { useKeyboardShortcuts } from './components/KeyboardShortcuts';
 import { generateId, calculateTimeStatus, THEMES } from './utils/helpers';
 import { trackEvent } from './utils/analytics';
 import { useReminderEngine } from './hooks/useReminderEngine';
 import { useFriendsEngine } from './hooks/useFriendsEngine';
+import { useModalState } from './hooks/useModalState';
 import { initStorage, getFriends, getMeetings, getCategories, getSettings, exportAllData, importAllData, saveMetadata, getMetadata } from './utils/storage';
 import { debouncedSaveFriends, debouncedSaveMeetings, debouncedSaveCategories, debouncedSaveSettings } from './utils/debouncedStorage';
 
@@ -48,17 +50,14 @@ const ToastContainer: React.FC<{ toasts: Toast[]; onDismiss: (id: string) => voi
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.HOME);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [isRuleGuideOpen, setIsRuleGuideOpen] = useState(false);
-  const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showBackupBanner, setShowBackupBanner] = useState(false);
   const [isStorageReady, setIsStorageReady] = useState(false);
+
+  // Centralized modal state management
+  const modals = useModalState();
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = generateId();
@@ -84,7 +83,8 @@ const App: React.FC = () => {
         backupReminderEnabled: true,
         backupReminderDays: 7
       },
-      hasSeenOnboarding: false
+      hasSeenOnboarding: false,
+      hasSeenDataWarning: false
     };
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -195,10 +195,17 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!settings.hasSeenOnboarding) {
-      const timer = setTimeout(() => setShowOnboarding(true), 500);
+      const timer = setTimeout(() => modals.openOnboarding(), 500);
       return () => clearTimeout(timer);
     }
-  }, [settings.hasSeenOnboarding]);
+  }, [settings.hasSeenOnboarding, modals]);
+
+  useEffect(() => {
+    if (!settings.hasSeenDataWarning && settings.hasSeenOnboarding) {
+      const timer = setTimeout(() => modals.openDataWarning(), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [settings.hasSeenDataWarning, settings.hasSeenOnboarding, modals]);
 
 
   const triggerBackupDownload = useCallback(async () => {
@@ -230,20 +237,20 @@ const App: React.FC = () => {
     onQuickBackup: triggerBackupDownload
   });
 
-  const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
+  const handleOnboardingComplete = useCallback(() => {
+    modals.closeOnboarding();
     setSettings(prev => ({ ...prev, hasSeenOnboarding: true }));
-  };
+  }, [modals]);
 
-  const openAddModal = useCallback(() => { 
-    setEditingFriend(null); 
-    setIsModalOpen(true); 
-  }, []);
-  
+  const handleDataWarningComplete = useCallback(() => {
+    modals.closeDataWarning();
+    setSettings(prev => ({ ...prev, hasSeenDataWarning: true }));
+  }, [modals]);
+
   const { setShowShortcutsModal, ShortcutsModal } = useKeyboardShortcuts(
     setActiveTab,
-    openAddModal,
-    () => setIsSettingsOpen(true)
+    modals.openAddFriend,
+    modals.openSettings
   );
 
   // Refresh time-based calculations every minute
@@ -261,21 +268,19 @@ const App: React.FC = () => {
            settings.textSize === 'xl' ? 'text-xl' : 'text-base';
   }, [settings.textSize]);
 
-  const handleSaveFriend = (friend: Friend) => {
-    saveFriend(friend, !!editingFriend);
-    setEditingFriend(null);
-  };
+  const handleSaveFriend = useCallback((friend: Friend) => {
+    saveFriend(friend, !!modals.editingFriend);
+    modals.closeFriendModal();
+  }, [saveFriend, modals]);
 
   const handleAddCategory = (newCat: string) => {
     if (!categories.includes(newCat)) setCategories(prev => [...prev, newCat]);
   };
 
-  const deleteLog = (friendId: string, logId: string) => {
+  const deleteLog = useCallback((friendId: string, logId: string) => {
     engineDeleteLog(friendId, logId);
-    if (editingFriend?.id === friendId) {
-      setEditingFriend(prev => prev ? ({ ...prev, logs: prev.logs.filter(l => l.id !== logId) }) : null);
-    }
-  };
+    // Note: editingFriend is managed in useModalState, no need to update here
+  }, [engineDeleteLog]);
 
   const handleRequestMeeting = useCallback((friend: Friend) => {
     setMeetingRequests(prev => [{
@@ -288,11 +293,6 @@ const App: React.FC = () => {
     }, ...prev]);
     trackEvent('MEETING_CREATED', { friendId: friend.id });
     setActiveTab(Tab.MEETINGS);
-  }, []);
-
-  const openEditModal = useCallback((friend: Friend) => { 
-    setEditingFriend(friend); 
-    setIsModalOpen(true); 
   }, []);
 
   const handleBulkImport = useCallback((newFriends: Friend[]) => {
@@ -395,7 +395,7 @@ const App: React.FC = () => {
             </p>
           </button>
           <button
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={modals.openSettings}
             className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm border ${themeColors.border} ${themeColors.cardBg} active:scale-95 transition-transform`}
           >
             <SettingsIcon size={20} className={themeColors.textSub} />
@@ -423,10 +423,10 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex justify-between items-center text-xs font-bold text-slate-600 px-1 mt-2">
-              <button onClick={() => setIsBulkImportOpen(true)} className="underline decoration-dotted underline-offset-4">
+              <button onClick={modals.openBulkImport} className="underline decoration-dotted underline-offset-4">
                 Import contacts into your garden
               </button>
-              <button onClick={openAddModal} className="text-emerald-700">New plant</button>
+              <button onClick={modals.openAddFriend} className="text-emerald-700">New plant</button>
             </div>
           </div>
         )}
@@ -450,7 +450,7 @@ const App: React.FC = () => {
                   <Users size={32} />
                 </div>
                 <h3 className="text-lg font-bold">Your garden is empty</h3>
-                <button onClick={openAddModal} className="mt-6 font-bold text-sm underline opacity-80">Plant your first seed</button>
+                <button onClick={modals.openAddFriend} className="mt-6 font-bold text-sm underline opacity-80">Plant your first seed</button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -466,7 +466,7 @@ const App: React.FC = () => {
                     friend={friend}
                     onContact={markContacted}
                     onDelete={deleteFriend}
-                    onEdit={openEditModal}
+                    onEdit={modals.openEditFriend}
                     onRequestMeeting={handleRequestMeeting}
                     feedback={feedbackMap[friend.id]}
                     onDismissFeedback={clearFeedback}
@@ -476,7 +476,7 @@ const App: React.FC = () => {
             )}
 
             <button
-              onClick={openAddModal}
+              onClick={modals.openAddFriend}
               className={`fixed bottom-24 right-6 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
             >
               <Plus size={28} strokeWidth={3} />
@@ -512,31 +512,31 @@ const App: React.FC = () => {
       </div>
 
       <FriendModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={modals.isFriendModalOpen}
+        onClose={modals.closeFriendModal}
         onSave={handleSaveFriend}
         onDeleteLog={deleteLog}
-        initialData={editingFriend}
+        initialData={modals.editingFriend}
         categories={categories}
         onAddCategory={handleAddCategory}
       />
 
       <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        isOpen={modals.isSettingsOpen}
+        onClose={modals.closeSettings}
         settings={settings}
         onUpdate={setSettings}
-        onOpenBulkImport={() => setIsBulkImportOpen(true)}
-        onShowOnboarding={() => setShowOnboarding(true)}
+        onOpenBulkImport={modals.openBulkImport}
+        onShowOnboarding={modals.openOnboarding}
         onShowShortcuts={() => setShowShortcutsModal(true)}
-        onShowRuleGuide={() => setIsRuleGuideOpen(true)}
+        onShowRuleGuide={modals.openRuleGuide}
       />
 
-      {isBulkImportOpen && (
+      {modals.isBulkImportOpen && (
         <Suspense fallback={null}>
           <BulkImportModal
-            isOpen={isBulkImportOpen}
-            onClose={() => setIsBulkImportOpen(false)}
+            isOpen={modals.isBulkImportOpen}
+            onClose={modals.closeBulkImport}
             onImport={handleBulkImport}
             existingFriends={friends}
             categories={categories}
@@ -545,17 +545,23 @@ const App: React.FC = () => {
         </Suspense>
       )}
 
-      {showOnboarding && (
+      {modals.showOnboarding && (
         <Suspense fallback={null}>
           <OnboardingTooltips settings={settings} onComplete={handleOnboardingComplete} />
         </Suspense>
       )}
 
-      {isRuleGuideOpen && (
+      {modals.isRuleGuideOpen && (
         <Suspense fallback={null}>
-          <RuleGuide isOpen={isRuleGuideOpen} onClose={() => setIsRuleGuideOpen(false)} />
+          <RuleGuide isOpen={modals.isRuleGuideOpen} onClose={modals.closeRuleGuide} />
         </Suspense>
       )}
+
+      <DataWarningModal
+        isOpen={modals.showDataWarning}
+        onClose={handleDataWarningComplete}
+        settings={settings}
+      />
 
       <ShortcutsModal />
     </div>

@@ -1,6 +1,7 @@
 import { Friend, ThemeId, ThemeColors, MeetingRequest, ContactLog, MeetingTimeframe } from '../types';
 import { Sprout, Flower, Trees, Leaf, Skull } from 'lucide-react';
 import React from 'react';
+import { TIMER_BUFFER_MULTIPLIER } from './scoring';
 
 // ─── Avatar Helpers ───────────────────────────────────────────────
 
