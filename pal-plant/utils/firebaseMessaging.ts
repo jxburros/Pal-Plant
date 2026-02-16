@@ -173,48 +173,14 @@ export const setupForegroundMessageHandler = (onMessage: (payload: any) => void)
 };
 
 /**
- * Sends the FCM token to your backend server when an endpoint is configured.
- */
-export const sendTokenToServer = async (token: string): Promise<boolean> => {
-  const endpoint = import.meta.env.VITE_FCM_TOKEN_ENDPOINT;
-
-  if (!endpoint) {
-    console.info('Skipping token sync: VITE_FCM_TOKEN_ENDPOINT is not configured.');
-    return false;
-  }
-
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
-
-    if (!response.ok) {
-      console.error('Failed to send token to server:', response.status, response.statusText);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error sending token to server:', error);
-    return false;
-  }
-};
-
-/**
- * Initializes Firebase Cloud Messaging for the app.
+ * Initializes Firebase Cloud Messaging for the web app.
+ * Obtains an FCM token (used by the service worker for background notifications)
+ * and sets up the foreground message handler.
  * Call this once when the app starts.
  */
 export const initializeFCM = async (): Promise<void> => {
   try {
-    // Get or request FCM token
-    const token = await getFCMToken();
-
-    if (token) {
-      // Send token to server
-      await sendTokenToServer(token);
-    }
+    await getFCMToken();
   } catch (error) {
     console.error('Error initializing FCM:', error);
   }
