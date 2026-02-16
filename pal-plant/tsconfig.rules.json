@@ -12,6 +12,7 @@
   },
   "include": [
     "tests/rule-invariants.ts",
+    "tests/module-tests.ts",
     "utils/friendEngine.ts",
     "utils/helpers.ts",
     "utils/avatar.ts",
