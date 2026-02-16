@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Friend, MeetingRequest, AppSettings } from '../types';
-import { calculateSocialGardenScore, calculateTimeStatus, getUpcomingBirthdays, getSmartNudges, getInitials, getAvatarColor, THEMES } from '../utils/helpers';
+import { calculateSocialGardenScore, calculateTimeStatus, getUpcomingBirthdays, getSmartNudges, getInitials, getAvatarColor } from '../utils/helpers';
 import { Trophy, Calendar, AlertTriangle, Gift, Sprout, Leaf, TrendingDown, TrendingUp, Lightbulb, CalendarDays, ChevronRight } from 'lucide-react';
 import WeeklyPlanView from './WeeklyPlanView';
+import { useTheme } from '../utils/ThemeContext';
 
 interface HomeViewProps {
   friends: Friend[];
@@ -14,7 +15,7 @@ interface HomeViewProps {
 }
 
 const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings, onNavigateToFriend, onNavigateToMeetings, onApplyNudge }) => {
-  const theme = THEMES[settings.theme];
+  const theme = useTheme();
   const score = calculateSocialGardenScore(friends, meetingRequests);
   const birthdays = getUpcomingBirthdays(friends);
   const nudges = getSmartNudges(friends);
@@ -94,9 +95,9 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
         ) : (
           <div className="space-y-2">
             {suggestedOutreach.map(item => (
-              <button key={item.id} onClick={item.action} className="w-full text-left p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition-colors">
-                <p className="text-sm font-bold text-slate-800">{item.label}</p>
-                <p className="text-xs text-slate-500 mt-1">{item.detail}</p>
+              <button key={item.id} onClick={item.action} className={`w-full text-left p-3 ${theme.surfaceHover} rounded-xl border ${theme.border} hover:${theme.surfaceActive} transition-colors`}>
+                <p className={`text-sm font-bold ${theme.textMain}`}>{item.label}</p>
+                <p className={`text-xs ${theme.textSub} mt-1`}>{item.detail}</p>
               </button>
             ))}
           </div>
@@ -205,9 +206,9 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
                    <button
                      key={f.id}
                      onClick={() => onNavigateToFriend(f.name)}
-                     className="w-full flex justify-between items-center bg-white/60 p-2 rounded-xl hover:bg-white transition-colors"
+                     className={`w-full flex justify-between items-center ${theme.cardBg}/60 p-2 rounded-xl hover:${theme.cardBg} transition-colors`}
                    >
-                      <span className="font-bold text-slate-700">{f.name}</span>
+                      <span className={`font-bold ${theme.textMain}`}>{f.name}</span>
                       <span className="text-xs font-bold text-red-500">
                         {calculateTimeStatus(f.lastContacted, f.frequencyDays).daysLeft} days
                       </span>

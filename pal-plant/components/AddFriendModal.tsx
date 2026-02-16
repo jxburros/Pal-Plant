@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, User, Phone, Calendar, Mail, Upload, Tags, FileText, History, Trash2, Gift } from 'lucide-react';
 import { Friend, ContactLog } from '../types';
 import { generateId, fileToBase64, calculateTimeStatus, getInitials, getAvatarColor, sanitizeText, sanitizePhone, isValidEmail } from '../utils/helpers';
+import { useTheme } from '../utils/ThemeContext';
 
 interface FriendModalProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ const FriendModal: React.FC<FriendModalProps> = ({
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [uploadError, setUploadError] = useState('');
+  
+  const theme = useTheme();
 
   // Birthday State
   const [bdayMonth, setBdayMonth] = useState('1');
@@ -168,12 +171,12 @@ const FriendModal: React.FC<FriendModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity animate-in fade-in" onClick={onClose} />
 
-      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-6 relative z-10 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
+      <div className={`${theme.cardBg} w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-6 relative z-10 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar`}>
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-900">
+          <h2 className={`text-xl font-bold ${theme.textMain}`}>
             {initialData ? 'Edit Details' : 'Add New Friend'}
           </h2>
-          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors">
+          <button onClick={onClose} className={`p-2 ${theme.surfaceHover} rounded-full ${theme.textSub} hover:${theme.surfaceActive} transition-colors`}>
             <X size={20} />
           </button>
         </div>
@@ -183,7 +186,7 @@ const FriendModal: React.FC<FriendModalProps> = ({
           <div className="flex flex-col items-center justify-center mb-4">
              <div className="relative group">
                 <div
-                  className="w-24 h-24 rounded-full overflow-hidden border-4 border-slate-100 shadow-sm cursor-pointer"
+                  className={`w-24 h-24 rounded-full overflow-hidden border-4 ${theme.border} shadow-sm cursor-pointer`}
                   onClick={() => fileInputRef.current?.click()}
                 >
                    {photo ? (
@@ -212,22 +215,22 @@ const FriendModal: React.FC<FriendModalProps> = ({
                 )}
              </div>
              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-             <p className="text-xs text-slate-400 mt-2 font-medium">Tap image to upload</p>
+             <p className={`text-xs ${theme.textDisabled} mt-2 font-medium`}>Tap image to upload</p>
              {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
           </div>
 
           {/* Core Info */}
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Name</label>
+              <label className={`block text-xs font-bold ${theme.textSub} uppercase tracking-wider mb-2`}>Name</label>
               <div className="relative">
-                <User className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                <User className={`absolute left-3 top-3.5 ${theme.textSub}`} size={18} />
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="E.g. John Doe"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all font-medium"
+                  className={`w-full ${theme.surfaceHover} border ${theme.border} rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:${theme.cardBg} transition-all font-medium`}
                   required
                   maxLength={100}
                 />
@@ -236,25 +239,25 @@ const FriendModal: React.FC<FriendModalProps> = ({
 
             {/* Birthday Section */}
              <div>
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 cursor-pointer">
+                <label className={`flex items-center gap-2 text-xs font-bold ${theme.textSub} uppercase tracking-wider mb-2 cursor-pointer`}>
                    <input type="checkbox" checked={hasBirthday} onChange={e => setHasBirthday(e.target.checked)} className="rounded text-brand-500 focus:ring-brand-500" />
                    Has Birthday?
                 </label>
                 {hasBirthday && (
                    <div className="relative flex gap-2 animate-in fade-in slide-in-from-top-2">
-                     <Gift className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                     <Gift className={`absolute left-3 top-3.5 ${theme.textSub}`} size={18} />
                      <div className="flex-1 pl-10 grid grid-cols-2 gap-2">
                         <select
                            value={bdayMonth}
                            onChange={e => setBdayMonth(e.target.value)}
-                           className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                           className={`w-full ${theme.surfaceHover} border ${theme.border} rounded-xl py-3 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500`}
                         >
                            {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
                         </select>
                          <select
                            value={bdayDay}
                            onChange={e => setBdayDay(e.target.value)}
-                           className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                           className={`w-full ${theme.surfaceHover} border ${theme.border} rounded-xl py-3 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500`}
                         >
                            {days.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
@@ -265,29 +268,29 @@ const FriendModal: React.FC<FriendModalProps> = ({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Phone</label>
+                <label className={`block text-xs font-bold ${theme.textSub} uppercase tracking-wider mb-2`}>Phone</label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                  <Phone className={`absolute left-3 top-3.5 ${theme.textSub}`} size={18} />
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="Phone number"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-sm"
+                    className={`w-full ${theme.surfaceHover} border ${theme.border} rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:${theme.cardBg} transition-all text-sm`}
                     maxLength={30}
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email</label>
+                <label className={`block text-xs font-bold ${theme.textSub} uppercase tracking-wider mb-2`}>Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                  <Mail className={`absolute left-3 top-3.5 ${theme.textSub}`} size={18} />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
                     placeholder="Email address"
-                    className={`w-full bg-slate-50 border rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-sm ${emailError ? 'border-red-300' : 'border-slate-200'}`}
+                    className={`w-full ${theme.surfaceHover} border rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:${theme.cardBg} transition-all text-sm ${emailError ? 'border-red-300' : theme.border}`}
                     maxLength={254}
                   />
                 </div>
@@ -298,9 +301,9 @@ const FriendModal: React.FC<FriendModalProps> = ({
 
           {/* Category */}
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Category</label>
+            <label className={`block text-xs font-bold ${theme.textSub} uppercase tracking-wider mb-2`}>Category</label>
             <div className="relative">
-              <Tags className="absolute left-3 top-3.5 text-slate-400" size={18} />
+              <Tags className={`absolute left-3 top-3.5 ${theme.textSub}`} size={18} />
               {!isAddingCategory ? (
                 <select
                   value={category}
@@ -308,7 +311,7 @@ const FriendModal: React.FC<FriendModalProps> = ({
                     if (e.target.value === '__NEW__') setIsAddingCategory(true);
                     else setCategory(e.target.value);
                   }}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white appearance-none text-slate-700"
+                  className={`w-full ${theme.surfaceHover} border ${theme.border} rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:${theme.cardBg} appearance-none ${theme.textMain}`}
                 >
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   <option value="__NEW__">+ Create New Category...</option>
@@ -320,11 +323,11 @@ const FriendModal: React.FC<FriendModalProps> = ({
                       placeholder="New Category Name"
                       value={newCategoryName}
                       onChange={e => setNewCategoryName(e.target.value)}
-                      className="flex-1 bg-white border border-brand-300 rounded-xl py-3 pl-10 pr-4 focus:outline-none ring-2 ring-brand-500"
+                      className={`flex-1 ${theme.cardBg} border border-brand-300 rounded-xl py-3 pl-10 pr-4 focus:outline-none ring-2 ring-brand-500`}
                       maxLength={50}
                    />
                    <button type="button" onClick={handleAddNewCategory} className="bg-brand-600 text-white px-4 rounded-xl font-bold">Add</button>
-                   <button type="button" onClick={() => setIsAddingCategory(false)} className="bg-slate-200 text-slate-600 px-3 rounded-xl"><X size={18}/></button>
+                   <button type="button" onClick={() => setIsAddingCategory(false)} className={`${theme.surfaceActive} ${theme.textSub} px-3 rounded-xl`}><X size={18}/></button>
                 </div>
               )}
             </div>
@@ -333,18 +336,18 @@ const FriendModal: React.FC<FriendModalProps> = ({
           {/* Frequency */}
           <div>
              <div className="flex justify-between items-center mb-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Contact Frequency</label>
+                <label className={`block text-xs font-bold ${theme.textSub} uppercase tracking-wider`}>Contact Frequency</label>
                 <span className="text-sm font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md">Every {frequency} days</span>
              </div>
              <div className="relative">
-               <Calendar className="absolute left-3 top-3.5 text-slate-400" size={18} />
+               <Calendar className={`absolute left-3 top-3.5 ${theme.textSub}`} size={18} />
                <input
                  type="number"
                  min="1"
                  max="365"
                  value={frequency}
                  onChange={(e) => setFrequency(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))}
-                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all font-bold text-slate-700"
+                 className={`w-full ${theme.surfaceHover} border ${theme.border} rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:${theme.cardBg} transition-all font-bold ${theme.textMain}`}
                />
              </div>
              <input
@@ -353,20 +356,20 @@ const FriendModal: React.FC<FriendModalProps> = ({
                 max="60"
                 value={frequency}
                 onChange={(e) => setFrequency(parseInt(e.target.value))}
-                className="w-full mt-4 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-500"
+                className={`w-full mt-4 h-2 ${theme.surfaceActive} rounded-lg appearance-none cursor-pointer accent-brand-500`}
              />
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Notes</label>
+            <label className={`block text-xs font-bold ${theme.textSub} uppercase tracking-wider mb-2`}>Notes</label>
             <div className="relative">
-              <FileText className="absolute left-3 top-3.5 text-slate-400" size={18} />
+              <FileText className={`absolute left-3 top-3.5 ${theme.textSub}`} size={18} />
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Important details, birthday, etc."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-sm h-24 resize-none"
+                className={`w-full ${theme.surfaceHover} border ${theme.border} rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:${theme.cardBg} transition-all text-sm h-24 resize-none`}
                 maxLength={1000}
               />
             </div>
@@ -374,9 +377,9 @@ const FriendModal: React.FC<FriendModalProps> = ({
 
           {/* Stats & History (Only if editing) */}
           {initialData && (
-             <div className="border-t border-slate-100 pt-6 mt-6">
+             <div className={`border-t ${theme.border} pt-6 mt-6`}>
                 <div className="flex justify-between items-center mb-4">
-                   <h3 className="font-bold text-slate-800 flex items-center gap-2"><History size={18}/> Interaction History</h3>
+                   <h3 className={`font-bold ${theme.textMain} flex items-center gap-2`}><History size={18}/> Interaction History</h3>
                    <span className={`px-2 py-1 rounded-md text-xs font-bold ${onTimePercentage >= 80 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                       {onTimePercentage}% On Time
                    </span>
@@ -384,10 +387,10 @@ const FriendModal: React.FC<FriendModalProps> = ({
 
                 <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
                    {logsSorted.slice(0, 10).map(log => (
-                      <div key={log.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm">
+                      <div key={log.id} className={`flex justify-between items-center ${theme.surfaceHover} p-3 rounded-lg border ${theme.border} text-sm`}>
                          <div>
-                            <p className="font-medium text-slate-700">{new Date(log.date).toLocaleDateString()}</p>
-                            <p className="text-[10px] text-slate-400">{new Date(log.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                            <p className={`font-medium ${theme.textMain}`}>{new Date(log.date).toLocaleDateString()}</p>
+                            <p className={`text-[10px] ${theme.textDisabled}`}>{new Date(log.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                          </div>
                          <div className="flex items-center gap-3">
                             <span className={`text-xs ${log.percentageRemaining < 0 ? 'text-red-500' : 'text-green-500'}`}>
@@ -397,7 +400,7 @@ const FriendModal: React.FC<FriendModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => onDeleteLog(initialData.id, log.id)}
-                                className="text-slate-300 hover:text-red-500 transition-colors"
+                                className={`${theme.textDisabled} hover:text-red-500 transition-colors`}
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -405,14 +408,14 @@ const FriendModal: React.FC<FriendModalProps> = ({
                          </div>
                       </div>
                    ))}
-                   {logsSorted.length === 0 && <p className="text-sm text-slate-400 italic">No interaction history.</p>}
+                   {logsSorted.length === 0 && <p className={`text-sm ${theme.textDisabled} italic`}>No interaction history.</p>}
                 </div>
              </div>
           )}
 
           <button
             type="submit"
-            className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl mt-4 active:scale-[0.98] transition-all hover:shadow-lg shadow-brand-500/20"
+            className={`w-full ${theme.primary} ${theme.primaryText} font-bold py-4 rounded-xl mt-4 active:scale-[0.98] transition-all hover:shadow-lg shadow-brand-500/20`}
           >
             {initialData ? 'Save Changes' : 'Start Tracking'}
           </button>

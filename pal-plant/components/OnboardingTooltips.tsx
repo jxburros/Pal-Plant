@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronRight, ChevronLeft, Sprout, Users, Calendar, Settings, Keyboard, TrendingUp, Clock, Award } from 'lucide-react';
-import { THEMES } from '../utils/helpers';
 import { AppSettings } from '../types';
+import { useTheme } from '../utils/ThemeContext';
 
 interface OnboardingTooltipsProps {
   settings: AppSettings;
@@ -88,7 +88,7 @@ const tooltipSteps: TooltipStep[] = [
 
 const OnboardingTooltips: React.FC<OnboardingTooltipsProps> = ({ settings, onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const theme = THEMES[settings.theme];
+  const theme = useTheme();
 
   const handleNext = () => {
     if (currentStep < tooltipSteps.length - 1) {
@@ -114,11 +114,11 @@ const OnboardingTooltips: React.FC<OnboardingTooltipsProps> = ({ settings, onCom
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleSkip} />
       
-      <div className={`bg-white w-full max-w-md rounded-3xl p-8 relative z-10 animate-in zoom-in-95 fade-in duration-300 shadow-2xl`}>
+      <div className={`${theme.cardBg} w-full max-w-md rounded-3xl p-8 relative z-10 animate-in zoom-in-95 fade-in duration-300 shadow-2xl`}>
         {/* Skip button */}
         <button 
           onClick={handleSkip}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+          className={`absolute top-4 right-4 p-2 ${theme.textSub} hover:${theme.textMain} hover:${theme.surfaceHover} rounded-full transition-colors`}
         >
           <X size={20} />
         </button>
@@ -130,7 +130,7 @@ const OnboardingTooltips: React.FC<OnboardingTooltipsProps> = ({ settings, onCom
               key={index}
               className={`w-2 h-2 rounded-full transition-all ${
                 index === currentStep ? 'w-6 bg-emerald-500' : 
-                index < currentStep ? 'bg-emerald-300' : 'bg-slate-200'
+                index < currentStep ? 'bg-emerald-300' : theme.surfaceActive
               }`}
             />
           ))}
@@ -139,16 +139,16 @@ const OnboardingTooltips: React.FC<OnboardingTooltipsProps> = ({ settings, onCom
         {/* Content */}
         <div className="text-center">
           <div className="mb-6 flex justify-center">
-            <div className="w-20 h-20 rounded-2xl bg-slate-50 flex items-center justify-center">
+            <div className={`w-20 h-20 rounded-2xl ${theme.surfaceHover} flex items-center justify-center`}>
               {step.icon}
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">{step.title}</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">{step.description}</p>
+          <h2 className={`text-2xl font-bold ${theme.textMain} mb-3`}>{step.title}</h2>
+          <p className={`${theme.textSub} leading-relaxed mb-4`}>{step.description}</p>
 
           {step.bullets && (
-            <ul className="text-left text-sm text-slate-700 space-y-2 mb-4 bg-slate-50 rounded-xl p-4">
+            <ul className={`text-left text-sm ${theme.textMain} space-y-2 mb-4 ${theme.surfaceHover} rounded-xl p-4`}>
               {step.bullets.map((bullet, idx) => (
                 <li key={idx} className="flex items-start gap-2">
                   <span className="text-emerald-500 mt-0.5">•</span>
@@ -160,9 +160,9 @@ const OnboardingTooltips: React.FC<OnboardingTooltipsProps> = ({ settings, onCom
 
           {step.shortcut && (
             <div className="mb-6 flex justify-center">
-              <div className="inline-flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-lg">
-                <span className="text-sm text-slate-500">Keyboard shortcut:</span>
-                <kbd className="px-2 py-1 bg-white rounded border border-slate-200 text-sm font-mono font-bold text-slate-700">
+              <div className={`inline-flex items-center gap-2 ${theme.surfaceHover} px-4 py-2 rounded-lg`}>
+                <span className={`text-sm ${theme.textSub}`}>Keyboard shortcut:</span>
+                <kbd className={`px-2 py-1 ${theme.cardBg} rounded border ${theme.border} text-sm font-mono font-bold ${theme.textMain}`}>
                   {step.shortcut}
                 </kbd>
               </div>
@@ -177,8 +177,8 @@ const OnboardingTooltips: React.FC<OnboardingTooltipsProps> = ({ settings, onCom
             disabled={currentStep === 0}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
               currentStep === 0 
-                ? 'text-slate-300 cursor-not-allowed' 
-                : 'text-slate-600 hover:bg-slate-100'
+                ? `${theme.textDisabled} cursor-not-allowed` 
+                : `${theme.textSub} hover:${theme.surfaceHover}`
             }`}
           >
             <ChevronLeft size={20} />

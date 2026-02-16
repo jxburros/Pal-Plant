@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, FileText, AlertTriangle, Check, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { Friend } from '../types';
-import { parseCSVContacts, detectDuplicates, generateId, THEMES } from '../utils/helpers';
+import { parseCSVContacts, detectDuplicates, generateId } from '../utils/helpers';
 import { AppSettings } from '../types';
+import { useTheme } from '../utils/ThemeContext';
 
 interface BulkImportModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ interface ParsedContact {
 const BulkImportModal: React.FC<BulkImportModalProps> = ({
   isOpen, onClose, onImport, existingFriends, categories, settings
 }) => {
+  const theme = useTheme();
   const [step, setStep] = useState<'upload' | 'review' | 'duplicates'>('upload');
   const [parsedContacts, setParsedContacts] = useState<ParsedContact[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set());
@@ -33,7 +35,6 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
   const [parseError, setParseError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const theme = THEMES[settings.theme];
 
   if (!isOpen) return null;
 
@@ -130,22 +131,22 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={resetAndClose} />
 
-      <div className={`bg-white w-full max-w-lg rounded-3xl p-6 relative z-10 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[80vh] overflow-y-auto`}>
+      <div className={`${theme.cardBg} w-full max-w-lg rounded-3xl p-6 relative z-10 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[80vh] overflow-y-auto`}>
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
               <Upload size={20} className="text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Import Contacts</h2>
-              <p className="text-sm text-slate-500">
+              <h2 className={`text-xl font-bold ${theme.textMain}`}>Import Contacts</h2>
+              <p className={`text-sm ${theme.textSub}`}>
                 {step === 'upload' && 'Upload a CSV file'}
                 {step === 'review' && `${parsedContacts.length} contacts found`}
                 {step === 'duplicates' && 'Review duplicates'}
               </p>
             </div>
           </div>
-          <button onClick={resetAndClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
+          <button onClick={resetAndClose} className={`p-2 ${theme.surfaceHover} rounded-full hover:${theme.surfaceActive} transition-colors`}>
             <X size={20} />
           </button>
         </div>
@@ -155,12 +156,12 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
           <div className="space-y-6">
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+              className={`border-2 border-dashed ${theme.border} rounded-2xl p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors`}
             >
-              <FileText size={48} className="mx-auto text-slate-300 mb-4" />
-              <p className="font-bold text-slate-700">Click to upload CSV file</p>
-              <p className="text-sm text-slate-500 mt-2">Required: name column</p>
-              <p className="text-sm text-slate-500">Optional: phone, email, category</p>
+              <FileText size={48} className={`mx-auto ${theme.textDisabled} mb-4`} />
+              <p className={`font-bold ${theme.textMain}`}>Click to upload CSV file</p>
+              <p className={`text-sm ${theme.textSub} mt-2`}>Required: name column</p>
+              <p className={`text-sm ${theme.textSub}`}>Optional: phone, email, category</p>
             </div>
             <input
               type="file"
@@ -178,9 +179,9 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
               </div>
             )}
 
-            <div className="bg-slate-50 p-4 rounded-xl">
-              <h4 className="font-bold text-sm text-slate-700 mb-2">CSV Format Example:</h4>
-              <code className="text-xs text-slate-600 block bg-white p-3 rounded-lg border border-slate-200 font-mono">
+            <div className={`${theme.surfaceHover} p-4 rounded-xl`}>
+              <h4 className={`font-bold text-sm ${theme.textMain} mb-2`}>CSV Format Example:</h4>
+              <code className={`text-xs ${theme.textSub} block ${theme.cardBg} p-3 rounded-lg border ${theme.border} font-mono`}>
                 name,phone,email,category<br/>
                 John Doe,555-1234,john@email.com,Friends<br/>
                 Jane Smith,555-5678,jane@email.com,Family
@@ -193,23 +194,23 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
         {step === 'review' && (
           <div className="space-y-4">
             {/* Default settings */}
-            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl">
+            <div className={`grid grid-cols-2 gap-4 ${theme.surfaceHover} p-4 rounded-xl`}>
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">Default Category</label>
+                <label className={`text-xs font-bold ${theme.textSub} uppercase`}>Default Category</label>
                 <select
                   value={defaultCategory}
                   onChange={(e) => setDefaultCategory(e.target.value)}
-                  className="w-full mt-1 p-2 rounded-lg border border-slate-200 text-sm"
+                  className={`w-full mt-1 p-2 rounded-lg border ${theme.border} text-sm`}
                 >
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">Contact Frequency</label>
+                <label className={`text-xs font-bold ${theme.textSub} uppercase`}>Contact Frequency</label>
                 <select
                   value={defaultFrequency}
                   onChange={(e) => setDefaultFrequency(Number(e.target.value))}
-                  className="w-full mt-1 p-2 rounded-lg border border-slate-200 text-sm"
+                  className={`w-full mt-1 p-2 rounded-lg border ${theme.border} text-sm`}
                 >
                   <option value={7}>Every 7 days</option>
                   <option value={14}>Every 14 days</option>
@@ -252,7 +253,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
               >
                 {selectedContacts.size === parsedContacts.length ? 'Deselect All' : 'Select All'}
               </button>
-              <span className="text-sm text-slate-500">
+              <span className={`text-sm ${theme.textSub}`}>
                 {selectedContacts.size} of {parsedContacts.length} selected
               </span>
             </div>
@@ -294,7 +295,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
             <div className="flex gap-3 pt-4">
               <button
                 onClick={() => setStep('upload')}
-                className="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50"
+                className={`flex-1 py-3 rounded-xl border ${theme.border} font-bold ${theme.textSub} hover:${theme.surfaceHover}`}
               >
                 Back
               </button>
@@ -302,7 +303,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
                 onClick={handleImport}
                 disabled={selectedContacts.size === 0}
                 className={`flex-1 py-3 rounded-xl font-bold text-white transition-colors ${
-                  selectedContacts.size > 0 ? `${theme.primary} hover:opacity-90` : 'bg-slate-300 cursor-not-allowed'
+                  selectedContacts.size > 0 ? `${theme.primary} hover:opacity-90` : `${theme.surfaceActive} cursor-not-allowed`
                 }`}
               >
                 Import {selectedContacts.size} Contacts
@@ -326,9 +327,9 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {duplicates.map((d, i) => (
-                <div key={i} className="p-3 bg-slate-50 rounded-xl">
-                  <p className="font-medium text-slate-800">"{d.newContact.name}"</p>
-                  <p className="text-xs text-slate-500">
+                <div key={i} className={`p-3 ${theme.surfaceHover} rounded-xl`}>
+                  <p className={`font-medium ${theme.textMain}`}>"{d.newContact.name}"</p>
+                  <p className={`text-xs ${theme.textSub}`}>
                     Similar to existing: "{d.existingFriend.name}" ({d.similarity}% match)
                   </p>
                 </div>
@@ -338,7 +339,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
             <div className="flex gap-3 pt-4">
               <button
                 onClick={() => setStep('review')}
-                className="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50"
+                className={`flex-1 py-3 rounded-xl border ${theme.border} font-bold ${theme.textSub} hover:${theme.surfaceHover}`}
               >
                 Go Back
               </button>

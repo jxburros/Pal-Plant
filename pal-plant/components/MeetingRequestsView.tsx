@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { Calendar, UserPlus, X, Check, MapPin, Briefcase, Mail, Phone, Upload, Clock, Download, Users, AlertTriangle, RefreshCw } from 'lucide-react';
 import { MeetingRequest } from '../types';
-import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent, getGoogleCalendarUrl } from '../utils/helpers';
+import { generateId, fileToBase64, getMeetingUrgency, downloadCalendarEvent, getGoogleCalendarUrl } from '../utils/helpers';
 import { AppSettings } from '../types';
+import { useTheme } from '../utils/ThemeContext';
 
 interface MeetingRequestsViewProps {
   requests: MeetingRequest[];
@@ -15,7 +16,7 @@ interface MeetingRequestsViewProps {
 const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
   requests, onAddRequest, onUpdateRequest, onDeleteRequest, settings
 }) => {
-  const theme = THEMES[settings.theme];
+  const theme = useTheme();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -361,7 +362,7 @@ const MeetingCard: React.FC<{
     <div className={`${theme.cardBg} rounded-2xl shadow-sm border ${isOverdue ? 'border-red-300 ring-2 ring-red-100' : isStale ? 'border-amber-300' : theme.border} overflow-hidden`}>
       {/* Top Timer Bar (Only for Requested) */}
       {req.status === 'REQUESTED' && (
-        <div className="h-2 bg-slate-100 w-full relative">
+        <div className={`h-2 ${theme.surfaceHover} w-full relative`}>
            <div
              className="h-full transition-all duration-500"
              style={{ width: `${urgency.ratio * 100}%`, backgroundColor: urgency.color }}
@@ -372,11 +373,11 @@ const MeetingCard: React.FC<{
       <div className="p-4">
         <div className="flex gap-4">
            {/* Avatar */}
-           <div className="w-16 h-16 rounded-2xl bg-slate-100 flex-shrink-0 overflow-hidden shadow-inner">
+           <div className={`w-16 h-16 rounded-2xl ${theme.surfaceHover} flex-shrink-0 overflow-hidden shadow-inner`}>
              {req.photo ? (
                <img src={req.photo} className="w-full h-full object-cover" alt={req.name} />
              ) : (
-               <div className="w-full h-full flex items-center justify-center text-slate-300 font-bold text-2xl">
+               <div className={`w-full h-full flex items-center justify-center ${theme.textDisabled} font-bold text-2xl`}>
                  {req.name.charAt(0)}
                </div>
              )}
@@ -404,8 +405,8 @@ const MeetingCard: React.FC<{
             )}
 
              <div className="flex gap-3 mt-2">
-                {req.phone && <a href={`tel:${req.phone}`} className="text-slate-400 hover:text-green-600"><Phone size={14}/></a>}
-                {req.email && <a href={`mailto:${req.email}`} className="text-slate-400 hover:text-blue-600"><Mail size={14}/></a>}
+                {req.phone && <a href={`tel:${req.phone}`} className={`${theme.textSub} hover:text-green-600`}><Phone size={14}/></a>}
+                {req.email && <a href={`mailto:${req.email}`} className={`${theme.textSub} hover:text-blue-600`}><Mail size={14}/></a>}
              </div>
            </div>
         </div>
@@ -436,12 +437,12 @@ const MeetingCard: React.FC<{
 
         {/* Scheduled Details View */}
         {req.status === 'SCHEDULED' && !isScheduling && (
-          <div className="mt-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
-             <div className="flex gap-2 text-sm text-slate-700 mb-1">
+          <div className={`mt-4 ${theme.surfaceHover} p-3 rounded-xl border ${theme.border}`}>
+             <div className={`flex gap-2 text-sm ${theme.textMain} mb-1`}>
                <Calendar size={16} className="text-blue-500" />
                <span className="font-bold">{new Date(req.scheduledDate!).toLocaleString()}</span>
              </div>
-             <div className="flex gap-2 text-sm text-slate-500">
+             <div className={`flex gap-2 text-sm ${theme.textSub}`}>
                <MapPin size={16} className="text-red-500" />
                <span>{req.location}</span>
              </div>
@@ -471,21 +472,21 @@ const MeetingCard: React.FC<{
 
         {/* Scheduling Inputs */}
         {isScheduling && (
-           <div className="mt-4 bg-slate-50 p-3 rounded-xl border border-slate-200 animate-in fade-in">
-              <label className="text-xs font-bold text-slate-400 uppercase">When</label>
-              <input type="datetime-local" value={schedDate} onChange={e => setSchedDate(e.target.value)} className="w-full p-2 mb-2 rounded border border-slate-200 text-sm" />
-              <label className="text-xs font-bold text-slate-400 uppercase">Where</label>
-              <input type="text" value={schedLoc} onChange={e => setSchedLoc(e.target.value)} className="w-full p-2 mb-3 rounded border border-slate-200 text-sm" placeholder="Location..." maxLength={200} />
+           <div className={`mt-4 ${theme.surfaceHover} p-3 rounded-xl border ${theme.border} animate-in fade-in`}>
+              <label className={`text-xs font-bold ${theme.textSub} uppercase`}>When</label>
+              <input type="datetime-local" value={schedDate} onChange={e => setSchedDate(e.target.value)} className={`w-full p-2 mb-2 rounded border ${theme.border} text-sm`} />
+              <label className={`text-xs font-bold ${theme.textSub} uppercase`}>Where</label>
+              <input type="text" value={schedLoc} onChange={e => setSchedLoc(e.target.value)} className={`w-full p-2 mb-3 rounded border ${theme.border} text-sm`} placeholder="Location..." maxLength={200} />
               <div className="flex gap-2">
                  <button onClick={saveSchedule} className="flex-1 bg-blue-600 text-white text-xs font-bold py-2 rounded">Save</button>
-                 <button onClick={() => setIsScheduling(false)} className="px-3 bg-slate-200 text-slate-600 text-xs font-bold rounded">Cancel</button>
+                 <button onClick={() => setIsScheduling(false)} className={`px-3 ${theme.surfaceActive} ${theme.textSub} text-xs font-bold rounded`}>Cancel</button>
               </div>
            </div>
         )}
 
 
-        <div className="mt-3 p-2 rounded-lg bg-slate-50 border border-slate-100">
-          <p className="text-[11px] text-slate-500">
+        <div className={`mt-3 p-2 rounded-lg ${theme.surfaceHover} border ${theme.border}`}>
+          <p className={`text-[11px] ${theme.textSub}`}>
             Score impact: <span className="font-semibold text-green-600">Mark attended +5</span> · <span className="font-semibold text-amber-700">Close without meeting +0</span>{isStale ? <span className="font-semibold text-red-500"> · Stale penalty -2</span> : null}
           </p>
         </div>
@@ -501,7 +502,7 @@ const MeetingCard: React.FC<{
              confirmComplete ? (
                <div className="col-span-1 flex gap-1">
                  <button onClick={() => { onMarkAttended(); setConfirmComplete(false); }} className="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-xs font-bold">Yes</button>
-                 <button onClick={() => setConfirmComplete(false)} className="flex-1 bg-slate-200 text-slate-600 py-2.5 rounded-xl text-xs font-bold">No</button>
+                 <button onClick={() => setConfirmComplete(false)} className={`flex-1 ${theme.surfaceActive} ${theme.textSub} py-2.5 rounded-xl text-xs font-bold`}>No</button>
                </div>
              ) : (
                <button onClick={() => setConfirmComplete(true)} className="col-span-1 bg-green-50 text-green-600 hover:bg-green-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
@@ -525,14 +526,14 @@ const MeetingCard: React.FC<{
              </button>
            )}
 
-           <button onClick={onEdit} className="col-span-1 bg-slate-50 text-slate-600 hover:bg-slate-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
+           <button onClick={onEdit} className={`col-span-1 ${theme.surfaceHover} ${theme.textSub} hover:${theme.surfaceActive} py-2.5 rounded-xl text-xs font-bold transition-colors`}>
              Edit
            </button>
 
            {confirmDelete ? (
              <div className="col-span-1 flex gap-1">
                <button onClick={() => { onDelete(); setConfirmDelete(false); }} className="flex-1 bg-red-500 text-white py-2.5 rounded-xl text-xs font-bold">Yes</button>
-               <button onClick={() => setConfirmDelete(false)} className="flex-1 bg-slate-200 text-slate-600 py-2.5 rounded-xl text-xs font-bold">No</button>
+               <button onClick={() => setConfirmDelete(false)} className={`flex-1 ${theme.surfaceActive} ${theme.textSub} py-2.5 rounded-xl text-xs font-bold`}>No</button>
              </div>
            ) : (
              <button onClick={() => setConfirmDelete(true)} className="col-span-1 bg-red-50 text-red-500 hover:bg-red-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
