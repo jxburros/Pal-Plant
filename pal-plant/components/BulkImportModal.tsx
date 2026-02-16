@@ -31,6 +31,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
   const [defaultFrequency, setDefaultFrequency] = useState(7);
   const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
   const [parseError, setParseError] = useState('');
+  const [importingDeviceContacts, setImportingDeviceContacts] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const theme = THEMES[settings.theme];
@@ -64,6 +65,49 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
     reader.readAsText(file);
     // Reset file input so same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+
+  const handleDeviceContactImport = async () => {
+    const contactPicker = (navigator as Navigator & {
+      contacts?: {
+        select?: (properties: string[], options?: { multiple?: boolean }) => Promise<Array<Record<string, any>>>;
+      };
+    }).contacts;
+
+    if (!contactPicker?.select) {
+      setParseError('Contact picker is not supported on this device. Use CSV import instead.');
+      return;
+    }
+
+    setParseError('');
+    setImportingDeviceContacts(true);
+
+    try {
+      const selected = await contactPicker.select(['name', 'tel', 'email'], { multiple: true });
+      const contacts = selected
+        .map((entry) => ({
+          name: Array.isArray(entry.name) ? String(entry.name[0] || '').trim() : '',
+          phone: Array.isArray(entry.tel) ? String(entry.tel[0] || '') : undefined,
+          email: Array.isArray(entry.email) ? String(entry.email[0] || '') : undefined,
+        }))
+        .filter((entry) => entry.name);
+
+      if (contacts.length === 0) {
+        setParseError('No contacts were selected.');
+        return;
+      }
+
+      setParsedContacts(contacts);
+      setSelectedContacts(new Set(contacts.map((_, i) => i)));
+      setDuplicates(detectDuplicates(contacts, existingFriends));
+      setStep('review');
+    } catch (error) {
+      setParseError('Unable to import contacts from device. Please use CSV import instead.');
+      console.warn('Device contact import failed:', error);
+    } finally {
+      setImportingDeviceContacts(false);
+    }
   };
 
   const handleToggleContact = (index: number) => {
@@ -169,6 +213,14 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
               accept=".csv"
               className="hidden"
             />
+
+            <button
+              onClick={handleDeviceContactImport}
+              disabled={importingDeviceContacts}
+              className="w-full py-3 rounded-xl border border-slate-200 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {importingDeviceContacts ? 'Loading contacts…' : 'Import from device contacts'}
+            </button>
 
             {/* Inline error instead of alert */}
             {parseError && (
