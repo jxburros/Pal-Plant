@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download } from 'lucide-react';
 import { Friend, Tab, ContactLog, MeetingRequest, AppSettings } from './types';
 import FriendCard from './components/FriendCard';
@@ -235,20 +235,31 @@ const App: React.FC = () => {
     setSettings(prev => ({ ...prev, hasSeenOnboarding: true }));
   };
 
-  const openAddModal = () => { setEditingFriend(null); setIsModalOpen(true); };
+  const openAddModal = useCallback(() => { 
+    setEditingFriend(null); 
+    setIsModalOpen(true); 
+  }, []);
+  
   const { setShowShortcutsModal, ShortcutsModal } = useKeyboardShortcuts(
     setActiveTab,
     openAddModal,
     () => setIsSettingsOpen(true)
   );
 
+  // Refresh time-based calculations every minute
+  // Use a timestamp instead of recreating entire friends array
+  const [currentTime, setCurrentTime] = useState(Date.now());
   useEffect(() => {
-    const interval = setInterval(() => setFriends(prev => [...prev]), 60000);
+    const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const themeColors = THEMES[settings.theme];
-  const textSizeClass = settings.textSize === 'large' ? 'text-lg' : settings.textSize === 'xl' ? 'text-xl' : 'text-base';
+  // Memoize theme colors and text size to avoid recalculation on every render
+  const themeColors = useMemo(() => THEMES[settings.theme], [settings.theme]);
+  const textSizeClass = useMemo(() => {
+    return settings.textSize === 'large' ? 'text-lg' : 
+           settings.textSize === 'xl' ? 'text-xl' : 'text-base';
+  }, [settings.textSize]);
 
   const handleSaveFriend = (friend: Friend) => {
     saveFriend(friend, !!editingFriend);
@@ -266,7 +277,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleRequestMeeting = (friend: Friend) => {
+  const handleRequestMeeting = useCallback((friend: Friend) => {
     setMeetingRequests(prev => [{
       id: generateId(),
       name: friend.name,
@@ -277,32 +288,51 @@ const App: React.FC = () => {
     }, ...prev]);
     trackEvent('MEETING_CREATED', { friendId: friend.id });
     setActiveTab(Tab.MEETINGS);
-  };
+  }, []);
 
-  const openEditModal = (friend: Friend) => { setEditingFriend(friend); setIsModalOpen(true); };
+  const openEditModal = useCallback((friend: Friend) => { 
+    setEditingFriend(friend); 
+    setIsModalOpen(true); 
+  }, []);
 
-  const handleBulkImport = (newFriends: Friend[]) => {
+  const handleBulkImport = useCallback((newFriends: Friend[]) => {
     bulkImport(newFriends);
     showToast(`Successfully imported ${newFriends.length} contacts!`);
-  };
+  }, [bulkImport, showToast]);
 
-  const filteredFriends = friends.filter(f => {
-    const matchesCategory = selectedCategory === 'All' || f.category === selectedCategory;
-    const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      f.notes?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Memoize filtered and sorted friends to avoid recalculation on every render
+  const filteredFriends = useMemo(() => {
+    return friends.filter(f => {
+      const matchesCategory = selectedCategory === 'All' || f.category === selectedCategory;
+      const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        f.notes?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [friends, selectedCategory, searchQuery]);
 
-  const sortedFriends = [...filteredFriends].sort((a, b) => calculateTimeStatus(a.lastContacted, a.frequencyDays).percentageLeft - calculateTimeStatus(b.lastContacted, b.frequencyDays).percentageLeft);
+  const sortedFriends = useMemo(() => {
+    // Force recalculation when currentTime changes (every minute)
+    const _ = currentTime;
+    return [...filteredFriends].sort((a, b) => {
+      const aStatus = calculateTimeStatus(a.lastContacted, a.frequencyDays);
+      const bStatus = calculateTimeStatus(b.lastContacted, b.frequencyDays);
+      return aStatus.percentageLeft - bStatus.percentageLeft;
+    });
+  }, [filteredFriends, currentTime]);
 
-  const handleNavigateToFriend = (friendName: string) => {
+  const handleNavigateToFriend = useCallback((friendName: string) => {
     setActiveTab(Tab.LIST);
     setSearchQuery(friendName);
-  };
+  }, []);
 
-  const handleNavigateToMeetings = () => {
+  const handleNavigateToMeetings = useCallback(() => {
     setActiveTab(Tab.MEETINGS);
-  };
+  }, []);
+
+  // Memoize category selection handler to avoid creating new functions on every render
+  const handleSelectCategory = useCallback((category: string) => {
+    setSelectedCategory(category);
+  }, []);
 
   const handleApplyNudge = useCallback((friendId: string, newFrequencyDays: number) => {
     setFriends(prev => prev.map(f =>
