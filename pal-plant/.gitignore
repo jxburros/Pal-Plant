@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.rule-test-dist/
 .env
 .env.local
 *.log

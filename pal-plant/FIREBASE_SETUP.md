@@ -4,17 +4,21 @@ This guide explains how to complete the Firebase Cloud Messaging (FCM) setup for
 
 ## Current Status
 
-✅ **Implemented:**
+✅ **Fully Implemented:**
+- Firebase SDK initialization (loaded dynamically from CDN)
+- Firebase Analytics integration with event tracking
 - Service worker for background notifications (`public/firebase-messaging-sw.js`)
-- Firebase Messaging module initialization
 - FCM token registration and management
 - Foreground and background message handlers
 - Web app manifest for PWA support
-- Firebase Analytics integration with existing analytics system
+- Integration with Capacitor for native Android/iOS notifications
 
-⚠️ **Action Required:**
+⚠️ **Configuration Required for Web Push:**
 - Generate and configure VAPID key (see below)
-- Optional: Set up backend API to send notifications
+- Update VAPID key in code
+
+🔧 **Optional (Advanced):**
+- Set up backend API to send notifications programmatically
 
 ## Getting Your VAPID Key
 
@@ -37,7 +41,7 @@ Firebase Cloud Messaging requires a VAPID key (Voluntary Application Server Iden
    - Copy the generated key
 
 4. **Update the Code:**
-   - Open `/home/user/Pal-Plant/pal-plant/utils/firebaseMessaging.ts`
+   - Open `pal-plant/utils/firebaseMessaging.ts`
    - Replace `YOUR_VAPID_KEY_HERE` on line 4 with your actual VAPID key
 
    ```typescript
@@ -94,22 +98,28 @@ For Web Platform:
 
 ## Testing Notifications
 
-### 1. Test Local Notifications (Current Implementation)
+### 1. Test Local Notifications (✅ Working Out of the Box)
 
-The app already sends local notifications when:
+The app sends local notifications when:
 - A friend is overdue for contact
 - A meeting is coming up soon
 
-These work immediately without FCM setup.
+**These work immediately on all platforms:**
+- **Web:** Browser Notification API
+- **Android/iOS:** Capacitor Local Notifications plugin
 
-### 2. Test FCM Notifications (Requires VAPID Key)
+No FCM setup is required for local notifications.
 
-Once you've configured the VAPID key:
+### 2. Test FCM Notifications (⚠️ Requires VAPID Key Configuration)
+
+Once you've configured the VAPID key in `utils/firebaseMessaging.ts`:
 
 1. Open the app in a web browser (Chrome/Firefox/Edge)
 2. Enable push notifications in Settings
 3. Check the browser console - you should see your FCM token logged
 4. The token can be used to send test notifications via Firebase Console
+
+**Note:** This only applies to the web version. Native Android/iOS apps use Capacitor's notification system.
 
 ### 3. Send Test Notification from Firebase Console
 
@@ -135,8 +145,9 @@ VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
 VITE_FCM_TOKEN_ENDPOINT=https://your-api.example.com/api/fcm-token
 ```
 
-## Backend API Integration (Optional)
+## Backend API Integration (Optional - For Remote Push Notifications)
 
+The app can send local notifications without a backend. However, if you want to send notifications from a server (e.g., reminder emails or push notifications when the app is not running), you can implement the `sendTokenToServer` function in `utils/firebaseMessaging.ts`.
 To send notifications from your backend, set `VITE_FCM_TOKEN_ENDPOINT` so the app can POST device tokens to your API.
 
 ### Example Backend Endpoint
@@ -215,12 +226,14 @@ pal-plant/
 
 ## Next Steps
 
-1. ✅ Generate VAPID key from Firebase Console
-2. ✅ Update `firebaseMessaging.ts` with the VAPID key
-3. ✅ Test notifications in a web browser
-4. ✅ Replace placeholder icons with actual app icons (optional)
-5. ✅ Implement backend API to send notifications (optional)
-6. ✅ Deploy and test on production domain with HTTPS
+1. ✅ **Already Working:** Firebase Analytics tracks events automatically
+2. ✅ **Already Working:** Local notifications work on all platforms (web, Android, iOS)
+3. ⚠️ **Optional:** Generate VAPID key from Firebase Console for web push notifications
+4. ⚠️ **Optional:** Update `firebaseMessaging.ts` with the VAPID key
+5. ⚠️ **Optional:** Test web push notifications in a browser
+6. 🔧 **Optional:** Replace placeholder icons with actual app icons
+7. 🔧 **Optional:** Implement backend API to send remote notifications
+8. 🚀 **Optional:** Deploy and test on production domain with HTTPS
 
 ## Resources
 

@@ -36,14 +36,16 @@ The app has clean entities:
 
 This model is sufficiently expressive for the current product scope and easy to extend.
 
-### Utility layer (`utils/helpers.ts`, `utils/analytics.ts`)
+### Utility layer (`utils/helpers.ts`, `utils/analytics.ts`, `utils/firebase.ts`, `utils/firebaseMessaging.ts`, `utils/friendEngine.ts`)
 
 Primary utility domains:
 - Time/urgency calculations (e.g., percentage left, days left).
 - Scoring and streak/cohort calculations.
 - ICS/calendar generation and download utilities.
 - Input sanitization (text/phone/email helpers).
-- Local analytics event tracking with capped retention.
+- Local analytics event tracking with Firebase Analytics integration.
+- Firebase SDK initialization and FCM token management.
+- Contact action processing and scoring logic.
 
 This is a good separation for maintainability, though some critical business rules remain implicit to users.
 
