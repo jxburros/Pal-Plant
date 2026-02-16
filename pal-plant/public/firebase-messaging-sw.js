@@ -26,8 +26,8 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || 'Pal Plant';
   const notificationOptions = {
     body: payload.notification?.body || 'You have a new notification',
-    icon: payload.notification?.icon || '/icon-192x192.png',
-    badge: '/badge-72x72.png',
+    icon: payload.notification?.icon || '/icon.svg',
+    badge: '/badge.svg',
     tag: payload.data?.tag || 'pal-plant-notification',
     data: payload.data,
     requireInteraction: false,

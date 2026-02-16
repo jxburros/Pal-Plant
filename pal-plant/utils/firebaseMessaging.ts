@@ -130,18 +130,23 @@ export const setupForegroundMessageHandler = (onMessage: (payload: any) => void)
   }
 
   try {
+    let unsubscribe: (() => void) | null = null;
+    let isActive = true;
+
     // Import onMessage dynamically since messaging module was loaded via CDN
     import('https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging.js').then(({ onMessage: onMessageFn }) => {
-      const unsubscribe = onMessageFn(messaging, (payload) => {
+      if (!isActive) return;
+
+      unsubscribe = onMessageFn(messaging, (payload) => {
         console.log('Foreground message received:', payload);
         onMessage(payload);
       });
-
-      return unsubscribe;
     });
 
     // Return a cleanup function
     return () => {
+      isActive = false;
+      unsubscribe?.();
       console.log('Foreground message handler cleaned up');
     };
   } catch (error) {
@@ -151,22 +156,28 @@ export const setupForegroundMessageHandler = (onMessage: (payload: any) => void)
 };
 
 /**
- * Sends the FCM token to your backend server.
- * Your backend will use this token to send notifications.
- *
- * TODO: Implement this function to send the token to your backend API.
+ * Sends the FCM token to your backend server when an endpoint is configured.
  */
 export const sendTokenToServer = async (token: string): Promise<boolean> => {
-  try {
-    // Example implementation:
-    // const response = await fetch('/api/fcm-token', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ token }),
-    // });
-    // return response.ok;
+  const endpoint = import.meta.env.VITE_FCM_TOKEN_ENDPOINT;
 
-    console.log('TODO: Send token to server:', token);
+  if (!endpoint) {
+    console.info('Skipping token sync: VITE_FCM_TOKEN_ENDPOINT is not configured.');
+    return false;
+  }
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send token to server:', response.status, response.statusText);
+      return false;
+    }
+
     return true;
   } catch (error) {
     console.error('Error sending token to server:', error);
