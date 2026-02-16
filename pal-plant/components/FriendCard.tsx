@@ -44,8 +44,9 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
   const cadenceChanged = !!(lastLog && previousLog && lastLog.daysWaitGoal !== previousLog.daysWaitGoal);
   const cyclesToNextToken = Math.max(0, 2 - (friend.cyclesSinceLastQuickTouch || 0));
 
+  // Deep connection cooldown: 24 hours with 20% buffer = 28.8 hours actual
   const isDeepCooldown = friend.lastDeepConnection
-    ? (new Date().getTime() - new Date(friend.lastDeepConnection).getTime()) < (24 * 60 * 60 * 1000)
+    ? (new Date().getTime() - new Date(friend.lastDeepConnection).getTime()) < (24 * 60 * 60 * 1000 * 1.2)
     : false;
 
   const scoreReason = !lastLog
