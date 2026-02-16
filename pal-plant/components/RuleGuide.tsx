@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { X, ChevronDown, ChevronUp, Droplets, Heart, Zap, Clock, TrendingUp, TrendingDown, AlertTriangle, HelpCircle, Target } from 'lucide-react';
-import { useTheme } from '../utils/ThemeContext';
 
 interface RuleGuideProps {
   isOpen: boolean;
@@ -16,39 +15,37 @@ interface SectionProps {
 
 const Section: React.FC<SectionProps> = ({ title, icon, children, defaultOpen = false }) => {
   const [open, setOpen] = useState(defaultOpen);
-  const theme = useTheme();
   return (
-    <div className={`border ${theme.border} rounded-xl overflow-hidden`}>
+    <div className="border border-slate-200 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(prev => !prev)}
-        className={`w-full flex items-center justify-between p-4 ${theme.surfaceHover} hover:${theme.surfaceActive} transition-colors text-left`}
+        className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
           {icon}
-          <span className={`font-bold ${theme.textMain} text-sm`}>{title}</span>
+          <span className="font-bold text-slate-800 text-sm">{title}</span>
         </div>
-        {open ? <ChevronUp size={16} className={theme.textSub} /> : <ChevronDown size={16} className={theme.textSub} />}
+        {open ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
       </button>
-      {open && <div className={`p-4 space-y-3 text-sm ${theme.textSub} leading-relaxed`}>{children}</div>}
+      {open && <div className="p-4 space-y-3 text-sm text-slate-600 leading-relaxed">{children}</div>}
     </div>
   );
 };
 
 const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
-  const theme = useTheme();
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <div className={`${theme.cardBg} w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-6 relative z-10 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[85vh] overflow-y-auto`}>
+      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-6 relative z-10 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className={`text-xl font-bold ${theme.textMain} flex items-center gap-2`}>
+          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <HelpCircle size={22} className="text-emerald-600" />
             How Pal Plant Works
           </h2>
-          <button onClick={onClose} className={`p-2 ${theme.surfaceHover} rounded-full hover:${theme.surfaceActive}`}>
+          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200">
             <X size={20} />
           </button>
         </div>

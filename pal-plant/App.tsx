@@ -13,7 +13,6 @@ import { useReminderEngine } from './hooks/useReminderEngine';
 import { useFriendsEngine } from './hooks/useFriendsEngine';
 import { initStorage, getFriends, getMeetings, getCategories, getSettings, exportAllData, importAllData, saveMetadata, getMetadata } from './utils/storage';
 import { debouncedSaveFriends, debouncedSaveMeetings, debouncedSaveCategories, debouncedSaveSettings } from './utils/debouncedStorage';
-import { ThemeProvider } from './utils/ThemeContext';
 
 const StatsView = lazy(() => import('./components/StatsView'));
 const OnboardingTooltips = lazy(() => import('./components/OnboardingTooltips'));
@@ -313,9 +312,8 @@ const App: React.FC = () => {
   }, [setFriends, showToast]);
 
   return (
-    <ThemeProvider theme={themeColors}>
-      <div className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
-        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+    <div className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {showBackupBanner && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[90] w-[90%] max-w-sm bg-blue-50 border border-blue-200 rounded-xl shadow-lg p-4 animate-in slide-in-from-top fade-in duration-300">
@@ -522,7 +520,6 @@ const App: React.FC = () => {
 
       <ShortcutsModal />
     </div>
-    </ThemeProvider>
   );
 };
 

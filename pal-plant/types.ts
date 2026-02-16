@@ -100,30 +100,12 @@ export interface ActionFeedback {
 }
 
 export interface ThemeColors {
-  // Background colors
-  bg: string;                    // Main background
-  cardBg: string;                // Card/surface background
-  surfaceHover: string;          // Hover state for surfaces
-  surfaceActive: string;         // Active/pressed state
-  
-  // Text colors
-  textMain: string;              // Primary text
-  textSub: string;               // Secondary/muted text
-  textDisabled: string;          // Disabled text
-  
-  // Interactive colors
-  primary: string;               // Primary button/action
-  primaryText: string;           // Text on primary buttons
-  primaryHover: string;          // Primary hover state
-  
-  // Accent colors
-  accent: string;                // Accent color
-  accentHover: string;           // Accent hover
-  
-  // Borders & dividers
-  border: string;                // Border color
-  borderStrong: string;          // Stronger border for emphasis
-  
-  // Semantic colors (maintain existing state indicators)
-  // Success, warning, error colors remain as inline for consistency
+  bg: string;
+  cardBg: string;
+  textMain: string;
+  textSub: string;
+  primary: string;
+  primaryText: string;
+  accent: string;
+  border: string;
 }

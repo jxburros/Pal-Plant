@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, Keyboard } from 'lucide-react';
 import { Tab } from '../types';
-import { useTheme } from '../utils/ThemeContext';
 
 interface KeyboardShortcutsProps {
   onNavigate: (tab: Tab) => void;
@@ -25,22 +24,21 @@ const shortcuts: ShortcutInfo[] = [
 ];
 
 const KeyboardShortcutsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const theme = useTheme();
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       
-      <div className={`${theme.cardBg} w-full max-w-md rounded-3xl p-6 relative z-10 animate-in zoom-in-95 fade-in duration-200 shadow-2xl`}>
+      <div className="bg-white w-full max-w-md rounded-3xl p-6 relative z-10 animate-in zoom-in-95 fade-in duration-200 shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
               <Keyboard size={20} className="text-orange-600" />
             </div>
-            <h2 className={`text-xl font-bold ${theme.textMain}`}>Keyboard Shortcuts</h2>
+            <h2 className="text-xl font-bold text-slate-900">Keyboard Shortcuts</h2>
           </div>
-          <button onClick={onClose} className={`p-2 ${theme.surfaceHover} rounded-full hover:${theme.surfaceActive} transition-colors`}>
+          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -49,18 +47,18 @@ const KeyboardShortcutsModal: React.FC<{ isOpen: boolean; onClose: () => void }>
           {shortcuts.map((shortcut) => (
             <div 
               key={shortcut.key}
-              className={`flex items-center justify-between p-3 ${theme.surfaceHover} rounded-xl`}
+              className="flex items-center justify-between p-3 bg-slate-50 rounded-xl"
             >
-              <span className={theme.textMain}>{shortcut.description}</span>
-              <kbd className={`px-3 py-1.5 ${theme.cardBg} rounded-lg border ${theme.border} text-sm font-mono font-bold ${theme.textMain} shadow-sm`}>
+              <span className="text-slate-700">{shortcut.description}</span>
+              <kbd className="px-3 py-1.5 bg-white rounded-lg border border-slate-200 text-sm font-mono font-bold text-slate-700 shadow-sm">
                 {shortcut.key}
               </kbd>
             </div>
           ))}
         </div>
 
-        <p className={`text-center text-sm ${theme.textDisabled} mt-6`}>
-          Press <kbd className={`px-1.5 py-0.5 ${theme.surfaceHover} rounded text-xs font-mono`}>Esc</kbd> to close this dialog
+        <p className="text-center text-sm text-slate-400 mt-6">
+          Press <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">Esc</kbd> to close this dialog
         </p>
       </div>
     </div>
