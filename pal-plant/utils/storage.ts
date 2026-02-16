@@ -6,6 +6,8 @@
  * - Transaction safety
  * - Structured data with indexing
  * - Graceful fallback to localStorage
+ * - Enhanced error handling and recovery
+ * - Storage quota monitoring
  */
 
 import { Friend, MeetingRequest, AppSettings } from '../types';
@@ -35,9 +37,81 @@ const LEGACY_KEYS = {
   ANALYTICS: 'friendkeep_analytics'
 } as const;
 
+// Storage error types
+export enum StorageErrorType {
+  QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
+  DB_UNAVAILABLE = 'DB_UNAVAILABLE',
+  TRANSACTION_FAILED = 'TRANSACTION_FAILED',
+  CORRUPTED_DATA = 'CORRUPTED_DATA',
+  UNKNOWN = 'UNKNOWN'
+}
+
+export class StorageError extends Error {
+  constructor(
+    public type: StorageErrorType,
+    message: string,
+    public originalError?: unknown
+  ) {
+    super(message);
+    this.name = 'StorageError';
+  }
+}
+
 let dbInstance: IDBDatabase | null = null;
 let dbInitPromise: Promise<IDBDatabase> | null = null;
 let useLocalStorageFallback = false;
+let storageErrorListeners: ((error: StorageError) => void)[] = [];
+
+/**
+ * Register a listener for storage errors
+ * Useful for showing user-friendly error messages in the UI
+ */
+export function onStorageError(listener: (error: StorageError) => void): () => void {
+  storageErrorListeners.push(listener);
+  return () => {
+    storageErrorListeners = storageErrorListeners.filter(l => l !== listener);
+  };
+}
+
+/**
+ * Notify all registered error listeners
+ */
+function notifyStorageError(error: StorageError): void {
+  storageErrorListeners.forEach(listener => {
+    try {
+      listener(error);
+    } catch (e) {
+      console.error('Error in storage error listener:', e);
+    }
+  });
+}
+
+/**
+ * Check storage quota and usage
+ * Returns usage information if available
+ */
+export async function checkStorageQuota(): Promise<{
+  usage: number;
+  quota: number;
+  percentUsed: number;
+  available: number;
+} | null> {
+  if ('storage' in navigator && 'estimate' in navigator.storage) {
+    try {
+      const estimate = await navigator.storage.estimate();
+      const usage = estimate.usage || 0;
+      const quota = estimate.quota || 0;
+      const percentUsed = quota > 0 ? (usage / quota) * 100 : 0;
+      const available = quota - usage;
+
+      return { usage, quota, percentUsed, available };
+    } catch (error) {
+      console.warn('Could not estimate storage quota:', error);
+      return null;
+    }
+  }
+  return null;
+}
 
 /**
  * Initialize IndexedDB with schema
@@ -50,7 +124,12 @@ function initDB(): Promise<IDBDatabase> {
     if (!window.indexedDB) {
       console.warn('IndexedDB not available, falling back to localStorage');
       useLocalStorageFallback = true;
-      reject(new Error('IndexedDB not available'));
+      const error = new StorageError(
+        StorageErrorType.DB_UNAVAILABLE,
+        'IndexedDB is not available in this browser. Using localStorage fallback.'
+      );
+      notifyStorageError(error);
+      reject(error);
       return;
     }
 
@@ -59,7 +138,13 @@ function initDB(): Promise<IDBDatabase> {
     request.onerror = () => {
       console.error('IndexedDB open error:', request.error);
       useLocalStorageFallback = true;
-      reject(request.error);
+      const error = new StorageError(
+        StorageErrorType.DB_UNAVAILABLE,
+        'Failed to open IndexedDB. Using localStorage fallback.',
+        request.error
+      );
+      notifyStorageError(error);
+      reject(error);
     };
 
     request.onsuccess = () => {
@@ -70,6 +155,16 @@ function initDB(): Promise<IDBDatabase> {
         dbInstance?.close();
         dbInstance = null;
         dbInitPromise = null;
+      };
+      
+      // Handle database errors
+      dbInstance.onerror = (event) => {
+        const error = new StorageError(
+          StorageErrorType.DB_UNAVAILABLE,
+          'IndexedDB error occurred',
+          event
+        );
+        notifyStorageError(error);
       };
       
       resolve(dbInstance);
@@ -103,6 +198,14 @@ function initDB(): Promise<IDBDatabase> {
         db.createObjectStore(STORES.METADATA, { keyPath: 'key' });
       }
     };
+
+    request.onblocked = () => {
+      const error = new StorageError(
+        StorageErrorType.DB_UNAVAILABLE,
+        'Database upgrade blocked. Please close other tabs using this app.'
+      );
+      notifyStorageError(error);
+    };
   });
 
   return dbInitPromise;
@@ -114,6 +217,21 @@ function initDB(): Promise<IDBDatabase> {
 async function getDB(): Promise<IDBDatabase> {
   if (dbInstance) return dbInstance;
   return initDB();
+}
+
+/**
+ * Detect if error is a quota exceeded error
+ */
+function isQuotaExceededError(error: unknown): boolean {
+  if (!error) return false;
+  const errorName = (error as any)?.name?.toLowerCase() || '';
+  const errorMessage = (error as any)?.message?.toLowerCase() || '';
+  return (
+    errorName.includes('quota') ||
+    errorMessage.includes('quota') ||
+    errorName === 'quotaexceedederror' ||
+    errorMessage.includes('storage limit')
+  );
 }
 
 /**
@@ -132,16 +250,30 @@ async function get<T>(storeName: string, key: string): Promise<T | null> {
       const request = store.get(key);
 
       request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        const error = new StorageError(
+          StorageErrorType.TRANSACTION_FAILED,
+          `Failed to get ${key} from ${storeName}`,
+          request.error
+        );
+        reject(error);
+      };
     });
   } catch (error) {
     console.error(`Error getting ${key} from ${storeName}:`, error);
+    notifyStorageError(
+      new StorageError(
+        StorageErrorType.TRANSACTION_FAILED,
+        `Failed to get ${key} from ${storeName}. Using fallback.`,
+        error
+      )
+    );
     return getFromLocalStorage<T>(storeName, key);
   }
 }
 
 /**
- * Generic put operation
+ * Generic put operation with quota detection
  */
 async function put<T>(storeName: string, value: T): Promise<void> {
   if (useLocalStorageFallback) {
@@ -156,10 +288,43 @@ async function put<T>(storeName: string, value: T): Promise<void> {
       const request = store.put(value);
 
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        if (isQuotaExceededError(request.error)) {
+          const error = new StorageError(
+            StorageErrorType.QUOTA_EXCEEDED,
+            'Storage quota exceeded. Please free up space or delete old data.',
+            request.error
+          );
+          notifyStorageError(error);
+          reject(error);
+        } else {
+          const error = new StorageError(
+            StorageErrorType.TRANSACTION_FAILED,
+            `Failed to save to ${storeName}`,
+            request.error
+          );
+          reject(error);
+        }
+      };
     });
   } catch (error) {
     console.error(`Error putting to ${storeName}:`, error);
+    if (isQuotaExceededError(error)) {
+      const storageError = new StorageError(
+        StorageErrorType.QUOTA_EXCEEDED,
+        'Storage quota exceeded. Using fallback.',
+        error
+      );
+      notifyStorageError(storageError);
+      throw storageError;
+    }
+    notifyStorageError(
+      new StorageError(
+        StorageErrorType.TRANSACTION_FAILED,
+        `Failed to save to ${storeName}. Using fallback.`,
+        error
+      )
+    );
     return putToLocalStorage(storeName, value);
   }
 }
@@ -180,10 +345,24 @@ async function getAll<T>(storeName: string): Promise<T[]> {
       const request = store.getAll();
 
       request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        const error = new StorageError(
+          StorageErrorType.TRANSACTION_FAILED,
+          `Failed to get all from ${storeName}`,
+          request.error
+        );
+        reject(error);
+      };
     });
   } catch (error) {
     console.error(`Error getting all from ${storeName}:`, error);
+    notifyStorageError(
+      new StorageError(
+        StorageErrorType.TRANSACTION_FAILED,
+        `Failed to get all from ${storeName}. Using fallback.`,
+        error
+      )
+    );
     return getAllFromLocalStorage<T>(storeName);
   }
 }
@@ -204,10 +383,24 @@ async function remove(storeName: string, key: string): Promise<void> {
       const request = store.delete(key);
 
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        const error = new StorageError(
+          StorageErrorType.TRANSACTION_FAILED,
+          `Failed to delete ${key} from ${storeName}`,
+          request.error
+        );
+        reject(error);
+      };
     });
   } catch (error) {
     console.error(`Error deleting ${key} from ${storeName}:`, error);
+    notifyStorageError(
+      new StorageError(
+        StorageErrorType.TRANSACTION_FAILED,
+        `Failed to delete ${key} from ${storeName}. Using fallback.`,
+        error
+      )
+    );
     return removeFromLocalStorage(storeName, key);
   }
 }
@@ -228,10 +421,24 @@ async function clear(storeName: string): Promise<void> {
       const request = store.clear();
 
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        const error = new StorageError(
+          StorageErrorType.TRANSACTION_FAILED,
+          `Failed to clear ${storeName}`,
+          request.error
+        );
+        reject(error);
+      };
     });
   } catch (error) {
     console.error(`Error clearing ${storeName}:`, error);
+    notifyStorageError(
+      new StorageError(
+        StorageErrorType.TRANSACTION_FAILED,
+        `Failed to clear ${storeName}. Using fallback.`,
+        error
+      )
+    );
     return clearLocalStorage(storeName);
   }
 }
@@ -298,12 +505,35 @@ function getLegacyKey(storeName: string): string {
  * Friends operations
  */
 export async function getFriends(): Promise<Friend[]> {
-  return getAll<Friend>(STORES.FRIENDS);
+  try {
+    return await getAll<Friend>(STORES.FRIENDS);
+  } catch (error) {
+    const storageError = new StorageError(
+      StorageErrorType.TRANSACTION_FAILED,
+      'Failed to load friends data',
+      error
+    );
+    notifyStorageError(storageError);
+    throw storageError;
+  }
 }
 
 export async function saveFriends(friends: Friend[]): Promise<void> {
   if (useLocalStorageFallback) {
-    localStorage.setItem(LEGACY_KEYS.FRIENDS, JSON.stringify(friends));
+    try {
+      localStorage.setItem(LEGACY_KEYS.FRIENDS, JSON.stringify(friends));
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        const storageError = new StorageError(
+          StorageErrorType.QUOTA_EXCEEDED,
+          'Storage quota exceeded. Please delete some data to free up space.',
+          error
+        );
+        notifyStorageError(storageError);
+        throw storageError;
+      }
+      throw error;
+    }
     return;
   }
 
@@ -324,14 +554,49 @@ export async function saveFriends(friends: Friend[]): Promise<void> {
       new Promise<void>((resolve, reject) => {
         const putRequest = store.put(friend);
         putRequest.onsuccess = () => resolve();
-        putRequest.onerror = () => reject(putRequest.error);
+        putRequest.onerror = () => {
+          if (isQuotaExceededError(putRequest.error)) {
+            reject(new StorageError(
+              StorageErrorType.QUOTA_EXCEEDED,
+              'Storage quota exceeded while saving friends',
+              putRequest.error
+            ));
+          } else {
+            reject(putRequest.error);
+          }
+        };
       })
     );
 
     await Promise.all(putPromises);
   } catch (error) {
     console.error('Error saving friends:', error);
-    localStorage.setItem(LEGACY_KEYS.FRIENDS, JSON.stringify(friends));
+    if (error instanceof StorageError && error.type === StorageErrorType.QUOTA_EXCEEDED) {
+      notifyStorageError(error);
+      throw error;
+    }
+    // Try localStorage fallback
+    try {
+      localStorage.setItem(LEGACY_KEYS.FRIENDS, JSON.stringify(friends));
+      notifyStorageError(
+        new StorageError(
+          StorageErrorType.TRANSACTION_FAILED,
+          'Failed to save to IndexedDB, using localStorage fallback',
+          error
+        )
+      );
+    } catch (fallbackError) {
+      if (isQuotaExceededError(fallbackError)) {
+        const storageError = new StorageError(
+          StorageErrorType.QUOTA_EXCEEDED,
+          'Storage quota exceeded in both IndexedDB and localStorage',
+          fallbackError
+        );
+        notifyStorageError(storageError);
+        throw storageError;
+      }
+      throw fallbackError;
+    }
   }
 }
 
@@ -339,12 +604,35 @@ export async function saveFriends(friends: Friend[]): Promise<void> {
  * Meetings operations
  */
 export async function getMeetings(): Promise<MeetingRequest[]> {
-  return getAll<MeetingRequest>(STORES.MEETINGS);
+  try {
+    return await getAll<MeetingRequest>(STORES.MEETINGS);
+  } catch (error) {
+    const storageError = new StorageError(
+      StorageErrorType.TRANSACTION_FAILED,
+      'Failed to load meetings data',
+      error
+    );
+    notifyStorageError(storageError);
+    throw storageError;
+  }
 }
 
 export async function saveMeetings(meetings: MeetingRequest[]): Promise<void> {
   if (useLocalStorageFallback) {
-    localStorage.setItem(LEGACY_KEYS.MEETINGS, JSON.stringify(meetings));
+    try {
+      localStorage.setItem(LEGACY_KEYS.MEETINGS, JSON.stringify(meetings));
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        const storageError = new StorageError(
+          StorageErrorType.QUOTA_EXCEEDED,
+          'Storage quota exceeded. Please delete some data to free up space.',
+          error
+        );
+        notifyStorageError(storageError);
+        throw storageError;
+      }
+      throw error;
+    }
     return;
   }
 
@@ -364,14 +652,49 @@ export async function saveMeetings(meetings: MeetingRequest[]): Promise<void> {
       new Promise<void>((resolve, reject) => {
         const putRequest = store.put(meeting);
         putRequest.onsuccess = () => resolve();
-        putRequest.onerror = () => reject(putRequest.error);
+        putRequest.onerror = () => {
+          if (isQuotaExceededError(putRequest.error)) {
+            reject(new StorageError(
+              StorageErrorType.QUOTA_EXCEEDED,
+              'Storage quota exceeded while saving meetings',
+              putRequest.error
+            ));
+          } else {
+            reject(putRequest.error);
+          }
+        };
       })
     );
 
     await Promise.all(putPromises);
   } catch (error) {
     console.error('Error saving meetings:', error);
-    localStorage.setItem(LEGACY_KEYS.MEETINGS, JSON.stringify(meetings));
+    if (error instanceof StorageError && error.type === StorageErrorType.QUOTA_EXCEEDED) {
+      notifyStorageError(error);
+      throw error;
+    }
+    // Try localStorage fallback
+    try {
+      localStorage.setItem(LEGACY_KEYS.MEETINGS, JSON.stringify(meetings));
+      notifyStorageError(
+        new StorageError(
+          StorageErrorType.TRANSACTION_FAILED,
+          'Failed to save to IndexedDB, using localStorage fallback',
+          error
+        )
+      );
+    } catch (fallbackError) {
+      if (isQuotaExceededError(fallbackError)) {
+        const storageError = new StorageError(
+          StorageErrorType.QUOTA_EXCEEDED,
+          'Storage quota exceeded in both IndexedDB and localStorage',
+          fallbackError
+        );
+        notifyStorageError(storageError);
+        throw storageError;
+      }
+      throw fallbackError;
+    }
   }
 }
 
