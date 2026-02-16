@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Friend, MeetingRequest } from '../types';
 import { calculateTimeStatus } from '../utils/helpers';
-import { initializeFCM, setupForegroundMessageHandler, getFCMToken } from '../utils/firebaseMessaging';
+import { initializeFCM, setupForegroundMessageHandler } from '../utils/firebaseMessaging';
 import { getMetadata, saveMetadata } from '../utils/storage';
 
 interface ReminderConfig {
@@ -40,43 +40,59 @@ interface ReminderEngineArgs {
 
 const BACKUP_KEY = 'friendkeep_last_backup_at';
 const BACKUP_REMINDER_KEY = 'friendkeep_last_backup_reminder_day';
-const NOTIFICATION_DELAY_MS = 1000; // Delay before showing notification (1 second)
+
+// Stable ID ranges so we can cancel/reschedule without conflicts.
+// iOS allows up to 64 scheduled local notifications total, so we budget:
+//   IDs 1000–1049  → friend overdue reminders (up to 50 friends)
+//   IDs 2000–2049  → meeting reminders (up to 50 meetings)
+const FRIEND_NOTIFICATION_ID_BASE = 1000;
+const MEETING_NOTIFICATION_ID_BASE = 2000;
+const MAX_SCHEDULED_PER_TYPE = 50;
 
 const isNative = () => Capacitor.isNativePlatform();
 
-// Helper to send notifications using the appropriate API
+/**
+ * Ensure the Android notification channel exists.
+ * Safe to call repeatedly — Android silently ignores duplicate creates.
+ */
+const ensureNotificationChannel = async () => {
+  if (Capacitor.getPlatform() === 'android') {
+    try {
+      await LocalNotifications.createChannel({
+        id: 'pal-plant-reminders',
+        name: 'Reminders',
+        description: 'Pal Plant reminders for contacts and meetings',
+        importance: 4,
+        visibility: 1,
+      });
+    } catch {
+      // Channel may already exist
+    }
+  }
+};
+
+/**
+ * Send an immediate notification (for foreground / real-time use).
+ */
 const sendNotification = async (title: string, body: string) => {
   if (isNative()) {
-    // Use native local notifications for Android/iOS
     try {
-      // Create notification channel for Android
-      if (Capacitor.getPlatform() === 'android') {
-        await LocalNotifications.createChannel({
-          id: 'pal-plant-reminders',
-          name: 'Reminders',
-          description: 'Pal Plant reminders for contacts and meetings',
-          importance: 4,
-          visibility: 1,
-        });
-      }
-
-      // Schedule a local notification
+      await ensureNotificationChannel();
       await LocalNotifications.schedule({
         notifications: [
           {
             title,
             body,
-            id: Date.now(),
-            schedule: { at: new Date(Date.now() + NOTIFICATION_DELAY_MS) },
+            id: Date.now() % 100000, // Avoid collision with pre-scheduled IDs
+            schedule: { at: new Date(Date.now() + 1000) },
             channelId: 'pal-plant-reminders',
           },
         ],
       });
     } catch {
-      // Silently fail if notification cannot be sent
+      // Silently fail
     }
   } else {
-    // Use web notifications (FCM handles background, browser API for foreground)
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, {
         body,
@@ -88,16 +104,106 @@ const sendNotification = async (title: string, body: string) => {
   }
 };
 
+/**
+ * Pre-schedule local notifications for friend deadlines and meetings.
+ * The OS delivers these even if the app is closed / killed.
+ *
+ * Called whenever friends or meetings data changes so schedules stay current.
+ */
+const scheduleUpcomingNotifications = async (
+  friends: Friend[],
+  meetingRequests: MeetingRequest[],
+  reminderHoursBefore: number
+) => {
+  if (!isNative()) return; // Web uses the interval-based approach below
+
+  try {
+    await ensureNotificationChannel();
+
+    // Cancel all previously scheduled friend/meeting notifications
+    const idsToCancel: { id: number }[] = [];
+    for (let i = 0; i < MAX_SCHEDULED_PER_TYPE; i++) {
+      idsToCancel.push({ id: FRIEND_NOTIFICATION_ID_BASE + i });
+      idsToCancel.push({ id: MEETING_NOTIFICATION_ID_BASE + i });
+    }
+    await LocalNotifications.cancel({ notifications: idsToCancel });
+
+    const now = new Date();
+    const notificationsToSchedule: Array<{
+      title: string;
+      body: string;
+      id: number;
+      schedule: { at: Date };
+      channelId: string;
+    }> = [];
+
+    // --- Friend overdue notifications ---
+    // Sort by deadline (soonest first) so the most urgent get slots
+    const friendsWithDeadlines = friends
+      .map(f => {
+        const status = calculateTimeStatus(f.lastContacted, f.frequencyDays);
+        return { friend: f, goalDate: status.goalDate, isOverdue: status.isOverdue };
+      })
+      .filter(entry => !entry.isOverdue) // Only future deadlines
+      .sort((a, b) => a.goalDate.getTime() - b.goalDate.getTime())
+      .slice(0, MAX_SCHEDULED_PER_TYPE);
+
+    friendsWithDeadlines.forEach((entry, index) => {
+      if (entry.goalDate > now) {
+        notificationsToSchedule.push({
+          title: `${entry.friend.name} needs a check-in`,
+          body: `Your timer for ${entry.friend.name} has expired. Time to reach out!`,
+          id: FRIEND_NOTIFICATION_ID_BASE + index,
+          schedule: { at: entry.goalDate },
+          channelId: 'pal-plant-reminders',
+        });
+      }
+    });
+
+    // --- Meeting reminder notifications ---
+    const upcomingMeetings = meetingRequests
+      .filter(m => m.status === 'SCHEDULED' && m.scheduledDate)
+      .map(m => ({ meeting: m, date: new Date(m.scheduledDate!) }))
+      .filter(m => m.date > now)
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, MAX_SCHEDULED_PER_TYPE);
+
+    upcomingMeetings.forEach((entry, index) => {
+      const reminderMs = reminderHoursBefore * 60 * 60 * 1000;
+      const scheduleAt = new Date(entry.date.getTime() - reminderMs);
+      if (scheduleAt > now) {
+        const hours = Math.max(1, Math.round(reminderMs / (1000 * 60 * 60)));
+        notificationsToSchedule.push({
+          title: `Upcoming meeting with ${entry.meeting.name}`,
+          body: `Starts in ${hours} hour(s).`,
+          id: MEETING_NOTIFICATION_ID_BASE + index,
+          schedule: { at: scheduleAt },
+          channelId: 'pal-plant-reminders',
+        });
+      }
+    });
+
+    if (notificationsToSchedule.length > 0) {
+      await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+    }
+  } catch (error) {
+    console.warn('Failed to schedule upcoming notifications:', error);
+  }
+};
+
 export const useReminderEngine = ({ friends, meetingRequests, reminders, onBackupReminder, onQuickBackup }: ReminderEngineArgs) => {
-  // Request permissions and initialize FCM on mount
+  const permissionsInitialized = useRef(false);
+
+  // Request permissions and initialize notification infrastructure on mount
   useEffect(() => {
     if (!reminders.pushEnabled) return;
+    if (permissionsInitialized.current) return;
+    permissionsInitialized.current = true;
 
     let cleanupForegroundHandler: (() => void) | undefined;
 
     const requestPermissions = async () => {
       if (isNative()) {
-        // Request native push and local notification permissions
         try {
           const pushResult = await PushNotifications.checkPermissions();
           const resolvedPushPermission = pushResult.receive === 'prompt'
@@ -136,9 +242,7 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
         try {
           await initializeFCM();
 
-          // Set up foreground message handler for FCM
           cleanupForegroundHandler = setupForegroundMessageHandler((payload) => {
-            // Display notification when app is in foreground
             const title = payload.notification?.title || 'Pal Plant';
             const body = payload.notification?.body || 'You have a new notification';
             sendNotification(title, body);
@@ -146,7 +250,6 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
         } catch (error) {
           console.warn('Failed to initialize FCM:', error);
 
-          // Fallback to requesting basic web notification permissions
           if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
           }
@@ -164,9 +267,18 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
     };
   }, [reminders.pushEnabled]);
 
-  // Check and send notifications periodically
+  // ─── Native: pre-schedule notifications for future deadlines ────
+  // The OS delivers these even when the app is closed or killed.
+  // Re-runs whenever friends/meetings change so schedules stay current.
   useEffect(() => {
-    if (!reminders.pushEnabled) return;
+    if (!reminders.pushEnabled || !isNative()) return;
+
+    scheduleUpcomingNotifications(friends, meetingRequests, reminders.reminderHoursBefore);
+  }, [friends, meetingRequests, reminders.pushEnabled, reminders.reminderHoursBefore]);
+
+  // ─── Web: interval-based checking (can't pre-schedule in browsers) ────
+  useEffect(() => {
+    if (!reminders.pushEnabled || isNative()) return;
 
     const REMINDER_KEY = 'friendkeep_last_reminders';
     const getReminderMap = async (): Promise<Record<string, string>> => {
@@ -182,14 +294,13 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
       const now = new Date();
       const reminderMap = await getReminderMap();
 
-      // Check for overdue friends
       for (const friend of friends) {
         const status = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
         if (status.daysLeft <= 0) {
           const key = `friend_${friend.id}_${now.toISOString().split('T')[0]}`;
           if (!reminderMap[key]) {
             await sendNotification(
-              `Pal Plant reminder: ${friend.name}`,
+              `${friend.name} needs a check-in`,
               `${friend.name} is overdue for a check-in.`
             );
             reminderMap[key] = now.toISOString();
@@ -197,7 +308,6 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
         }
       }
 
-      // Check for upcoming meetings
       for (const req of meetingRequests) {
         if (req.status !== 'SCHEDULED' || !req.scheduledDate) continue;
         const diffHours = (new Date(req.scheduledDate).getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -221,6 +331,7 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
     return () => clearInterval(interval);
   }, [friends, meetingRequests, reminders.pushEnabled, reminders.reminderHoursBefore]);
 
+  // ─── Backup reminders ────
   useEffect(() => {
     if (!reminders.backupReminderEnabled) return;
 
