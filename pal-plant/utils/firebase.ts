@@ -1,5 +1,12 @@
+/**
+ * Firebase configuration for Pal-Plant
+ * 
+ * IMPORTANT: Firebase is used ONLY for push notifications (FCM).
+ * No other Firebase services (Analytics, Auth, Firestore, etc.) are permitted.
+ * This is a local-first app with push notifications as the only cloud dependency.
+ */
+
 const FIREBASE_APP_CDN_URL = 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
-const FIREBASE_ANALYTICS_CDN_URL = 'https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js';
 const FIREBASE_MESSAGING_CDN_URL = 'https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging.js';
 
 const firebaseConfig = {
@@ -9,36 +16,32 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'pal-plant.firebasestorage.app',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '85069651501',
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:85069651501:web:e6c4dcbc62458d12ff22a4',
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-DPRV8B32KV',
+  // Note: measurementId removed - Analytics not used
 };
 
 let initialized = false;
 let messagingInstance: any = null;
-let analyticsInstance: any = null;
 
 /**
- * Initializes Firebase SDK from CDN at runtime.
+ * Initializes Firebase SDK from CDN at runtime for push notifications ONLY.
  * This keeps the app buildable in restricted environments where npm install is blocked.
+ * 
+ * Firebase is ONLY used for Cloud Messaging (FCM) for push notifications.
+ * No other Firebase services are initialized or used.
  */
 export const initializeFirebase = async () => {
   if (initialized || typeof window === 'undefined') {
     return;
   }
 
-  const [{ initializeApp }, { getAnalytics, isSupported }, { getMessaging, isSupported: isMessagingSupported }] = await Promise.all([
+  const [{ initializeApp }, { getMessaging, isSupported: isMessagingSupported }] = await Promise.all([
     import(/* @vite-ignore */ FIREBASE_APP_CDN_URL),
-    import(/* @vite-ignore */ FIREBASE_ANALYTICS_CDN_URL),
     import(/* @vite-ignore */ FIREBASE_MESSAGING_CDN_URL),
   ]);
 
   const app = initializeApp(firebaseConfig);
 
-  // Initialize Analytics if supported
-  if (await isSupported()) {
-    analyticsInstance = getAnalytics(app);
-  }
-
-  // Initialize Messaging if supported
+  // Initialize Messaging if supported (ONLY service allowed)
   if (await isMessagingSupported()) {
     try {
       messagingInstance = getMessaging(app);
@@ -56,12 +59,4 @@ export const initializeFirebase = async () => {
  */
 export const getFirebaseMessaging = () => {
   return messagingInstance;
-};
-
-/**
- * Gets the Firebase Analytics instance.
- * Returns null if analytics is not supported or not initialized.
- */
-export const getFirebaseAnalytics = () => {
-  return analyticsInstance;
 };

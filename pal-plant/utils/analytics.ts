@@ -1,4 +1,12 @@
-import { getFirebaseAnalytics } from './firebase';
+/**
+ * Local-only analytics for Pal-Plant
+ * 
+ * IMPORTANT: This is a LOCAL analytics system only.
+ * No data is sent to external services (Firebase Analytics is NOT used).
+ * All analytics events are stored locally for user's personal insights only.
+ * This maintains the app's local-first privacy model.
+ */
+
 import { getMetadata, saveMetadata } from './storage';
 
 export type AnalyticsEventType =
@@ -25,28 +33,9 @@ const EVENT_LIMIT = 500;
 const generateEventId = (): string => `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 /**
- * Sends an event to Firebase Analytics.
+ * Retrieves all locally stored analytics events.
+ * Events are stored in local storage only and never sent externally.
  */
-const sendToFirebaseAnalytics = async (type: AnalyticsEventType, metadata?: AnalyticsEvent['metadata']): Promise<void> => {
-  try {
-    const analytics = getFirebaseAnalytics();
-    if (!analytics) {
-      return; // Firebase Analytics not initialized
-    }
-
-    // Import logEvent dynamically since analytics module was loaded via CDN
-    const { logEvent } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js');
-
-    // Convert event type to Firebase-friendly format (lowercase with underscores)
-    const eventName = type.toLowerCase();
-
-    // Send event to Firebase Analytics
-    logEvent(analytics, eventName, metadata || {});
-  } catch (error) {
-    console.warn('Failed to send event to Firebase Analytics:', error);
-  }
-};
-
 export const getAnalyticsEvents = async (): Promise<AnalyticsEvent[]> => {
   try {
     const raw = await getMetadata(EVENT_KEY);
@@ -58,6 +47,10 @@ export const getAnalyticsEvents = async (): Promise<AnalyticsEvent[]> => {
   }
 };
 
+/**
+ * Tracks an event locally for personal analytics and insights.
+ * Events are stored locally only and never sent to external services.
+ */
 export const trackEvent = async (type: AnalyticsEventType, metadata?: AnalyticsEvent['metadata']): Promise<void> => {
   const current = await getAnalyticsEvents();
   const next: AnalyticsEvent[] = [
@@ -71,9 +64,6 @@ export const trackEvent = async (type: AnalyticsEventType, metadata?: AnalyticsE
   ].slice(0, EVENT_LIMIT);
 
   await saveMetadata(EVENT_KEY, JSON.stringify(next));
-
-  // Also send to Firebase Analytics
-  void sendToFirebaseAnalytics(type, metadata);
 };
 
 export const getAnalyticsSummary = async (days = 7): Promise<Record<AnalyticsEventType, number>> => {

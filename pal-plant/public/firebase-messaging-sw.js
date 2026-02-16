@@ -1,10 +1,13 @@
 // Firebase Cloud Messaging Service Worker
 // This service worker handles background notifications when the app is closed or minimized
+//
+// IMPORTANT: Firebase is used ONLY for push notifications (FCM).
+// No other Firebase services are used or initialized.
 
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js');
 
-// Initialize Firebase in the service worker
+// Initialize Firebase in the service worker for push notifications only
 const firebaseConfig = {
   apiKey: 'AIzaSyCGKDTAi4dReXOYFs92xhDfSVduy_fntZg',
   authDomain: 'pal-plant.firebaseapp.com',
@@ -12,7 +15,7 @@ const firebaseConfig = {
   storageBucket: 'pal-plant.firebasestorage.app',
   messagingSenderId: '85069651501',
   appId: '1:85069651501:web:e6c4dcbc62458d12ff22a4',
-  measurementId: 'G-DPRV8B32KV',
+  // Note: measurementId removed - Analytics not used
 };
 
 firebase.initializeApp(firebaseConfig);
