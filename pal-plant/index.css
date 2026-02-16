@@ -13,3 +13,30 @@ body {
   padding-top: var(--safe-area-inset-top);
   padding-bottom: var(--safe-area-inset-bottom);
 }
+
+/* Theme-specific contrast fixes */
+[data-theme='midnight'] .bg-white,
+[data-theme='midnight'] .bg-slate-50,
+[data-theme='midnight'] .bg-slate-100 {
+  background-color: rgb(30 41 59 / 0.95) !important;
+}
+
+[data-theme='midnight'] .text-slate-900,
+[data-theme='midnight'] .text-slate-800,
+[data-theme='midnight'] .text-slate-700,
+[data-theme='midnight'] .text-slate-600,
+[data-theme='midnight'] .text-slate-500,
+[data-theme='midnight'] .text-slate-400 {
+  color: rgb(226 232 240) !important;
+}
+
+[data-theme='midnight'] .border-slate-100,
+[data-theme='midnight'] .border-slate-200,
+[data-theme='midnight'] .border-slate-300 {
+  border-color: rgb(71 85 105 / 0.9) !important;
+}
+
+[data-theme='midnight'] .hover\:bg-slate-100:hover,
+[data-theme='midnight'] .hover\:bg-slate-50:hover {
+  background-color: rgb(51 65 85) !important;
+}

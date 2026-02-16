@@ -62,7 +62,8 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
             : `Regular contact logged on time (${lastLog.scoreDelta ?? 5} points).`);
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-200 hover:shadow-md mb-4 group" role="article" aria-label={`Friend card for ${friend.name}`}>
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-200 hover:shadow-md mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
+      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Identity</p>
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
         <div className="flex items-center gap-1">
           <span className={`text-[10px] font-black px-2 py-1 rounded-md border ${friend.individualScore > 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : friend.individualScore < 40 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
@@ -119,6 +120,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         </div>
       </div>
 
+      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Status</p>
       <div className="mt-3 relative">
         <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1 px-1">
           <span>Needs Water</span>
@@ -158,6 +160,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         </div>
       )}
 
+      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Actions</p>
       {/* Channel Selector */}
       <div className="flex items-center gap-1.5 mt-4 mb-2">
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Via:</span>
