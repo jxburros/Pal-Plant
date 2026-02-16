@@ -165,6 +165,51 @@ Personalize timing suggestions based on historical response and meeting follow-t
 
 ---
 
+### 4. Further App.tsx Refactoring 🏗️
+
+**Status:** Planned
+**Priority:** Low-Medium
+**Estimated Effort:** 2-3 days
+
+**Description:**
+Continue refactoring App.tsx to achieve the original 300-350 line target by extracting more business logic into custom hooks.
+
+**Current State:**
+- ✅ Modal state extracted to useModalState hook (P0.2)
+- ✅ Friends engine logic in useFriendsEngine hook
+- ✅ Reminder engine in useReminderEngine hook
+- ⏳ App.tsx still at 577 lines (target: 300-350)
+
+**Proposed Refactoring:**
+1. Extract meeting request management into `useMeetingsEngine` hook
+2. Extract settings management into `useSettings` hook
+3. Extract navigation/tab state into `useNavigation` hook
+4. Extract toast notifications into `useToast` hook
+5. Consider creating a higher-level `useAppState` orchestrator hook
+
+**Benefits:**
+- Improved testability (hooks can be tested in isolation)
+- Better code organization and maintainability
+- Easier to reason about app state flow
+- Aligns with React best practices
+
+**Technical Considerations:**
+- Ensure proper dependency management between hooks
+- Maintain performance (avoid unnecessary re-renders)
+- Keep backward compatibility with existing components
+- Update tests to cover new hooks
+
+**Files to Create:**
+- `pal-plant/hooks/useMeetingsEngine.ts`
+- `pal-plant/hooks/useSettings.ts`
+- `pal-plant/hooks/useNavigation.ts`
+- `pal-plant/hooks/useToast.ts`
+
+**Files to Modify:**
+- `pal-plant/App.tsx` - Refactor to use new hooks
+
+---
+
 ## Future Considerations (P3+)
 
 ### Social Features (Requires Backend)
