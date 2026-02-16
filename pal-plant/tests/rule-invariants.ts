@@ -122,7 +122,7 @@ test('quick touch feedback shows -1 token', () => {
   assert.equal(result.feedback.tokenChange, -1);
   assert.equal(result.feedback.tokensAvailable, 0);
   assert.equal(result.feedback.scoreDelta, 2);
-  assert.equal(result.feedback.timerEffect, '+30 min');
+  assert.equal(result.feedback.timerEffect, '+19.2h'); // 8% of 10 days = 0.8 days = 19.2 hours
 });
 
 test('tokens regenerate after 2 full cycles', () => {
@@ -139,6 +139,45 @@ test('tokens regenerate after 2 full cycles', () => {
   assert.equal(r2.friend.cyclesSinceLastQuickTouch, 0);
   assert.equal(r2.friend.quickTouchesAvailable, 1);
   assert.equal(r2.feedback.tokenChange, 1);
+});
+
+test('quick touch extends timer by 8% of frequency length', () => {
+  // Test with 10-day frequency (already covered above, 8% = 19.2h)
+  const friend10 = { ...baseFriend, frequencyDays: 10 };
+  const result10 = processContactAction(friend10, 'QUICK', new Date());
+  assert.equal(result10.feedback.timerEffect, '+19.2h');
+
+  // Test with 7-day frequency: 8% = 0.56 days = 13.44h
+  const friend7 = { ...baseFriend, frequencyDays: 7 };
+  const result7 = processContactAction(friend7, 'QUICK', new Date());
+  assert.equal(result7.feedback.timerEffect, '+13.4h');
+
+  // Test with 30-day frequency: 8% = 2.4 days
+  const friend30 = { ...baseFriend, frequencyDays: 30 };
+  const result30 = processContactAction(friend30, 'QUICK', new Date());
+  assert.equal(result30.feedback.timerEffect, '+2.4d');
+
+  // Test with 2-day frequency: 8% = 0.16 days = 3.84h
+  const friend2 = { ...baseFriend, frequencyDays: 2 };
+  const result2 = processContactAction(friend2, 'QUICK', new Date());
+  assert.equal(result2.feedback.timerEffect, '+3.8h');
+});
+
+test('quick touch correctly updates lastContacted by 8%', () => {
+  const now = new Date('2025-01-01T12:00:00.000Z');
+  const friend = {
+    ...baseFriend,
+    frequencyDays: 10,
+    lastContacted: now.toISOString()
+  };
+
+  const result = processContactAction(friend, 'QUICK', now);
+  
+  // 8% of 10 days = 0.8 days = 19.2 hours = 69120000 ms
+  const expectedTime = now.getTime() + (0.8 * 24 * 60 * 60 * 1000);
+  const actualTime = new Date(result.friend.lastContacted).getTime();
+  
+  assert.equal(actualTime, expectedTime);
 });
 
 // ─── Cadence Shortening Tests ────────────────────────────────────

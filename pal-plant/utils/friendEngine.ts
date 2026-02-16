@@ -49,7 +49,9 @@ export const processContactAction = (
       };
     }
 
-    const newLastContacted = new Date(new Date(friend.lastContacted).getTime() + (30 * 60 * 1000)).toISOString();
+    // Calculate 8% of the timer's full length
+    const extensionMs = friend.frequencyDays * 0.08 * 24 * 60 * 60 * 1000;
+    const newLastContacted = new Date(new Date(friend.lastContacted).getTime() + extensionMs).toISOString();
     const newTokens = friend.quickTouchesAvailable - 1;
     const newScore = Math.min(100, (friend.individualScore || 50) + 2);
     const updated: Friend = {
@@ -68,6 +70,14 @@ export const processContactAction = (
       individualScore: newScore
     };
 
+    // Format the extension time for display
+    const extensionHours = Math.round((extensionMs / (60 * 60 * 1000)) * 10) / 10;
+    const timerEffectText = extensionHours >= 24 
+      ? `+${Math.round(extensionHours / 24 * 10) / 10}d`
+      : extensionHours >= 1
+        ? `+${extensionHours}h`
+        : `+${Math.round(extensionMs / (60 * 1000))}min`;
+
     return {
       friend: updated,
       cadenceShortened: false,
@@ -76,7 +86,7 @@ export const processContactAction = (
         scoreDelta: 2,
         newScore,
         cadenceShortened: false,
-        timerEffect: '+30 min',
+        timerEffect: timerEffectText,
         tokenChange: -1,
         tokensAvailable: newTokens,
         timestamp: now.getTime()
