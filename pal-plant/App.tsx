@@ -334,6 +334,23 @@ const App: React.FC = () => {
     setSelectedCategory(category);
   }, []);
 
+  // Memoize meeting request handlers to prevent child component re-renders
+  const handleAddMeetingRequest = useCallback((req: MeetingRequest) => {
+    setMeetingRequests(prev => [req, ...prev]);
+    trackEvent('MEETING_CREATED', { meetingId: req.id });
+  }, []);
+
+  const handleUpdateMeetingRequest = useCallback((req: MeetingRequest) => {
+    setMeetingRequests(prev => prev.map(r => r.id === req.id ? req : r));
+    if (req.status === 'SCHEDULED') trackEvent('MEETING_SCHEDULED', { meetingId: req.id });
+    if (req.status === 'COMPLETE' && req.verified) trackEvent('MEETING_COMPLETED', { meetingId: req.id });
+    if (req.status === 'COMPLETE' && req.verified === false) trackEvent('MEETING_CLOSED', { meetingId: req.id });
+  }, []);
+
+  const handleDeleteMeetingRequest = useCallback((id: string) => {
+    setMeetingRequests(prev => prev.filter(r => r.id !== id));
+  }, []);
+
   const handleApplyNudge = useCallback((friendId: string, newFrequencyDays: number) => {
     setFriends(prev => prev.map(f =>
       f.id === friendId ? { ...f, frequencyDays: newFrequencyDays } : f
@@ -399,9 +416,9 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-6 px-6">
-              <button onClick={() => setSelectedCategory('All')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedCategory === 'All' ? `${themeColors.primary} text-white border-transparent` : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}>All</button>
+              <button onClick={() => handleSelectCategory('All')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedCategory === 'All' ? `${themeColors.primary} text-white border-transparent` : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}>All</button>
               {categories.map(cat => (
-                <button key={cat} onClick={() => setSelectedCategory(cat)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat ? `${themeColors.primary} text-white border-transparent` : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}>{cat}</button>
+                <button key={cat} onClick={() => handleSelectCategory(cat)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat ? `${themeColors.primary} text-white border-transparent` : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}>{cat}</button>
               ))}
             </div>
 
@@ -472,17 +489,9 @@ const App: React.FC = () => {
         ) : (
           <MeetingRequestsView
             requests={meetingRequests}
-            onAddRequest={(req) => {
-              setMeetingRequests(prev => [req, ...prev]);
-              trackEvent('MEETING_CREATED', { meetingId: req.id });
-            }}
-            onUpdateRequest={(req) => {
-              setMeetingRequests(prev => prev.map(r => r.id === req.id ? req : r));
-              if (req.status === 'SCHEDULED') trackEvent('MEETING_SCHEDULED', { meetingId: req.id });
-              if (req.status === 'COMPLETE' && req.verified) trackEvent('MEETING_COMPLETED', { meetingId: req.id });
-              if (req.status === 'COMPLETE' && req.verified === false) trackEvent('MEETING_CLOSED', { meetingId: req.id });
-            }}
-            onDeleteRequest={(id) => setMeetingRequests(prev => prev.filter(r => r.id !== id))}
+            onAddRequest={handleAddMeetingRequest}
+            onUpdateRequest={handleUpdateMeetingRequest}
+            onDeleteRequest={handleDeleteMeetingRequest}
             settings={settings}
           />
         )}
