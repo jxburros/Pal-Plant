@@ -1,7 +1,10 @@
+export type ContactChannel = 'call' | 'text' | 'video' | 'in-person' | 'other';
+
 export interface ContactLog {
   id: string;
   date: string; // ISO string
   type: 'REGULAR' | 'DEEP' | 'QUICK';
+  channel?: ContactChannel; // Communication method used
   daysWaitGoal: number;
   percentageRemaining: number;
   scoreDelta?: number; // How much this interaction changed the score
@@ -76,6 +79,19 @@ export interface AppSettings {
   reducedMotion: boolean;
   reminders: ReminderSettings;
   hasSeenOnboarding: boolean;
+}
+
+export interface ActionFeedback {
+  type: 'REGULAR' | 'DEEP' | 'QUICK';
+  scoreDelta: number;
+  newScore: number;
+  cadenceShortened: boolean;
+  oldFrequencyDays?: number;
+  newFrequencyDays?: number;
+  timerEffect: string; // e.g. "reset to 14 days", "extended by 12 hours", "+30 min"
+  tokenChange: number; // -1 if consumed, 0 if unchanged, +1 if earned
+  tokensAvailable: number;
+  timestamp: number;
 }
 
 export interface ThemeColors {

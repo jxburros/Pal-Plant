@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Calendar, UserPlus, X, Check, MapPin, Briefcase, Mail, Phone, Upload, Clock, Download, Users } from 'lucide-react';
+import { Calendar, UserPlus, X, Check, MapPin, Briefcase, Mail, Phone, Upload, Clock, Download, Users, AlertTriangle, RefreshCw } from 'lucide-react';
 import { MeetingRequest } from '../types';
 import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent, getGoogleCalendarUrl } from '../utils/helpers';
 import { AppSettings } from '../types';
@@ -111,6 +111,30 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
     !m.verified
   );
 
+  // Stale requests (>14 days in REQUESTED status, incurring garden score penalty)
+  const staleRequests = activeRequests.filter(r => {
+    if (r.status !== 'REQUESTED') return false;
+    const daysPassed = Math.floor((Date.now() - new Date(r.dateAdded).getTime()) / (1000 * 60 * 60 * 24));
+    return daysPassed > 14;
+  });
+
+  // Overdue meetings (separate from regular list for highlighting)
+  const overdueScheduled = activeRequests.filter(r =>
+    r.status === 'SCHEDULED' &&
+    r.scheduledDate &&
+    new Date(r.scheduledDate) < new Date()
+  );
+
+  const normalRequests = activeRequests.filter(r => {
+    // Exclude overdue scheduled (they're shown separately)
+    if (r.status === 'SCHEDULED' && r.scheduledDate && new Date(r.scheduledDate) < new Date()) return false;
+    return true;
+  });
+
+  const handleReschedule = (req: MeetingRequest) => {
+    onUpdateRequest({ ...req, status: 'REQUESTED', scheduledDate: undefined, location: undefined });
+  };
+
   return (
     <div className="pb-32">
        {/* Header */}
@@ -135,7 +159,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                  Confirm outcome for your meeting with {m.name} on {new Date(m.scheduledDate!).toLocaleDateString()}.
                </p>
                <p className="text-[11px] text-yellow-700 mb-2">Attended meetings raise your score. Closing without attendance avoids false positives.</p>
-               <div className="flex gap-2">
+               <div className="flex flex-wrap gap-2">
                  <button
                    onClick={() => onUpdateRequest({ ...m, status: 'COMPLETE', verified: true })}
                    className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl"
@@ -143,20 +167,79 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                    Mark attended (+5 garden score)
                  </button>
                  <button
-                   onClick={() => onUpdateRequest({ ...m, status: 'REQUESTED', verified: false, scheduledDate: undefined, location: undefined })}
-                   className="px-4 py-2 bg-blue-100 text-blue-700 text-xs font-bold rounded-xl"
+                   onClick={() => handleReschedule(m)}
+                   className="px-4 py-2 bg-blue-100 text-blue-700 text-xs font-bold rounded-xl flex items-center gap-1"
                  >
-                   Reschedule meeting
+                   <RefreshCw size={12} /> Reschedule
                  </button>
                  <button
-                   onClick={() => onDeleteRequest(m.id)}
-                   className="px-4 py-2 bg-red-100 text-red-600 text-xs font-bold rounded-xl"
+                   onClick={() => onUpdateRequest({ ...m, status: 'COMPLETE', verified: false })}
+                   className="px-4 py-2 bg-amber-100 text-amber-700 text-xs font-bold rounded-xl"
                  >
-                   Delete request
+                   Close without meeting (no score change)
                  </button>
                </div>
              </div>
            ))}
+         </div>
+       )}
+
+       {/* Stale Requests Warning */}
+       {staleRequests.length > 0 && (
+         <div className="mb-6 bg-red-50 border border-red-200 p-4 rounded-2xl">
+           <div className="flex items-center gap-2 mb-2">
+             <AlertTriangle size={16} className="text-red-600" />
+             <p className="text-sm font-bold text-red-800">
+               {staleRequests.length} stale request{staleRequests.length > 1 ? 's' : ''} penalizing your garden score
+             </p>
+           </div>
+           <p className="text-[11px] text-red-600 mb-3">
+             Requests pending over 14 days incur a -2 garden score penalty each. Schedule, close, or delete them.
+           </p>
+           <div className="space-y-2">
+             {staleRequests.map(r => {
+               const daysPassed = Math.floor((Date.now() - new Date(r.dateAdded).getTime()) / (1000 * 60 * 60 * 24));
+               return (
+                 <div key={r.id} className="flex items-center justify-between bg-white/60 p-2 rounded-xl">
+                   <div>
+                     <span className="font-bold text-slate-700 text-sm">{r.name}</span>
+                     <span className="text-xs text-red-500 ml-2">{daysPassed} days waiting (-2 score)</span>
+                   </div>
+                   <button
+                     onClick={() => onUpdateRequest({ ...r, status: 'COMPLETE', verified: false })}
+                     className="text-xs font-bold text-amber-700 bg-amber-100 px-3 py-1 rounded-lg"
+                   >
+                     Close
+                   </button>
+                 </div>
+               );
+             })}
+           </div>
+         </div>
+       )}
+
+       {/* Overdue Scheduled Meetings */}
+       {overdueScheduled.length > 0 && pastDueMeetings.length === 0 && (
+         <div className="mb-6">
+           <h3 className="text-xs font-bold text-red-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+             <AlertTriangle size={14} /> Overdue Meetings
+           </h3>
+           <div className="space-y-3">
+             {overdueScheduled.map(req => (
+               <MeetingCard
+                 key={req.id}
+                 req={req}
+                 theme={theme}
+                 onEdit={() => startEdit(req)}
+                 onSchedule={(date, loc) => handleSchedule(req, date, loc)}
+                 onMarkAttended={() => handleMarkAttended(req)}
+                 onCloseWithoutMeeting={() => handleCloseWithoutMeeting(req)}
+                 onReschedule={() => handleReschedule(req)}
+                 onDelete={() => onDeleteRequest(req.id)}
+                 isOverdue
+               />
+             ))}
+           </div>
          </div>
        )}
 
@@ -220,13 +303,13 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
 
        {/* List */}
        <div className="space-y-4">
-         {activeRequests.length === 0 && !isAdding && (
+         {normalRequests.length === 0 && overdueScheduled.length === 0 && !isAdding && (
            <div className={`text-center py-10 ${theme.textSub}`}>
              <p>No pending requests.</p>
            </div>
          )}
 
-         {activeRequests.map(req => (
+         {normalRequests.map(req => (
            <MeetingCard
              key={req.id}
              req={req}
@@ -235,6 +318,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
              onSchedule={(date, loc) => handleSchedule(req, date, loc)}
              onMarkAttended={() => handleMarkAttended(req)}
              onCloseWithoutMeeting={() => handleCloseWithoutMeeting(req)}
+             onReschedule={() => handleReschedule(req)}
              onDelete={() => onDeleteRequest(req.id)}
            />
          ))}
@@ -251,8 +335,10 @@ const MeetingCard: React.FC<{
   onSchedule: (date: string, loc: string) => void;
   onMarkAttended: () => void;
   onCloseWithoutMeeting: () => void;
+  onReschedule: () => void;
   onDelete: () => void;
-}> = ({ req, theme, onEdit, onSchedule, onMarkAttended, onCloseWithoutMeeting, onDelete }) => {
+  isOverdue?: boolean;
+}> = ({ req, theme, onEdit, onSchedule, onMarkAttended, onCloseWithoutMeeting, onReschedule, onDelete, isOverdue = false }) => {
   const [isScheduling, setIsScheduling] = useState(false);
   const [schedDate, setSchedDate] = useState(req.scheduledDate || '');
   const [schedLoc, setSchedLoc] = useState(req.location || '');
@@ -268,8 +354,10 @@ const MeetingCard: React.FC<{
     }
   };
 
+  const isStale = req.status === 'REQUESTED' && urgency.daysPassed > 14;
+
   return (
-    <div className={`${theme.cardBg} rounded-2xl shadow-sm border ${theme.border} overflow-hidden`}>
+    <div className={`${theme.cardBg} rounded-2xl shadow-sm border ${isOverdue ? 'border-red-300 ring-2 ring-red-100' : isStale ? 'border-amber-300' : theme.border} overflow-hidden`}>
       {/* Top Timer Bar (Only for Requested) */}
       {req.status === 'REQUESTED' && (
         <div className="h-2 bg-slate-100 w-full relative">
@@ -323,10 +411,26 @@ const MeetingCard: React.FC<{
 
         {/* Urgency Text */}
         {req.status === 'REQUESTED' && (
-           <div className="mt-3 text-xs font-bold" style={{ color: urgency.color }}>
-              <Clock size={12} className="inline mr-1" />
-              Waiting {urgency.daysPassed} days
+           <div className="mt-3">
+             <div className="text-xs font-bold" style={{ color: urgency.color }}>
+               <Clock size={12} className="inline mr-1" />
+               Waiting {urgency.daysPassed} days
+             </div>
+             {isStale && (
+               <div className="mt-1 text-[10px] font-bold text-red-600 flex items-center gap-1">
+                 <AlertTriangle size={10} />
+                 Stale request: -2 garden score penalty active
+               </div>
+             )}
            </div>
+        )}
+
+        {/* Overdue scheduled indicator */}
+        {isOverdue && req.status === 'SCHEDULED' && (
+          <div className="mt-3 text-xs font-bold text-red-600 flex items-center gap-1">
+            <AlertTriangle size={12} />
+            Meeting date has passed — confirm outcome or reschedule
+          </div>
         )}
 
         {/* Scheduled Details View */}
@@ -379,15 +483,17 @@ const MeetingCard: React.FC<{
         )}
 
 
-        <p className="mt-3 text-[11px] text-slate-500">
-          Score impact: <span className="font-semibold text-green-600">attended +5</span> · <span className="font-semibold text-amber-700">closed without meeting +0</span>
-        </p>
+        <div className="mt-3 p-2 rounded-lg bg-slate-50 border border-slate-100">
+          <p className="text-[11px] text-slate-500">
+            Score impact: <span className="font-semibold text-green-600">Mark attended +5</span> · <span className="font-semibold text-amber-700">Close without meeting +0</span>{isStale ? <span className="font-semibold text-red-500"> · Stale penalty -2</span> : null}
+          </p>
+        </div>
 
         {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-2 mt-4">
            {req.status === 'REQUESTED' && (
              <button onClick={() => setIsScheduling(true)} className="col-span-1 bg-blue-50 text-blue-600 hover:bg-blue-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
-               Schedule
+               Schedule meeting
              </button>
            )}
            {req.status === 'SCHEDULED' && (
@@ -402,10 +508,20 @@ const MeetingCard: React.FC<{
                </button>
              )
            )}
+           {req.status === 'SCHEDULED' && (
+             <button onClick={onReschedule} className="col-span-1 bg-blue-50 text-blue-600 hover:bg-blue-100 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
+               <RefreshCw size={12} /> Reschedule
+             </button>
+           )}
            {req.status === 'REQUESTED' && (
               <button onClick={onCloseWithoutMeeting} className="col-span-1 bg-amber-50 text-amber-700 hover:bg-amber-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
                 Close without meeting
               </button>
+           )}
+           {req.status === 'SCHEDULED' && (
+             <button onClick={onCloseWithoutMeeting} className="col-span-1 bg-amber-50 text-amber-700 hover:bg-amber-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
+               Close without meeting
+             </button>
            )}
 
            <button onClick={onEdit} className="col-span-1 bg-slate-50 text-slate-600 hover:bg-slate-100 py-2.5 rounded-xl text-xs font-bold transition-colors">

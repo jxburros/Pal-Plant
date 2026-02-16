@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Users, Clock, Keyboard, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Users, Clock, Keyboard, HelpCircle, CheckCircle2, BookOpen, Copy, Share2 } from 'lucide-react';
 import { AppSettings, ThemeId } from '../types';
 import { THEMES } from '../utils/helpers';
 import { markBackupExportedNow } from '../hooks/useReminderEngine';
@@ -12,14 +12,16 @@ interface SettingsModalProps {
   onOpenBulkImport?: () => void;
   onShowOnboarding?: () => void;
   onShowShortcuts?: () => void;
+  onShowRuleGuide?: () => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
-  isOpen, onClose, settings, onUpdate, onOpenBulkImport, onShowOnboarding, onShowShortcuts
+  isOpen, onClose, settings, onUpdate, onOpenBulkImport, onShowOnboarding, onShowShortcuts, onShowRuleGuide
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [importMessage, setImportMessage] = useState('');
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
 
   if (!isOpen) return null;
 
@@ -337,19 +339,92 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             <p className="text-[11px] text-slate-500 mt-2 text-center">Restore tip: tap "Restore Data", choose your latest backup JSON, and the app reloads automatically.</p>
           </section>
 
+          {/* Sync & Export */}
+          <section>
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Share2 size={16} /> Sync & Export
+            </h3>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  const data = {
+                    friends: JSON.parse(localStorage.getItem('friendkeep_data') || '[]'),
+                    meetings: JSON.parse(localStorage.getItem('friendkeep_meetings') || '[]'),
+                    categories: JSON.parse(localStorage.getItem('friendkeep_categories') || '[]'),
+                    settings: JSON.parse(localStorage.getItem('friendkeep_settings') || '{}'),
+                    exportDate: new Date().toISOString(),
+                    version: 2
+                  };
+                  navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+                  setCopyStatus('copied');
+                  setTimeout(() => setCopyStatus('idle'), 2000);
+                }}
+                className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
+              >
+                <Copy size={20} className={copyStatus === 'copied' ? 'text-emerald-600' : 'text-slate-700'} />
+                <span className={`text-sm font-bold ${copyStatus === 'copied' ? 'text-emerald-700' : 'text-slate-700'}`}>
+                  {copyStatus === 'copied' ? 'Copied to clipboard!' : 'Copy Data to Clipboard'}
+                </span>
+              </button>
+
+              {typeof navigator !== 'undefined' && navigator.share && (
+                <button
+                  onClick={async () => {
+                    const data = {
+                      friends: JSON.parse(localStorage.getItem('friendkeep_data') || '[]'),
+                      meetings: JSON.parse(localStorage.getItem('friendkeep_meetings') || '[]'),
+                      categories: JSON.parse(localStorage.getItem('friendkeep_categories') || '[]'),
+                      settings: JSON.parse(localStorage.getItem('friendkeep_settings') || '{}'),
+                      exportDate: new Date().toISOString(),
+                      version: 2
+                    };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const file = new File([blob], `pal_plant_backup_${new Date().toISOString().split('T')[0]}.json`, { type: 'application/json' });
+                    try {
+                      await navigator.share({ files: [file], title: 'Pal Plant Backup' });
+                    } catch {
+                      // User cancelled or share failed
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors"
+                >
+                  <Share2 size={20} className="text-purple-600" />
+                  <span className="text-sm font-bold text-purple-700">Share Backup via...</span>
+                </button>
+              )}
+
+              <p className="text-[10px] text-slate-400 text-center">
+                Share your backup to Google Drive, iCloud, email, or any cloud service. Local-first — your data never leaves your device unless you choose to share.
+              </p>
+            </div>
+          </section>
+
           {/* Help */}
-          {onShowOnboarding && (
+          {(onShowOnboarding || onShowRuleGuide) && (
             <section>
               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <HelpCircle size={16} /> Help
               </h3>
-              <button
-                onClick={() => { onShowOnboarding(); onClose(); }}
-                className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-              >
-                <HelpCircle size={20} className="text-emerald-600" />
-                <span className="text-sm font-bold text-emerald-700">Show App Tour</span>
-              </button>
+              <div className="space-y-3">
+                {onShowRuleGuide && (
+                  <button
+                    onClick={() => { onShowRuleGuide(); onClose(); }}
+                    className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+                  >
+                    <BookOpen size={20} className="text-blue-600" />
+                    <span className="text-sm font-bold text-blue-700">Scoring Rules & FAQ</span>
+                  </button>
+                )}
+                {onShowOnboarding && (
+                  <button
+                    onClick={() => { onShowOnboarding(); onClose(); }}
+                    className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                  >
+                    <HelpCircle size={20} className="text-emerald-600" />
+                    <span className="text-sm font-bold text-emerald-700">Show App Tour</span>
+                  </button>
+                )}
+              </div>
             </section>
           )}
         </div>

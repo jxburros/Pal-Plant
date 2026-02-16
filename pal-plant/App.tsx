@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X } from 'lucide-react';
+import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download } from 'lucide-react';
 import { Friend, Tab, ContactLog, MeetingRequest, AppSettings } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
@@ -9,12 +9,13 @@ import HomeView from './components/HomeView';
 import { useKeyboardShortcuts } from './components/KeyboardShortcuts';
 import { generateId, calculateTimeStatus, THEMES } from './utils/helpers';
 import { trackEvent } from './utils/analytics';
-import { processContactAction, removeFriendLog } from './utils/friendEngine';
 import { useReminderEngine } from './hooks/useReminderEngine';
+import { useFriendsEngine } from './hooks/useFriendsEngine';
 
 const StatsView = lazy(() => import('./components/StatsView'));
 const OnboardingTooltips = lazy(() => import('./components/OnboardingTooltips'));
 const BulkImportModal = lazy(() => import('./components/BulkImportModal'));
+const RuleGuide = lazy(() => import('./components/RuleGuide'));
 
 interface Toast {
   id: string;
@@ -49,10 +50,12 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isRuleGuideOpen, setIsRuleGuideOpen] = useState(false);
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [showBackupBanner, setShowBackupBanner] = useState(false);
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = generateId();
@@ -93,7 +96,10 @@ const App: React.FC = () => {
     return defaults;
   });
 
-  const [friends, setFriends] = useState<Friend[]>(() => {
+  const {
+    friends, setFriends, feedbackMap, markContacted, clearFeedback,
+    deleteFriend, deleteLog: engineDeleteLog, saveFriend, bulkImport
+  } = useFriendsEngine(() => {
     const saved = localStorage.getItem('friendkeep_data');
     if (!saved) return [];
     return JSON.parse(saved);
@@ -127,11 +133,35 @@ const App: React.FC = () => {
   }, [settings.hasSeenOnboarding]);
 
 
+  const triggerBackupDownload = useCallback(() => {
+    const data = {
+      friends: JSON.parse(localStorage.getItem('friendkeep_data') || '[]'),
+      meetings: JSON.parse(localStorage.getItem('friendkeep_meetings') || '[]'),
+      categories: JSON.parse(localStorage.getItem('friendkeep_categories') || '[]'),
+      settings: JSON.parse(localStorage.getItem('friendkeep_settings') || '{}'),
+      exportDate: new Date().toISOString(),
+      version: 2
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pal_plant_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    // Mark backup as done
+    localStorage.setItem('friendkeep_last_backup_at', new Date().toISOString());
+    showToast('Backup downloaded successfully!', 'success');
+  }, [showToast]);
+
   useReminderEngine({
     friends,
     meetingRequests,
     reminders: settings.reminders,
-    onBackupReminder: (message) => showToast(message, 'info')
+    onBackupReminder: () => setShowBackupBanner(true),
+    onQuickBackup: triggerBackupDownload
   });
 
   const handleOnboardingComplete = () => {
@@ -155,13 +185,7 @@ const App: React.FC = () => {
   const textSizeClass = settings.textSize === 'large' ? 'text-lg' : settings.textSize === 'xl' ? 'text-xl' : 'text-base';
 
   const handleSaveFriend = (friend: Friend) => {
-    if (editingFriend) {
-      setFriends(prev => prev.map(f => f.id === friend.id ? friend : f));
-      trackEvent('FRIEND_EDITED', { friendId: friend.id });
-    } else {
-      setFriends(prev => [friend, ...prev]);
-      trackEvent('FRIEND_ADDED', { friendId: friend.id, category: friend.category });
-    }
+    saveFriend(friend, !!editingFriend);
     setEditingFriend(null);
   };
 
@@ -169,37 +193,8 @@ const App: React.FC = () => {
     if (!categories.includes(newCat)) setCategories(prev => [...prev, newCat]);
   };
 
-  const deleteFriend = (id: string) => {
-    setFriends(prev => prev.filter(f => f.id !== id));
-    trackEvent('FRIEND_DELETED', { friendId: id });
-  };
-
-  const markContacted = (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK') => {
-    setFriends(prev => prev.map(f => {
-      if (f.id !== id) return f;
-
-      const result = processContactAction(f, type, new Date());
-
-      if (result.cadenceShortened) {
-        showToast(`${f.name}'s timer shortened to ${result.friend.frequencyDays} days (frequent contact detected).`, 'info');
-      }
-
-      if (result.friend === f) return f;
-
-      const metadata: Record<string, string | number | boolean | undefined> = { friendId: f.id, type };
-      const latestLog = result.friend.logs[0];
-      if (latestLog?.scoreDelta !== undefined) metadata.scoreChange = latestLog.scoreDelta;
-      trackEvent('CONTACT_LOGGED', metadata);
-
-      return result.friend;
-    }));
-  };
-
   const deleteLog = (friendId: string, logId: string) => {
-    setFriends(prev => prev.map(f => {
-      if (f.id !== friendId) return f;
-      return removeFriendLog(f, logId);
-    }));
+    engineDeleteLog(friendId, logId);
     if (editingFriend?.id === friendId) {
       setEditingFriend(prev => prev ? ({ ...prev, logs: prev.logs.filter(l => l.id !== logId) }) : null);
     }
@@ -221,8 +216,7 @@ const App: React.FC = () => {
   const openEditModal = (friend: Friend) => { setEditingFriend(friend); setIsModalOpen(true); };
 
   const handleBulkImport = (newFriends: Friend[]) => {
-    setFriends(prev => [...newFriends, ...prev]);
-    trackEvent('BULK_IMPORT', { count: newFriends.length });
+    bulkImport(newFriends);
     showToast(`Successfully imported ${newFriends.length} contacts!`);
   };
 
@@ -244,18 +238,46 @@ const App: React.FC = () => {
     setActiveTab(Tab.MEETINGS);
   };
 
+  const handleApplyNudge = useCallback((friendId: string, newFrequencyDays: number) => {
+    setFriends(prev => prev.map(f =>
+      f.id === friendId ? { ...f, frequencyDays: newFrequencyDays } : f
+    ));
+    showToast(`Cadence updated to ${newFrequencyDays} days`, 'success');
+  }, [setFriends, showToast]);
+
   return (
     <div className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      <header className={`px-6 pt-8 pb-4 ${themeColors.bg}/95 backdrop-blur-md sticky top-0 z-30 border-b ${themeColors.border} transition-colors duration-300`}>
+      {showBackupBanner && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[90] w-[90%] max-w-sm bg-blue-50 border border-blue-200 rounded-xl shadow-lg p-4 animate-in slide-in-from-top fade-in duration-300">
+          <p className="text-sm font-bold text-blue-800 mb-2">Backup Reminder</p>
+          <p className="text-xs text-blue-600 mb-3">It's been a while since your last backup. Download one now?</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { triggerBackupDownload(); setShowBackupBanner(false); }}
+              className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white text-xs font-bold py-2 rounded-lg"
+            >
+              <Download size={14} /> Download Backup
+            </button>
+            <button
+              onClick={() => setShowBackupBanner(false)}
+              className="px-4 bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded-lg"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      <header className={`px-6 pt-8 pb-4 ${themeColors.bg}/95 backdrop-blur-md sticky top-0 z-30 border-b ${themeColors.border} transition-colors duration-300`} role="banner">
         <div className="flex justify-between items-center mb-4">
           <button onClick={() => setActiveTab(Tab.HOME)} className="text-left">
             <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
               <Sprout className="text-emerald-600 fill-emerald-100" />
               Pal Plant
             </h1>
-            <p className="text-xs font-bold uppercase tracking-widest mt-0.5 opacity-60">
+            <p className="text-xs font-bold uppercase tracking-widest mt-0.5 opacity-60" aria-live="polite">
               {activeTab === Tab.HOME ? 'Dashboard' : activeTab === Tab.LIST ? 'Your Garden' : activeTab === Tab.STATS ? 'Statistics' : 'Meeting Requests'}
             </p>
           </button>
@@ -305,6 +327,7 @@ const App: React.FC = () => {
             settings={settings}
             onNavigateToFriend={handleNavigateToFriend}
             onNavigateToMeetings={handleNavigateToMeetings}
+            onApplyNudge={handleApplyNudge}
           />
         ) : activeTab === Tab.LIST ? (
           <>
@@ -332,6 +355,8 @@ const App: React.FC = () => {
                     onDelete={deleteFriend}
                     onEdit={openEditModal}
                     onRequestMeeting={handleRequestMeeting}
+                    feedback={feedbackMap[friend.id]}
+                    onDismissFeedback={clearFeedback}
                   />
                 ))}
               </div>
@@ -367,18 +392,18 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <nav className={`fixed bottom-0 w-full ${themeColors.cardBg} border-t ${themeColors.border} px-6 py-4 pb-6 z-40 flex justify-between items-center sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300`}>
-        <button onClick={() => setActiveTab(Tab.HOME)} className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110' : 'opacity-40'}`}><Home size={24} /><span className="text-[10px] font-bold">Home</span></button>
-        <button onClick={() => setActiveTab(Tab.LIST)} className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110' : 'opacity-40'}`}><Users size={24} /><span className="text-[10px] font-bold">Garden</span></button>
-        <button onClick={() => setActiveTab(Tab.STATS)} className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.STATS ? 'opacity-100 scale-110' : 'opacity-40'}`}><BarChart3 size={24} /><span className="text-[10px] font-bold">Stats</span></button>
-        <button onClick={() => setActiveTab(Tab.MEETINGS)} className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110' : 'opacity-40'}`}><Calendar size={24} /><span className="text-[10px] font-bold">Requests</span></button>
+      <nav className={`fixed bottom-0 w-full ${themeColors.cardBg} border-t ${themeColors.border} px-6 py-4 pb-6 z-40 flex justify-between items-center sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300`} role="navigation" aria-label="Main navigation">
+        <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} aria-label="Home" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110' : 'opacity-40'}`}><Home size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Home</span></button>
+        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Garden" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Garden</span></button>
+        <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} aria-label="Statistics" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.STATS ? 'opacity-100 scale-110' : 'opacity-40'}`}><BarChart3 size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Stats</span></button>
+        <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} aria-label="Meeting requests" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110' : 'opacity-40'}`}><Calendar size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Requests</span></button>
       </nav>
 
-      <div className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${themeColors.cardBg}/90 backdrop-blur-md border ${themeColors.border} shadow-xl rounded-full px-2 py-2 gap-2 z-40`}>
-        <button onClick={() => setActiveTab(Tab.HOME)} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.HOME ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Home</button>
-        <button onClick={() => setActiveTab(Tab.LIST)} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.LIST ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Garden</button>
-        <button onClick={() => setActiveTab(Tab.STATS)} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.STATS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Stats</button>
-        <button onClick={() => setActiveTab(Tab.MEETINGS)} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.MEETINGS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Requests</button>
+      <div className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${themeColors.cardBg}/90 backdrop-blur-md border ${themeColors.border} shadow-xl rounded-full px-2 py-2 gap-2 z-40`} role="navigation" aria-label="Main navigation">
+        <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.HOME ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Home</button>
+        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.LIST ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Garden</button>
+        <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.STATS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Stats</button>
+        <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.MEETINGS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-slate-100`}`}>Requests</button>
       </div>
 
       <FriendModal
@@ -399,6 +424,7 @@ const App: React.FC = () => {
         onOpenBulkImport={() => setIsBulkImportOpen(true)}
         onShowOnboarding={() => setShowOnboarding(true)}
         onShowShortcuts={() => setShowShortcutsModal(true)}
+        onShowRuleGuide={() => setIsRuleGuideOpen(true)}
       />
 
       {isBulkImportOpen && (
@@ -417,6 +443,12 @@ const App: React.FC = () => {
       {showOnboarding && (
         <Suspense fallback={null}>
           <OnboardingTooltips settings={settings} onComplete={handleOnboardingComplete} />
+        </Suspense>
+      )}
+
+      {isRuleGuideOpen && (
+        <Suspense fallback={null}>
+          <RuleGuide isOpen={isRuleGuideOpen} onClose={() => setIsRuleGuideOpen(false)} />
         </Suspense>
       )}
 

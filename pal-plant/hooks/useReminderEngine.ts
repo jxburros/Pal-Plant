@@ -18,6 +18,7 @@ interface ReminderEngineArgs {
   meetingRequests: MeetingRequest[];
   reminders: ReminderConfig;
   onBackupReminder: (message: string) => void;
+  onQuickBackup?: () => void;
 }
 
 const BACKUP_KEY = 'friendkeep_last_backup_at';
@@ -70,7 +71,7 @@ const sendNotification = async (title: string, body: string) => {
   }
 };
 
-export const useReminderEngine = ({ friends, meetingRequests, reminders, onBackupReminder }: ReminderEngineArgs) => {
+export const useReminderEngine = ({ friends, meetingRequests, reminders, onBackupReminder, onQuickBackup }: ReminderEngineArgs) => {
   // Request permissions and initialize FCM on mount
   useEffect(() => {
     if (!reminders.pushEnabled) return;

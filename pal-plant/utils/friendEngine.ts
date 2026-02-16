@@ -1,40 +1,71 @@
-import { ContactLog, Friend } from '../types';
+import { ActionFeedback, ContactChannel, ContactLog, Friend } from '../types';
 import { calculateInteractionScore, calculateIndividualFriendScore, calculateTimeStatus, generateId } from './helpers';
 
 export interface ContactActionResult {
   friend: Friend;
   cadenceShortened: boolean;
+  feedback: ActionFeedback;
 }
 
 export const processContactAction = (
   friend: Friend,
   type: 'REGULAR' | 'DEEP' | 'QUICK',
-  now: Date = new Date()
+  now: Date = new Date(),
+  channel?: ContactChannel
 ): ContactActionResult => {
   const { percentageLeft, daysLeft } = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
 
   if (type === 'QUICK') {
     if ((friend.quickTouchesAvailable || 0) <= 0) {
-      return { friend, cadenceShortened: false };
+      return {
+        friend,
+        cadenceShortened: false,
+        feedback: {
+          type: 'QUICK',
+          scoreDelta: 0,
+          newScore: friend.individualScore,
+          cadenceShortened: false,
+          timerEffect: 'No tokens available',
+          tokenChange: 0,
+          tokensAvailable: 0,
+          timestamp: now.getTime()
+        }
+      };
     }
 
     const newLastContacted = new Date(new Date(friend.lastContacted).getTime() + (30 * 60 * 1000)).toISOString();
+    const newTokens = friend.quickTouchesAvailable - 1;
+    const newScore = Math.min(100, (friend.individualScore || 50) + 2);
     const updated: Friend = {
       ...friend,
       lastContacted: newLastContacted,
-      quickTouchesAvailable: friend.quickTouchesAvailable - 1,
+      quickTouchesAvailable: newTokens,
       logs: [{
         id: generateId(),
         date: now.toISOString(),
         type: 'QUICK',
+        channel,
         daysWaitGoal: friend.frequencyDays,
         percentageRemaining: percentageLeft,
         scoreDelta: 2
       }, ...friend.logs],
-      individualScore: Math.min(100, (friend.individualScore || 50) + 2)
+      individualScore: newScore
     };
 
-    return { friend: updated, cadenceShortened: false };
+    return {
+      friend: updated,
+      cadenceShortened: false,
+      feedback: {
+        type: 'QUICK',
+        scoreDelta: 2,
+        newScore,
+        cadenceShortened: false,
+        timerEffect: '+30 min',
+        tokenChange: -1,
+        tokensAvailable: newTokens,
+        timestamp: now.getTime()
+      }
+    };
   }
 
   let updatedFrequencyDays = friend.frequencyDays;
@@ -54,6 +85,7 @@ export const processContactAction = (
     id: generateId(),
     date: now.toISOString(),
     type,
+    channel,
     daysWaitGoal: updatedFrequencyDays,
     percentageRemaining: percentageLeft,
     scoreDelta: scoreChange
@@ -71,13 +103,35 @@ export const processContactAction = (
 
   let newCycles = (friend.cyclesSinceLastQuickTouch || 0) + 1;
   let newTokens = (friend.quickTouchesAvailable || 0);
+  const oldTokens = newTokens;
   if (newCycles >= 2) {
     newTokens = 1;
     newCycles = 0;
   }
+  const tokenChange = newTokens - oldTokens;
+
+  // Build timer effect description
+  let timerEffect: string;
+  if (type === 'DEEP') {
+    timerEffect = `reset to ${updatedFrequencyDays}d + 12h`;
+  } else {
+    timerEffect = `reset to ${updatedFrequencyDays}d`;
+  }
 
   return {
     cadenceShortened,
+    feedback: {
+      type,
+      scoreDelta: scoreChange,
+      newScore,
+      cadenceShortened,
+      oldFrequencyDays: cadenceShortened ? friend.frequencyDays : undefined,
+      newFrequencyDays: cadenceShortened ? updatedFrequencyDays : undefined,
+      timerEffect,
+      tokenChange,
+      tokensAvailable: newTokens,
+      timestamp: now.getTime()
+    },
     friend: {
       ...friend,
       frequencyDays: updatedFrequencyDays,
