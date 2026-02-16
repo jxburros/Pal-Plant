@@ -65,8 +65,11 @@ export const useModalState = (): ModalState => {
   }, []);
 
   const updateEditingFriend = useCallback((friend: Friend) => {
-    setEditingFriend(friend);
-  }, []);
+    // Only update if modal is currently open to prevent unexpected state changes
+    if (isFriendModalOpen) {
+      setEditingFriend(friend);
+    }
+  }, [isFriendModalOpen]);
 
   const closeFriendModal = useCallback(() => {
     setIsFriendModalOpen(false);
