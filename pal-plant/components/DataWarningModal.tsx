@@ -30,7 +30,7 @@ const DataWarningModal: React.FC<DataWarningModalProps> = ({ isOpen, onClose, se
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 px-6 py-4 border-b ${theme.border} ${theme.cardBg}/95 backdrop-blur-md flex justify-between items-center">
+        <div className={`sticky top-0 px-6 py-4 border-b ${theme.border} ${theme.cardBg}/95 backdrop-blur-md flex justify-between items-center`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertTriangle className="text-amber-600" size={20} />
