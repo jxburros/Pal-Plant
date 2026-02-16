@@ -16,6 +16,7 @@ export interface ModalState {
   editingFriend: Friend | null;
   openAddFriend: () => void;
   openEditFriend: (friend: Friend) => void;
+  updateEditingFriend: (friend: Friend) => void;
   closeFriendModal: () => void;
 
   // Settings modal
@@ -61,6 +62,10 @@ export const useModalState = (): ModalState => {
   const openEditFriend = useCallback((friend: Friend) => {
     setEditingFriend(friend);
     setIsFriendModalOpen(true);
+  }, []);
+
+  const updateEditingFriend = useCallback((friend: Friend) => {
+    setEditingFriend(friend);
   }, []);
 
   const closeFriendModal = useCallback(() => {
@@ -113,6 +118,7 @@ export const useModalState = (): ModalState => {
     editingFriend,
     openAddFriend,
     openEditFriend,
+    updateEditingFriend,
     closeFriendModal,
 
     isSettingsOpen,
