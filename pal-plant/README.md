@@ -63,7 +63,16 @@ For detailed setup instructions, see [FIREBASE_SETUP.md](FIREBASE_SETUP.md).
 
 ## Data Storage
 
-All user data is stored locally in the browser's `localStorage`. **No data is synced to the cloud.** This ensures privacy but means:
+All user data is stored locally using **IndexedDB** (with automatic fallback to `localStorage` if unavailable). **No data is synced to the cloud.** This ensures privacy while providing:
+
+### Storage Features
+- **Better Capacity**: IndexedDB supports 50MB+ storage (vs. 5-10MB for localStorage)
+- **Transaction Safety**: Atomic operations prevent data corruption
+- **Automatic Migration**: Existing localStorage data is automatically migrated to IndexedDB
+- **Debounced Writes**: Updates are batched within 1-second windows to improve performance
+- **Graceful Fallback**: Falls back to localStorage if IndexedDB is unavailable
+
+### Important Notes
 - Data is device-specific
 - Regular backups are recommended (use the in-app Backup feature in Settings)
 - Switching devices requires manual data export/import
