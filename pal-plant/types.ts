@@ -34,6 +34,8 @@ export interface Friend {
 
 export type MeetingStatus = 'REQUESTED' | 'SCHEDULED' | 'COMPLETE';
 
+export type MeetingTimeframe = 'ASAP' | 'DAYS' | 'WEEK' | 'MONTH' | 'FLEXIBLE';
+
 export interface MeetingRequest {
   id: string;
   name: string;
@@ -49,6 +51,9 @@ export interface MeetingRequest {
   // For Scheduled status
   scheduledDate?: string; // ISO
   location?: string;
+  
+  // Desired timeframe (optional)
+  desiredTimeframe?: MeetingTimeframe;
 
   // Verification
   verified?: boolean; // Has the user confirmed attendance?

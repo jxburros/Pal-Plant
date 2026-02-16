@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Calendar, UserPlus, X, Check, MapPin, Briefcase, Mail, Phone, Upload, Clock, Download, Users, AlertTriangle, RefreshCw } from 'lucide-react';
-import { MeetingRequest } from '../types';
+import { MeetingRequest, MeetingTimeframe } from '../types';
 import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent, getGoogleCalendarUrl } from '../utils/helpers';
 import { AppSettings } from '../types';
 
@@ -27,11 +27,12 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
   const [notes, setNotes] = useState('');
   const [photo, setPhoto] = useState('');
   const [category, setCategory] = useState<'Friend' | 'Family' | 'Business' | 'Other'>('Friend');
+  const [desiredTimeframe, setDesiredTimeframe] = useState<MeetingTimeframe | ''>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
-    setName(''); setOrg(''); setPhone(''); setEmail(''); setNotes(''); setPhoto(''); setCategory('Friend');
+    setName(''); setOrg(''); setPhone(''); setEmail(''); setNotes(''); setPhoto(''); setCategory('Friend'); setDesiredTimeframe('');
     setEditingId(null);
     setIsAdding(false);
   };
@@ -45,7 +46,8 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
       if (existing) {
         onUpdateRequest({
           ...existing,
-          name, organization: org, phone, email, notes, photo, category
+          name, organization: org, phone, email, notes, photo, category,
+          desiredTimeframe: desiredTimeframe || undefined
         });
       }
     } else {
@@ -59,7 +61,8 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
         photo,
         category,
         status: 'REQUESTED',
-        dateAdded: new Date().toISOString()
+        dateAdded: new Date().toISOString(),
+        desiredTimeframe: desiredTimeframe || undefined
       });
     }
     resetForm();
@@ -73,6 +76,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
     setNotes(req.notes || '');
     setPhoto(req.photo || '');
     setCategory(req.category || 'Friend');
+    setDesiredTimeframe(req.desiredTimeframe || '');
     setEditingId(req.id);
     setIsAdding(true);
   };
@@ -285,6 +289,29 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                 <option value="Business">Business</option>
                 <option value="Other">Other</option>
               </select>
+              
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                  <Clock size={14} />
+                  Desired Timeframe (Optional)
+                </label>
+                <select
+                  value={desiredTimeframe}
+                  onChange={(e) => setDesiredTimeframe(e.target.value as MeetingTimeframe | '')}
+                  className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all"
+                >
+                  <option value="">No preference</option>
+                  <option value="ASAP">As soon as possible</option>
+                  <option value="DAYS">Within a few days</option>
+                  <option value="WEEK">Within a week</option>
+                  <option value="MONTH">Within a month</option>
+                  <option value="FLEXIBLE">Flexible / no rush</option>
+                </select>
+                <p className="text-[10px] text-slate-500 italic">
+                  This helps prioritize your meetings but is not required.
+                </p>
+              </div>
+              
               <textarea placeholder="Notes..." value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all h-20 resize-none" maxLength={500} />
 
               <button type="submit" className={`w-full ${theme.primary} ${theme.primaryText} py-3 rounded-xl font-bold`}>
@@ -400,6 +427,17 @@ const MeetingCard: React.FC<{
             {req.category && (
               <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md inline-flex items-center gap-1">
                 <Users size={12} /> {req.category}
+              </div>
+            )}
+            
+            {req.desiredTimeframe && (
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-blue-600 bg-blue-50 px-2 py-1 rounded-md inline-flex items-center gap-1">
+                <Clock size={12} />
+                {req.desiredTimeframe === 'ASAP' ? 'ASAP' : 
+                 req.desiredTimeframe === 'DAYS' ? 'Within Days' :
+                 req.desiredTimeframe === 'WEEK' ? 'Within Week' :
+                 req.desiredTimeframe === 'MONTH' ? 'Within Month' :
+                 'Flexible'}
               </div>
             )}
 
