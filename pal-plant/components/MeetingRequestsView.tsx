@@ -111,11 +111,12 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
     !m.verified
   );
 
-  // Stale requests (>14 days in REQUESTED status, incurring garden score penalty)
+  // Stale requests (>14 days in REQUESTED status with 20% buffer = 16.8 days, incurring garden score penalty)
   const staleRequests = activeRequests.filter(r => {
     if (r.status !== 'REQUESTED') return false;
     const daysPassed = Math.floor((Date.now() - new Date(r.dateAdded).getTime()) / (1000 * 60 * 60 * 24));
-    return daysPassed > 14;
+    // Apply 20% buffer: 14 days * 1.2 = 16.8 days
+    return daysPassed > (14 * 1.2);
   });
 
   // Overdue meetings (separate from regular list for highlighting)

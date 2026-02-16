@@ -319,18 +319,38 @@ export const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+/**
+ * Timer buffer multiplier: All timers run 20% longer than advertised.
+ * This creates a user-friendly grace period without explicitly advertising it.
+ * 
+ * Example: A 10-day timer actually expires at 12 days (10 * 1.2)
+ */
+export const TIMER_BUFFER_MULTIPLIER = 1.2;
+
+/**
+ * Calculate the time status for a friend's contact timer
+ * Applies a 20% buffer so timers actually last longer than the displayed duration
+ * 
+ * Example: A 10-day timer displays "10 days" to the user, but the system
+ * uses 12 days (10 * 1.2) for calculations. The percentageLeft and daysLeft
+ * are based on the buffered duration, not the advertised duration.
+ */
 export const calculateTimeStatus = (lastContacted: string, frequencyDays: number) => {
   const lastDate = new Date(lastContacted);
   const now = new Date();
-  const goalDate = new Date(lastDate.getTime() + frequencyDays * 24 * 60 * 60 * 1000);
+  
+  // Apply 20% buffer: timer runs 20% longer than advertised
+  const adjustedFrequencyDays = frequencyDays * TIMER_BUFFER_MULTIPLIER;
+  const goalDate = new Date(lastDate.getTime() + adjustedFrequencyDays * 24 * 60 * 60 * 1000);
 
   const totalDurationMs = goalDate.getTime() - lastDate.getTime();
   const timeRemainingMs = goalDate.getTime() - now.getTime();
 
-  // Percentage of the "battery" left
+  // Percentage of the "battery" left (based on actual buffered duration, not advertised)
   let percentageLeft = (timeRemainingMs / totalDurationMs) * 100;
 
-  // Cap for UI purposes, but keep raw for logic
+  // Days left (based on actual buffered duration)
+  // Note: UI may show advertised duration, but expiration uses adjusted duration
   const daysLeft = Math.ceil(timeRemainingMs / (1000 * 60 * 60 * 24));
 
   return {
@@ -407,12 +427,14 @@ export const getPlantStage = (percentage: number) => {
   return { icon: Skull, label: 'Withered', color: 'text-stone-500', bg: 'bg-stone-100' };
 };
 
-// Meeting Urgency Logic: Green -> Red over 14 days
+// Meeting Urgency Logic: Green -> Red over 14 days (with 20% buffer = 16.8 days actual)
 export const getMeetingUrgency = (dateAdded: string) => {
   const start = new Date(dateAdded).getTime();
   const now = new Date().getTime();
   const daysPassed = (now - start) / (1000 * 60 * 60 * 24);
-  const maxDays = 14;
+  
+  // Apply 20% buffer: meeting requests are considered stale after 16.8 days, not 14
+  const maxDays = 14 * TIMER_BUFFER_MULTIPLIER;
 
   const ratio = Math.min(daysPassed / maxDays, 1);
 
@@ -491,9 +513,9 @@ export const calculateSocialGardenScore = (friends: Friend[], meetings: MeetingR
     if (m.status === 'COMPLETE' && m.verified) {
       meetingScore += 5; // +5 for every completed, verified meeting
     } else if (m.status === 'REQUESTED') {
-       // Penalty if sitting in requested too long (> 14 days)
+       // Penalty if sitting in requested too long (> 14 days with 20% buffer = 16.8 days)
        const urgency = getMeetingUrgency(m.dateAdded);
-       if (urgency.daysPassed > 14) {
+       if (urgency.daysPassed > (14 * TIMER_BUFFER_MULTIPLIER)) {
          meetingScore -= 2;
        }
     }
