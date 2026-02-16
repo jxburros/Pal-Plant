@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" role="img" aria-label="Pal Plant badge">
+  <circle cx="36" cy="36" r="34" fill="#16a34a"/>
+  <path d="M36 56c-2 0-4-2-4-4V30c0-2 2-4 4-4s4 2 4 4v22c0 2-2 4-4 4z" fill="#dcfce7"/>
+  <path d="M32 30c-14 0-26-12-26-26 14 0 26 12 26 26z" fill="#bbf7d0" transform="translate(4 10) scale(.75)"/>
+  <path d="M40 30c14 0 26-12 26-26-14 0-26 12-26 26z" fill="#dcfce7" transform="translate(-4 10) scale(.75)"/>
+</svg>

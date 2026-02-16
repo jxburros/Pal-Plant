@@ -142,11 +142,13 @@ VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
 VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
 VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+VITE_FCM_TOKEN_ENDPOINT=https://your-api.example.com/api/fcm-token
 ```
 
 ## Backend API Integration (Optional - For Remote Push Notifications)
 
 The app can send local notifications without a backend. However, if you want to send notifications from a server (e.g., reminder emails or push notifications when the app is not running), you can implement the `sendTokenToServer` function in `utils/firebaseMessaging.ts`.
+To send notifications from your backend, set `VITE_FCM_TOKEN_ENDPOINT` so the app can POST device tokens to your API.
 
 ### Example Backend Endpoint
 

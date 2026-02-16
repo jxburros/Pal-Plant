@@ -62,8 +62,8 @@ const sendNotification = async (title: string, body: string) => {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, {
         body,
-        icon: '/icon-192x192.png',
-        badge: '/badge-72x72.png',
+        icon: '/icon.svg',
+        badge: '/badge.svg',
         tag: 'pal-plant-reminder',
       });
     }
@@ -74,6 +74,8 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
   // Request permissions and initialize FCM on mount
   useEffect(() => {
     if (!reminders.pushEnabled) return;
+
+    let cleanupForegroundHandler: (() => void) | undefined;
 
     const requestPermissions = async () => {
       if (isNative()) {
@@ -97,15 +99,12 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
           await initializeFCM();
 
           // Set up foreground message handler for FCM
-          const cleanup = setupForegroundMessageHandler((payload) => {
+          cleanupForegroundHandler = setupForegroundMessageHandler((payload) => {
             // Display notification when app is in foreground
             const title = payload.notification?.title || 'Pal Plant';
             const body = payload.notification?.body || 'You have a new notification';
             sendNotification(title, body);
-          });
-
-          // Return cleanup function
-          return cleanup || undefined;
+          }) || undefined;
         } catch (error) {
           console.warn('Failed to initialize FCM:', error);
 
@@ -117,7 +116,11 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
       }
     };
 
-    return requestPermissions();
+    requestPermissions();
+
+    return () => {
+      cleanupForegroundHandler?.();
+    };
   }, [reminders.pushEnabled]);
 
   // Check and send notifications periodically
