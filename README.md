@@ -44,7 +44,8 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **Reduced Motion** – Disable animations
 
 ### 🔔 Reminders
-- **Push Notifications** – Browser notifications for web app, native push notifications for Android/iOS apps for overdue contacts and upcoming scheduled meetings
+- **Push Notifications** – Browser notifications for web app (via Firebase Cloud Messaging), native push notifications for Android/iOS apps (via Capacitor) for overdue contacts and upcoming scheduled meetings
+- **Note:** Web push notifications require Firebase configuration (see [FIREBASE_SETUP.md](pal-plant/FIREBASE_SETUP.md))
 
 ### ⌨️ Keyboard Shortcuts
 - `H` Home, `G` Garden, `M` Meetings, `N` New Friend, `S` Settings, `?` Shortcuts, `Esc` Close dialog
@@ -54,11 +55,13 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **React 19** – UI framework
 - **TypeScript** – Type-safe JavaScript
 - **Vite** – Fast build tool and dev server
-- **Capacitor** – Native Android app packaging
+- **Capacitor** – Native Android/iOS app packaging
+- **Firebase Analytics** – Event tracking and usage analytics
+- **Firebase Cloud Messaging** – Push notification infrastructure (requires backend for delivery)
 - **Tailwind CSS** – Utility-first styling (via CDN)
 - **Lucide React** – Beautiful icons
 - **Recharts** – Data visualization
-- **Local Storage** – Persistent data storage
+- **Local Storage** – Persistent data storage (local-first, no cloud sync)
 
 ## 🚀 Getting Started
 
@@ -138,6 +141,8 @@ This project uses [Capacitor](https://capacitorjs.com/) to package the web app a
 
 3. In Xcode, select a target device or simulator and click **Run** to launch the app.
 
+**Note:** iOS builds are supported but have not been extensively tested. Please report any issues you encounter.
+
 ## 📖 How It Works
 
 ### The Plant Metaphor
@@ -185,17 +190,29 @@ pal-plant/
 │   ├── OnboardingTooltips.tsx
 │   ├── SettingsModal.tsx
 │   └── StatsView.tsx
+├── hooks/
+│   └── useReminderEngine.ts  # Notification system
 ├── utils/
-│   └── helpers.ts        # Utility functions
+│   ├── helpers.ts           # Utility functions
+│   ├── analytics.ts         # Event tracking with Firebase integration
+│   ├── firebase.ts          # Firebase initialization
+│   ├── firebaseMessaging.ts # FCM token & message handling
+│   └── friendEngine.ts      # Contact scoring logic
+├── public/
+│   └── firebase-messaging-sw.js  # Service worker for FCM
+├── tests/
+│   └── rule-invariants.ts   # Scoring system tests
 ├── App.tsx               # Main application component
 ├── types.ts              # TypeScript type definitions
 ├── index.tsx             # Application entry point
 ├── index.html            # HTML template
 ├── android/              # Native Android project (Capacitor)
+├── ios/                  # Native iOS project (Capacitor)
 ├── capacitor.config.ts   # Capacitor configuration
 ├── package.json          # Dependencies and scripts
 ├── tsconfig.json         # TypeScript configuration
-└── vite.config.ts        # Vite configuration
+├── vite.config.ts        # Vite configuration
+└── FIREBASE_SETUP.md     # Firebase configuration guide
 ```
 
 ## 🤝 Contributing
