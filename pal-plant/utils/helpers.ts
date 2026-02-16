@@ -320,16 +320,11 @@ export const fileToBase64 = (file: File): Promise<string> => {
 };
 
 /**
- * Timer buffer multiplier: All timers run 20% longer than advertised.
- * This creates a user-friendly grace period without explicitly advertising it.
+ * Legacy helpers.ts file - Re-exports from domain-specific modules
  * 
- * Example: A 10-day timer actually expires at 12 days (10 * 1.2)
- */
-export const TIMER_BUFFER_MULTIPLIER = 1.2;
-
-/**
- * Calculate the time status for a friend's contact timer
- * Applies a 20% buffer so timers actually last longer than the displayed duration
+ * This file maintains backward compatibility by re-exporting all functions
+ * from the new modular structure. All helper functions have been organized
+ * into domain-specific modules for better maintainability.
  * 
  * Example: A 10-day timer displays "10 days" to the user, but the system
  * uses 12 days (10 * 1.2) for calculations. The percentageLeft and daysLeft

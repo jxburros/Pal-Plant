@@ -10,7 +10,9 @@
     "cap:sync": "vite build && cap sync",
     "cap:open:android": "cap open android",
     "cap:open:ios": "cap open ios",
-    "test:rules": "rm -rf .rule-test-dist && tsc -p tsconfig.rules.json && echo '{\"type\":\"commonjs\"}' > .rule-test-dist/package.json && node .rule-test-dist/tests/rule-invariants.js"
+    "test:rules": "rm -rf .rule-test-dist && tsc -p tsconfig.rules.json && echo '{\"type\":\"commonjs\"}' > .rule-test-dist/package.json && node .rule-test-dist/tests/rule-invariants.js",
+    "test:modules": "rm -rf .rule-test-dist && tsc -p tsconfig.rules.json && echo '{\"type\":\"commonjs\"}' > .rule-test-dist/package.json && node .rule-test-dist/tests/module-tests.js",
+    "test": "npm run test:rules && npm run test:modules"
   },
   "dependencies": {
     "@capacitor/core": "^8.1.0",

@@ -7,12 +7,25 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "types": ["node"]
   },
   "include": [
     "tests/rule-invariants.ts",
+    "tests/module-tests.ts",
     "utils/friendEngine.ts",
     "utils/helpers.ts",
+    "utils/avatar.ts",
+    "utils/validation.ts",
+    "utils/calendar.ts",
+    "utils/streaks.ts",
+    "utils/csv.ts",
+    "utils/duplicates.ts",
+    "utils/scoring.ts",
+    "utils/stats.ts",
+    "utils/nudges.ts",
+    "utils/themes.ts",
+    "utils/core.ts",
     "types.ts",
     "tests/type-shims.d.ts"
   ]
