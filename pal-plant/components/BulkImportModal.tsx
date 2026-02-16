@@ -15,10 +15,11 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { X, Upload, FileText, AlertTriangle, Check, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Upload, FileText, AlertTriangle, Check, Users, ChevronDown, ChevronUp, BookUser } from 'lucide-react';
 import { Friend } from '../types';
 import { parseCSVContacts, detectDuplicates, generateId, THEMES } from '../utils/helpers';
 import { AppSettings } from '../types';
+import { pickContacts, isContactPickerAvailable } from '../utils/contacts';
 
 interface BulkImportModalProps {
   isOpen: boolean;
@@ -85,14 +86,8 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
 
   const handleDeviceContactImport = async () => {
-    const contactPicker = (navigator as Navigator & {
-      contacts?: {
-        select?: (properties: string[], options?: { multiple?: boolean }) => Promise<Array<Record<string, any>>>;
-      };
-    }).contacts;
-
-    if (!contactPicker?.select) {
-      setParseError('Contact picker is not supported on this device. Use CSV import instead.');
+    if (!isContactPickerAvailable()) {
+      setParseError('Contact picker is not available on this device/browser. Use CSV import instead.');
       return;
     }
 
@@ -100,14 +95,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
     setImportingDeviceContacts(true);
 
     try {
-      const selected = await contactPicker.select(['name', 'tel', 'email'], { multiple: true });
-      const contacts = selected
-        .map((entry) => ({
-          name: Array.isArray(entry.name) ? String(entry.name[0] || '').trim() : '',
-          phone: Array.isArray(entry.tel) ? String(entry.tel[0] || '') : undefined,
-          email: Array.isArray(entry.email) ? String(entry.email[0] || '') : undefined,
-        }))
-        .filter((entry) => entry.name);
+      const contacts = await pickContacts();
 
       if (contacts.length === 0) {
         setParseError('No contacts were selected.');
@@ -118,8 +106,12 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
       setSelectedContacts(new Set(contacts.map((_, i) => i)));
       setDuplicates(detectDuplicates(contacts, existingFriends));
       setStep('review');
-    } catch (error) {
-      setParseError('Unable to import contacts from device. Please use CSV import instead.');
+    } catch (error: any) {
+      if (error?.message === 'PERMISSION_DENIED') {
+        setParseError('Contact permission was denied. Please allow access to contacts in your device settings and try again.');
+      } else {
+        setParseError('Unable to import contacts from device. Please use CSV import instead.');
+      }
       console.warn('Device contact import failed:', error);
     } finally {
       setImportingDeviceContacts(false);
@@ -233,8 +225,9 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
             <button
               onClick={handleDeviceContactImport}
               disabled={importingDeviceContacts}
-              className="w-full py-3 rounded-xl border border-slate-200 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full py-3 rounded-xl border border-slate-200 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
+              <BookUser size={18} />
               {importingDeviceContacts ? 'Loading contacts…' : 'Import from device contacts'}
             </button>
 
