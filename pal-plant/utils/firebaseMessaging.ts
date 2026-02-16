@@ -1,4 +1,5 @@
 import { getFirebaseMessaging } from './firebase';
+import { getMetadata, saveMetadata } from './storage';
 
 const FCM_TOKEN_KEY = 'pal_plant_fcm_token';
 const VAPID_KEY = 'BJYgoCs1JF5LsEYA9OqllAkseQxZDOv-JpvyvrdWR41YWB3wyH2-NXa1x28MhFAiSQhqggGyq_TicN_HD2GOu4o';
@@ -90,7 +91,7 @@ export const getFCMToken = async (): Promise<string | null> => {
 
     if (token) {
       console.log('FCM Token obtained:', token);
-      localStorage.setItem(FCM_TOKEN_KEY, token);
+      await saveMetadata(FCM_TOKEN_KEY, token);
       return token;
     } else {
       console.warn('No FCM token available');
@@ -103,18 +104,18 @@ export const getFCMToken = async (): Promise<string | null> => {
 };
 
 /**
- * Gets the cached FCM token from localStorage.
+ * Gets the cached FCM token from storage.
  */
-export const getCachedFCMToken = (): string | null => {
-  return localStorage.getItem(FCM_TOKEN_KEY);
+export const getCachedFCMToken = async (): Promise<string | null> => {
+  return await getMetadata(FCM_TOKEN_KEY);
 };
 
 /**
  * Clears the cached FCM token.
  * Call this when the user logs out or disables notifications.
  */
-export const clearFCMToken = (): void => {
-  localStorage.removeItem(FCM_TOKEN_KEY);
+export const clearFCMToken = async (): Promise<void> => {
+  await saveMetadata(FCM_TOKEN_KEY, '');
 };
 
 /**

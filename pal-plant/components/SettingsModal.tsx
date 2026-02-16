@@ -3,6 +3,7 @@ import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Use
 import { AppSettings, ThemeId } from '../types';
 import { THEMES } from '../utils/helpers';
 import { markBackupExportedNow } from '../hooks/useReminderEngine';
+import { exportAllData, importAllData } from '../utils/storage';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -25,26 +26,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleExport = () => {
-    const data = {
-      friends: JSON.parse(localStorage.getItem('friendkeep_data') || '[]'),
-      meetings: JSON.parse(localStorage.getItem('friendkeep_meetings') || '[]'),
-      categories: JSON.parse(localStorage.getItem('friendkeep_categories') || '[]'),
-      settings: JSON.parse(localStorage.getItem('friendkeep_settings') || '{}'),
-      exportDate: new Date().toISOString(),
-      version: 2
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pal_plant_backup_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    markBackupExportedNow();
+  const handleExport = async () => {
+    try {
+      const data = await exportAllData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pal_plant_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      markBackupExportedNow();
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      setImportStatus('error');
+      setImportMessage('Error creating backup. Please try again.');
+    }
   };
 
   const handleImportClick = () => {
@@ -53,25 +52,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        if (json.friends) localStorage.setItem('friendkeep_data', JSON.stringify(json.friends));
-        if (json.meetings) localStorage.setItem('friendkeep_meetings', JSON.stringify(json.meetings));
-        if (json.categories) localStorage.setItem('friendkeep_categories', JSON.stringify(json.categories));
-        if (json.settings) {
-          localStorage.setItem('friendkeep_settings', JSON.stringify(json.settings));
-        }
+        await importAllData(json);
 
         setImportStatus('success');
         setImportMessage('Data restored successfully! Reloading...');
         setTimeout(() => window.location.reload(), 1500);
-      } catch {
+      } catch (error) {
+        console.error('Error importing data:', error);
         setImportStatus('error');
         setImportMessage('Invalid backup file. Please check the file format.');
       }
@@ -346,18 +341,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </h3>
             <div className="space-y-3">
               <button
-                onClick={() => {
-                  const data = {
-                    friends: JSON.parse(localStorage.getItem('friendkeep_data') || '[]'),
-                    meetings: JSON.parse(localStorage.getItem('friendkeep_meetings') || '[]'),
-                    categories: JSON.parse(localStorage.getItem('friendkeep_categories') || '[]'),
-                    settings: JSON.parse(localStorage.getItem('friendkeep_settings') || '{}'),
-                    exportDate: new Date().toISOString(),
-                    version: 2
-                  };
-                  navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-                  setCopyStatus('copied');
-                  setTimeout(() => setCopyStatus('idle'), 2000);
+                onClick={async () => {
+                  try {
+                    const data = await exportAllData();
+                    await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+                    setCopyStatus('copied');
+                    setTimeout(() => setCopyStatus('idle'), 2000);
+                  } catch (error) {
+                    console.error('Error copying data:', error);
+                  }
                 }}
                 className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
               >
@@ -370,20 +362,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               {typeof navigator !== 'undefined' && navigator.share && (
                 <button
                   onClick={async () => {
-                    const data = {
-                      friends: JSON.parse(localStorage.getItem('friendkeep_data') || '[]'),
-                      meetings: JSON.parse(localStorage.getItem('friendkeep_meetings') || '[]'),
-                      categories: JSON.parse(localStorage.getItem('friendkeep_categories') || '[]'),
-                      settings: JSON.parse(localStorage.getItem('friendkeep_settings') || '{}'),
-                      exportDate: new Date().toISOString(),
-                      version: 2
-                    };
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const file = new File([blob], `pal_plant_backup_${new Date().toISOString().split('T')[0]}.json`, { type: 'application/json' });
                     try {
+                      const data = await exportAllData();
+                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                      const file = new File([blob], `pal_plant_backup_${new Date().toISOString().split('T')[0]}.json`, { type: 'application/json' });
                       await navigator.share({ files: [file], title: 'Pal Plant Backup' });
-                    } catch {
+                    } catch (error) {
                       // User cancelled or share failed
+                      console.error('Error sharing:', error);
                     }
                   }}
                   className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors"

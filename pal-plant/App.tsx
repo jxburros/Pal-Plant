@@ -11,6 +11,8 @@ import { generateId, calculateTimeStatus, THEMES } from './utils/helpers';
 import { trackEvent } from './utils/analytics';
 import { useReminderEngine } from './hooks/useReminderEngine';
 import { useFriendsEngine } from './hooks/useFriendsEngine';
+import { initStorage, getFriends, getMeetings, getCategories, getSettings, exportAllData, importAllData, saveMetadata, getMetadata } from './utils/storage';
+import { debouncedSaveFriends, debouncedSaveMeetings, debouncedSaveCategories, debouncedSaveSettings } from './utils/debouncedStorage';
 
 const StatsView = lazy(() => import('./components/StatsView'));
 const OnboardingTooltips = lazy(() => import('./components/OnboardingTooltips'));
@@ -56,6 +58,7 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showBackupBanner, setShowBackupBanner] = useState(false);
+  const [isStorageReady, setIsStorageReady] = useState(false);
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = generateId();
@@ -68,6 +71,7 @@ const App: React.FC = () => {
   }, []);
 
   const [settings, setSettings] = useState<AppSettings>(() => {
+    // Temporary sync read for initial render (will be replaced by async load)
     const saved = localStorage.getItem('friendkeep_settings');
     const defaults: AppSettings = {
       theme: 'plant',
@@ -100,25 +104,94 @@ const App: React.FC = () => {
     friends, setFriends, feedbackMap, markContacted, clearFeedback,
     deleteFriend, deleteLog: engineDeleteLog, saveFriend, bulkImport
   } = useFriendsEngine(() => {
+    // Temporary sync read for initial render (will be replaced by async load)
     const saved = localStorage.getItem('friendkeep_data');
     if (!saved) return [];
     return JSON.parse(saved);
   });
 
   const [categories, setCategories] = useState<string[]>(() => {
+    // Temporary sync read for initial render (will be replaced by async load)
     const saved = localStorage.getItem('friendkeep_categories');
     return saved ? JSON.parse(saved) : ['Friends', 'Romantic', 'Business', 'Family'];
   });
 
   const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>(() => {
+    // Temporary sync read for initial render (will be replaced by async load)
     const saved = localStorage.getItem('friendkeep_meetings');
     return saved ? JSON.parse(saved) : [];
   });
 
-  useEffect(() => { localStorage.setItem('friendkeep_data', JSON.stringify(friends)); }, [friends]);
-  useEffect(() => { localStorage.setItem('friendkeep_categories', JSON.stringify(categories)); }, [categories]);
-  useEffect(() => { localStorage.setItem('friendkeep_meetings', JSON.stringify(meetingRequests)); }, [meetingRequests]);
-  useEffect(() => { localStorage.setItem('friendkeep_settings', JSON.stringify(settings)); }, [settings]);
+  // Initialize storage and load data on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Initialize storage (runs migration if needed)
+        await initStorage();
+
+        // Load all data from storage
+        const [loadedFriends, loadedMeetings, loadedCategories, loadedSettings] = await Promise.all([
+          getFriends(),
+          getMeetings(),
+          getCategories(),
+          getSettings()
+        ]);
+
+        // Update state with loaded data
+        if (loadedFriends.length > 0) {
+          setFriends(loadedFriends);
+        }
+        if (loadedMeetings.length > 0) {
+          setMeetingRequests(loadedMeetings);
+        }
+        if (loadedCategories.length > 0) {
+          setCategories(loadedCategories);
+        }
+        if (loadedSettings) {
+          setSettings(prev => ({
+            ...prev,
+            ...loadedSettings,
+            reminders: {
+              ...prev.reminders,
+              ...(loadedSettings.reminders || {})
+            }
+          }));
+        }
+
+        setIsStorageReady(true);
+      } catch (error) {
+        console.error('Error loading data from storage:', error);
+        // Continue with localStorage data already loaded in initial state
+        setIsStorageReady(true);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Save friends with debouncing
+  useEffect(() => {
+    if (!isStorageReady) return;
+    debouncedSaveFriends(friends);
+  }, [friends, isStorageReady]);
+
+  // Save categories with debouncing
+  useEffect(() => {
+    if (!isStorageReady) return;
+    debouncedSaveCategories(categories);
+  }, [categories, isStorageReady]);
+
+  // Save meetings with debouncing
+  useEffect(() => {
+    if (!isStorageReady) return;
+    debouncedSaveMeetings(meetingRequests);
+  }, [meetingRequests, isStorageReady]);
+
+  // Save settings with debouncing
+  useEffect(() => {
+    if (!isStorageReady) return;
+    debouncedSaveSettings(settings);
+  }, [settings, isStorageReady]);
 
   useEffect(() => {
     localStorage.removeItem('friendkeep_accounts');
@@ -133,27 +206,25 @@ const App: React.FC = () => {
   }, [settings.hasSeenOnboarding]);
 
 
-  const triggerBackupDownload = useCallback(() => {
-    const data = {
-      friends: JSON.parse(localStorage.getItem('friendkeep_data') || '[]'),
-      meetings: JSON.parse(localStorage.getItem('friendkeep_meetings') || '[]'),
-      categories: JSON.parse(localStorage.getItem('friendkeep_categories') || '[]'),
-      settings: JSON.parse(localStorage.getItem('friendkeep_settings') || '{}'),
-      exportDate: new Date().toISOString(),
-      version: 2
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pal_plant_backup_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    // Mark backup as done
-    localStorage.setItem('friendkeep_last_backup_at', new Date().toISOString());
-    showToast('Backup downloaded successfully!', 'success');
+  const triggerBackupDownload = useCallback(async () => {
+    try {
+      const data = await exportAllData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pal_plant_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      // Mark backup as done
+      await saveMetadata('friendkeep_last_backup_at', new Date().toISOString());
+      showToast('Backup downloaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      showToast('Error creating backup', 'warning');
+    }
   }, [showToast]);
 
   useReminderEngine({
