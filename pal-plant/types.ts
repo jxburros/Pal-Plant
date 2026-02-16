@@ -32,7 +32,7 @@ export interface Friend {
   avatarSeed?: number;
 }
 
-export type MeetingStatus = 'REQUESTED' | 'SCHEDULED' | 'COMPLETE';
+export type MeetingStatus = 'REQUESTED' | 'SCHEDULED' | 'COMPLETE' | 'CANCELLED';
 
 export type MeetingTimeframe = 'ASAP' | 'DAYS' | 'WEEK' | 'MONTH' | 'FLEXIBLE';
 
@@ -84,6 +84,7 @@ export interface AppSettings {
   reducedMotion: boolean;
   reminders: ReminderSettings;
   hasSeenOnboarding: boolean;
+  hasSeenDataWarning: boolean; // Show warning about local-first data storage
 }
 
 export interface ActionFeedback {

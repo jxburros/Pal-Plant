@@ -1,6 +1,14 @@
 import { Friend, ThemeId, ThemeColors, MeetingRequest, ContactLog, MeetingTimeframe } from '../types';
 import { Sprout, Flower, Trees, Leaf, Skull } from 'lucide-react';
 import React from 'react';
+import { 
+  TIMER_BUFFER_MULTIPLIER, 
+  calculateTimeStatus, 
+  getMeetingUrgency,
+  calculateInteractionScore,
+  calculateIndividualFriendScore,
+  calculateSocialGardenScore
+} from './scoring';
 
 // ─── Avatar Helpers ───────────────────────────────────────────────
 
@@ -319,6 +327,7 @@ export const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+
 /**
  * Legacy helpers.ts file - Re-exports from domain-specific modules
  * 
@@ -326,35 +335,12 @@ export const fileToBase64 = (file: File): Promise<string> => {
  * from the new modular structure. All helper functions have been organized
  * into domain-specific modules for better maintainability.
  * 
- * Example: A 10-day timer displays "10 days" to the user, but the system
- * uses 12 days (10 * 1.2) for calculations. The percentageLeft and daysLeft
- * are based on the buffered duration, not the advertised duration.
+ * Core scoring and timing functions are now defined in scoring.ts and
+ * re-exported here for backward compatibility.
  */
-export const calculateTimeStatus = (lastContacted: string, frequencyDays: number) => {
-  const lastDate = new Date(lastContacted);
-  const now = new Date();
-  
-  // Apply 20% buffer: timer runs 20% longer than advertised
-  const adjustedFrequencyDays = frequencyDays * TIMER_BUFFER_MULTIPLIER;
-  const goalDate = new Date(lastDate.getTime() + adjustedFrequencyDays * 24 * 60 * 60 * 1000);
 
-  const totalDurationMs = goalDate.getTime() - lastDate.getTime();
-  const timeRemainingMs = goalDate.getTime() - now.getTime();
-
-  // Percentage of the "battery" left (based on actual buffered duration, not advertised)
-  let percentageLeft = (timeRemainingMs / totalDurationMs) * 100;
-
-  // Days left (based on actual buffered duration)
-  // Note: UI may show advertised duration, but expiration uses adjusted duration
-  const daysLeft = Math.ceil(timeRemainingMs / (1000 * 60 * 60 * 24));
-
-  return {
-    percentageLeft,
-    daysLeft,
-    isOverdue: timeRemainingMs < 0,
-    goalDate
-  };
-};
+// Re-export scoring functions from scoring.ts to avoid duplication
+export { calculateTimeStatus, getMeetingUrgency, calculateInteractionScore, calculateIndividualFriendScore, calculateSocialGardenScore } from './scoring';
 
 // ─── Stats ────────────────────────────────────────────────────────
 
@@ -422,121 +408,8 @@ export const getPlantStage = (percentage: number) => {
   return { icon: Skull, label: 'Withered', color: 'text-stone-500', bg: 'bg-stone-100' };
 };
 
-// Meeting Urgency Logic: Green -> Red over 14 days (with 20% buffer = 16.8 days actual)
-export const getMeetingUrgency = (dateAdded: string) => {
-  const start = new Date(dateAdded).getTime();
-  const now = new Date().getTime();
-  const daysPassed = (now - start) / (1000 * 60 * 60 * 24);
-  
-  // Apply 20% buffer: meeting requests are considered stale after 16.8 days, not 14
-  const maxDays = 14 * TIMER_BUFFER_MULTIPLIER;
-
-  const ratio = Math.min(daysPassed / maxDays, 1);
-
-  const hue = 150 - (ratio * 150);
-  const color = `hsl(${hue}, 70%, 50%)`;
-
-  return {
-    daysPassed: Math.floor(daysPassed),
-    ratio,
-    color
-  };
-};
-
 // ─── Scoring ──────────────────────────────────────────────────────
-
-/**
- * Calculates the score for a single interaction event
- */
-export const calculateInteractionScore = (
-  type: 'REGULAR' | 'DEEP' | 'QUICK',
-  percentageRemaining: number,
-  daysOverdue: number
-): number => {
-  if (type === 'QUICK') return 2; // Small bonus for quick touches
-  if (type === 'DEEP') return 15; // Big bonus for deep connections
-
-  // Regular Logic
-  if (daysOverdue > 0) {
-    // Penalty: -5 points per day overdue, max -30
-    return Math.max(-30, -5 * daysOverdue);
-  }
-
-  // Too Early Penalty (>80% left)
-  if (percentageRemaining > 80) {
-    return -2;
-  }
-
-  // Sweet Spot (0% to 50% left) -> High points
-  if (percentageRemaining <= 50) {
-    return 10;
-  }
-
-  // Normal (50% to 80% left)
-  return 5;
-};
-
-/**
- * Recalculates a friend's total individual score based on history
- */
-export const calculateIndividualFriendScore = (logs: ContactLog[]): number => {
-  // Start neutral
-  let score = 50;
-
-  // We weight recent logs more heavily? For now, flat sum clamped 0-100
-  logs.forEach(log => {
-    score += (log.scoreDelta || 0);
-  });
-
-  return Math.max(0, Math.min(100, score));
-};
-
-/**
- * Global Score Algorithm
- */
-export const calculateSocialGardenScore = (friends: Friend[], meetings: MeetingRequest[]): number => {
-  if (friends.length === 0) return 0;
-
-  const getMeetingConfig = (timeframe?: MeetingTimeframe) => {
-    switch (timeframe) {
-      case 'ASAP':
-        return { bonus: 7, penalty: -4, staleAfterDays: 3 };
-      case 'DAYS':
-        return { bonus: 6, penalty: -3, staleAfterDays: 7 };
-      case 'MONTH':
-        return { bonus: 4, penalty: -1, staleAfterDays: 30 };
-      case 'FLEXIBLE':
-        return { bonus: 3, penalty: -1, staleAfterDays: 45 };
-      case 'WEEK':
-      default:
-        return { bonus: 5, penalty: -2, staleAfterDays: 14 };
-    }
-  };
-
-  // 1. Average of Individual Friend Scores
-  const totalFriendScore = friends.reduce((acc, f) => acc + f.individualScore, 0);
-  const avgFriendScore = totalFriendScore / friends.length;
-
-  // 2. Meeting Bonuses/Penalties
-  let meetingScore = 0;
-
-  meetings.forEach(m => {
-    const config = getMeetingConfig(m.desiredTimeframe);
-
-    if (m.status === 'COMPLETE' && m.verified) {
-      meetingScore += config.bonus;
-    } else if (m.status === 'REQUESTED') {
-       // Penalty if sitting in requested too long (timeframe aware + 20% grace buffer)
-       const urgency = getMeetingUrgency(m.dateAdded);
-       if (urgency.daysPassed > (config.staleAfterDays * TIMER_BUFFER_MULTIPLIER)) {
-         meetingScore += config.penalty;
-       }
-    }
-  });
-
-  // Calculate final
-  return Math.round(Math.max(0, Math.min(100, avgFriendScore + (meetingScore / Math.max(1, friends.length)))));
-};
+// Note: Scoring functions are now defined in scoring.ts and re-exported at the top of this file
 
 export const getUpcomingBirthdays = (friends: Friend[]) => {
   const today = new Date();

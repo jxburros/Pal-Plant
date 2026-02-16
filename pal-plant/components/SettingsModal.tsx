@@ -134,15 +134,72 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </h3>
 
             <div className="space-y-4">
+              {/* Permission Status Display */}
+              <div className={`p-3 rounded-xl border-2 ${
+                !notificationsSupported
+                  ? 'bg-slate-50 border-slate-200'
+                  : notificationPermission === 'granted'
+                  ? 'bg-emerald-50 border-emerald-200'
+                  : notificationPermission === 'denied'
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-amber-50 border-amber-200'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Permission Status
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                    !notificationsSupported
+                      ? 'bg-slate-200 text-slate-600'
+                      : notificationPermission === 'granted'
+                      ? 'bg-emerald-200 text-emerald-700'
+                      : notificationPermission === 'denied'
+                      ? 'bg-red-200 text-red-700'
+                      : 'bg-amber-200 text-amber-700'
+                  }`}>
+                    {!notificationsSupported
+                      ? 'NOT SUPPORTED'
+                      : notificationPermission === 'granted'
+                      ? 'GRANTED'
+                      : notificationPermission === 'denied'
+                      ? 'BLOCKED'
+                      : 'NOT REQUESTED'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600">
+                  {!notificationsSupported
+                    ? 'Push notifications are not supported on this device/browser.'
+                    : notificationPermission === 'granted'
+                    ? 'Browser notifications are enabled. You\'ll receive reminders for overdue contacts and meetings.'
+                    : notificationPermission === 'denied'
+                    ? 'Notifications are blocked. Please enable them in your browser settings to receive reminders.'
+                    : 'Grant permission to receive browser notifications for timely reminders.'}
+                </p>
+                {notificationsSupported && notificationPermission !== 'granted' && notificationPermission !== 'denied' && (
+                  <button
+                    onClick={() => {
+                      Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                          updateReminders({ pushEnabled: true });
+                        }
+                      });
+                    }}
+                    className="mt-3 w-full py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors"
+                  >
+                    Request Permission
+                  </button>
+                )}
+              </div>
+
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <Bell size={20} className="text-slate-400" />
-                  <span className="font-medium text-slate-700">Push Notifications</span>
+                  <span className="font-medium text-slate-700">Enable Push Reminders</span>
                 </div>
                 <button
                   onClick={() => {
                     if (!notificationsSupported) return;
-                    if (!settings.reminders?.pushEnabled) {
+                    if (!settings.reminders?.pushEnabled && notificationPermission !== 'granted') {
                       Notification.requestPermission().then(permission => {
                         if (permission === 'granted') {
                           updateReminders({ pushEnabled: true });
@@ -152,20 +209,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       updateReminders({ pushEnabled: !settings.reminders?.pushEnabled });
                     }
                   }}
-                  disabled={!notificationsSupported}
+                  disabled={!notificationsSupported || notificationPermission === 'denied'}
                   className={`w-12 h-6 rounded-full transition-colors relative ${settings.reminders?.pushEnabled ? 'bg-emerald-500' : 'bg-slate-200'} disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.reminders?.pushEnabled ? 'left-7' : 'left-1'}`} />
                 </button>
               </div>
-
-              <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                {!notificationsSupported
-                  ? 'Push notifications are not supported on this device/browser.'
-                  : notificationPermission === 'denied'
-                  ? 'Push notifications are blocked. Re-enable notification permission in your browser settings.'
-                  : 'Push reminders are active through browser notifications when permission is granted.'}
-              </p>
               {settings.reminders?.pushEnabled && (
                 <div className="bg-slate-50 p-3 rounded-xl">
                   <div className="flex items-center gap-2 mb-2">
