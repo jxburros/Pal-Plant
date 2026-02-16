@@ -104,7 +104,7 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
               </p>
               <ul className="mt-2 space-y-1 text-yellow-700 text-xs">
                 <li><strong>Always:</strong> +2 points</li>
-                <li>Shifts timer forward by 30 minutes</li>
+                <li>Shifts timer forward by 8% of full timer length</li>
                 <li>Costs 1 token (see tokens section below)</li>
               </ul>
             </div>
@@ -155,7 +155,7 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
               <ul className="mt-2 space-y-1 text-xs text-slate-600">
                 <li><strong>After Regular/Deep contact:</strong> Timer resets to your full frequency days</li>
                 <li><strong>After Deep contact:</strong> Timer also gets an extra 12 hours</li>
-                <li><strong>After Quick Touch:</strong> Timer shifts forward by only 30 minutes</li>
+                <li><strong>After Quick Touch:</strong> Timer shifts forward by 8% of full timer length</li>
                 <li><strong>Cadence shortened:</strong> Two consecutive early contacts trigger halving</li>
               </ul>
             </div>

@@ -218,7 +218,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         <button
           onClick={() => { if (canQuickTouch) onContact(friend.id, 'QUICK', selectedChannel); }}
           className={`px-3 py-2 rounded-xl transition-colors border ${!canQuickTouch ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'text-yellow-500 hover:bg-yellow-50 hover:text-yellow-600 border-slate-100 hover:border-yellow-200'}`}
-          title={!canQuickTouch ? 'Not available yet (1 token every 2 cycles)' : 'Quick Touch (+2 points, +30 min timer shift)'}
+          title={!canQuickTouch ? 'Not available yet (1 token every 2 cycles)' : 'Quick Touch (+2 points, extends timer by 8% of full length)'}
           aria-label={!canQuickTouch ? `Quick touch unavailable for ${friend.name} — no tokens` : `Quick touch ${friend.name}`}
           aria-disabled={!canQuickTouch}
         >
