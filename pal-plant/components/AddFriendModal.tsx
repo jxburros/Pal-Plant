@@ -266,7 +266,7 @@ const FriendModal: React.FC<FriendModalProps> = ({
               className="w-full py-2.5 rounded-xl border border-blue-200 bg-blue-50 font-bold text-blue-700 hover:bg-blue-100 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60"
             >
               <BookUser size={16} />
-              {contactImportLoading ? 'Loading contact…' : 'Fill from device contacts'}
+              {contactImportLoading ? 'Loading contact…' : (initialData ? 'Update from device contacts' : 'Pick from device contacts')}
             </button>
           )}
 

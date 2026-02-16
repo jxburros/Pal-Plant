@@ -125,3 +125,9 @@ export interface ThemeColors {
   accent: string;
   border: string;
 }
+
+export interface Group {
+  id: string;
+  name: string;
+  memberIds: string[]; // Array of Friend.id values
+}
