@@ -1,7 +1,10 @@
+export type ContactChannel = 'call' | 'text' | 'video' | 'in-person' | 'other';
+
 export interface ContactLog {
   id: string;
   date: string; // ISO string
   type: 'REGULAR' | 'DEEP' | 'QUICK';
+  channel?: ContactChannel; // Communication method used
   daysWaitGoal: number;
   percentageRemaining: number;
   scoreDelta?: number; // How much this interaction changed the score

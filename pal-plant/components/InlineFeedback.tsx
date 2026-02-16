@@ -38,6 +38,9 @@ const InlineFeedback: React.FC<InlineFeedbackProps> = ({ feedback, onDismiss }) 
 
   return (
     <div
+      role="status"
+      aria-live="polite"
+      aria-label={`${typeLabel}: ${isPositive ? '+' : ''}${feedback.scoreDelta} points. ${feedback.timerEffect}`}
       className={`mt-3 rounded-xl border overflow-hidden transition-all duration-300 ${
         visible ? 'opacity-100 max-h-40 translate-y-0' : 'opacity-0 max-h-0 -translate-y-2'
       } ${isPositive ? 'border-emerald-200 bg-emerald-50' : isNegative ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-slate-50'}`}

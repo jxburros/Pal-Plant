@@ -1,12 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { Phone, CheckCircle2, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, Heart, Zap, ChevronDown, ChevronUp } from 'lucide-react';
-import { ActionFeedback, Friend } from '../types';
+import { Phone, CheckCircle2, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, Heart, Zap, ChevronDown, ChevronUp, PhoneCall, Video, Users } from 'lucide-react';
+import { ActionFeedback, ContactChannel, Friend } from '../types';
 import { calculateTimeStatus, getProgressBarColor, getStatusColor, getPlantStage, getInitials, getAvatarColor } from '../utils/helpers';
 import InlineFeedback from './InlineFeedback';
 
 interface FriendCardProps {
   friend: Friend;
-  onContact: (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK') => void;
+  onContact: (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK', channel?: ContactChannel) => void;
   onDelete: (id: string) => void;
   onEdit: (friend: Friend) => void;
   onRequestMeeting: (friend: Friend) => void;
@@ -14,10 +14,18 @@ interface FriendCardProps {
   onDismissFeedback?: (friendId: string) => void;
 }
 
+const CHANNEL_OPTIONS: { value: ContactChannel; label: string; icon: typeof Phone }[] = [
+  { value: 'call', label: 'Call', icon: PhoneCall },
+  { value: 'text', label: 'Text', icon: MessageCircle },
+  { value: 'video', label: 'Video', icon: Video },
+  { value: 'in-person', label: 'In Person', icon: Users },
+];
+
 const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, onEdit, onRequestMeeting, feedback, onDismissFeedback }) => {
   const { percentageLeft, daysLeft, isOverdue } = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showMechanics, setShowMechanics] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<ContactChannel>('call');
   const handleDismissFeedback = useCallback(() => {
     onDismissFeedback?.(friend.id);
   }, [onDismissFeedback, friend.id]);
@@ -53,7 +61,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
             : `Regular contact logged on time (${lastLog.scoreDelta ?? 5} points).`);
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-200 hover:shadow-md mb-4 group">
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-200 hover:shadow-md mb-4 group" role="article" aria-label={`Friend card for ${friend.name}`}>
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
         <div className="flex items-center gap-1">
           <span className={`text-[10px] font-black px-2 py-1 rounded-md border ${friend.individualScore > 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : friend.individualScore < 40 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
@@ -75,7 +83,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
           <div className="relative">
             <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden flex-shrink-0 border-4 border-white shadow-sm relative group-hover:scale-105 transition-transform z-0">
               {friend.photo ? (
-                <img src={friend.photo} alt={friend.name} className="w-full h-full object-cover" />
+                <img src={friend.photo} alt={`Photo of ${friend.name}`} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-white font-bold text-xl" style={{ backgroundColor: getAvatarColor(friend.name) }}>
                   {getInitials(friend.name)}
@@ -115,7 +123,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
           <span>Needs Water</span>
           <span>Thriving</span>
         </div>
-        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-50">
+        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-50" role="progressbar" aria-valuenow={Math.round(visualPercentage)} aria-valuemin={0} aria-valuemax={100} aria-label={`Contact timer: ${isOverdue ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days remaining`}`}>
           <div className={`h-full transition-all duration-500 ease-out relative ${progressColorClass}`} style={{ width: `${visualPercentage}%` }}>
             <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20"></div>
           </div>
@@ -149,33 +157,59 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         </div>
       )}
 
-      <div className="flex gap-2 mt-4">
-        <button onClick={() => onContact(friend.id, 'REGULAR')} className="flex-1 bg-slate-900 text-white py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-slate-900/10 hover:bg-slate-800">
-          <CheckCircle2 size={16} />
+      {/* Channel Selector */}
+      <div className="flex items-center gap-1.5 mt-4 mb-2">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Via:</span>
+        {CHANNEL_OPTIONS.map(ch => {
+          const Icon = ch.icon;
+          return (
+            <button
+              key={ch.value}
+              onClick={() => setSelectedChannel(ch.value)}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all border ${
+                selectedChannel === ch.value
+                  ? 'bg-slate-800 text-white border-slate-800'
+                  : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'
+              }`}
+            >
+              <Icon size={10} />
+              {ch.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex gap-2">
+        <button onClick={() => onContact(friend.id, 'REGULAR', selectedChannel)} className="flex-1 bg-slate-900 text-white py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-slate-900/10 hover:bg-slate-800" aria-label={`Water ${friend.name} — log regular contact`}>
+          <CheckCircle2 size={16} aria-hidden="true" />
           Water
         </button>
 
         <button
-          onClick={() => { if (!isDeepCooldown) onContact(friend.id, 'DEEP'); }}
+          onClick={() => { if (!isDeepCooldown) onContact(friend.id, 'DEEP', selectedChannel); }}
           className={`px-3 py-2 rounded-xl transition-colors border ${isDeepCooldown ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'text-pink-400 hover:bg-pink-50 hover:text-pink-600 border-slate-100 hover:border-pink-200'}`}
           title={isDeepCooldown ? 'Used recently' : 'Deep Connection (+15 points, extends timer by 12 hours)'}
+          aria-label={isDeepCooldown ? `Deep connection unavailable for ${friend.name} — used recently` : `Deep connection with ${friend.name}`}
+          aria-disabled={isDeepCooldown}
         >
           <Heart size={20} fill={isDeepCooldown ? 'currentColor' : 'none'} />
         </button>
 
         <button
-          onClick={() => { if (canQuickTouch) onContact(friend.id, 'QUICK'); }}
+          onClick={() => { if (canQuickTouch) onContact(friend.id, 'QUICK', selectedChannel); }}
           className={`px-3 py-2 rounded-xl transition-colors border ${!canQuickTouch ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'text-yellow-500 hover:bg-yellow-50 hover:text-yellow-600 border-slate-100 hover:border-yellow-200'}`}
           title={!canQuickTouch ? 'Not available yet (1 token every 2 cycles)' : 'Quick Touch (+2 points, +30 min timer shift)'}
+          aria-label={!canQuickTouch ? `Quick touch unavailable for ${friend.name} — no tokens` : `Quick touch ${friend.name}`}
+          aria-disabled={!canQuickTouch}
         >
           <Zap size={20} fill={!canQuickTouch ? 'none' : 'currentColor'} />
         </button>
 
-        <button onClick={() => onRequestMeeting(friend)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-orange-50 hover:text-orange-600 transition-colors border border-slate-100 hover:border-orange-100" title="Create meeting request">
+        <button onClick={() => onRequestMeeting(friend)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-orange-50 hover:text-orange-600 transition-colors border border-slate-100 hover:border-orange-100" title="Create meeting request" aria-label={`Schedule meeting with ${friend.name}`}>
           <CalendarPlus size={20} />
         </button>
 
-        <button onClick={() => onEdit(friend)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors border border-slate-100 hover:border-blue-100" title="Edit">
+        <button onClick={() => onEdit(friend)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors border border-slate-100 hover:border-blue-100" title="Edit" aria-label={`Edit ${friend.name}`}>
           <Edit2 size={20} />
         </button>
 

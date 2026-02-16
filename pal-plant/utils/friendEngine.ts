@@ -1,4 +1,4 @@
-import { ActionFeedback, ContactLog, Friend } from '../types';
+import { ActionFeedback, ContactChannel, ContactLog, Friend } from '../types';
 import { calculateInteractionScore, calculateIndividualFriendScore, calculateTimeStatus, generateId } from './helpers';
 
 export interface ContactActionResult {
@@ -10,7 +10,8 @@ export interface ContactActionResult {
 export const processContactAction = (
   friend: Friend,
   type: 'REGULAR' | 'DEEP' | 'QUICK',
-  now: Date = new Date()
+  now: Date = new Date(),
+  channel?: ContactChannel
 ): ContactActionResult => {
   const { percentageLeft, daysLeft } = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
 
@@ -43,6 +44,7 @@ export const processContactAction = (
         id: generateId(),
         date: now.toISOString(),
         type: 'QUICK',
+        channel,
         daysWaitGoal: friend.frequencyDays,
         percentageRemaining: percentageLeft,
         scoreDelta: 2
@@ -83,6 +85,7 @@ export const processContactAction = (
     id: generateId(),
     date: now.toISOString(),
     type,
+    channel,
     daysWaitGoal: updatedFrequencyDays,
     percentageRemaining: percentageLeft,
     scoreDelta: scoreChange
