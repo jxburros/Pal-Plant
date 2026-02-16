@@ -71,9 +71,10 @@ This is a good separation for maintainability, though some critical business rul
 ### Primary setup flow (create relationship records)
 1. User opens Garden.
 2. Adds friend via modal with required name + optional context fields.
-3. Assigns category and follow-up cadence.
+3. Can import contact info directly from device contacts (native mobile/web Contact Picker API).
+4. Assigns category and follow-up cadence.
 
-**Assessment:** practical and complete for a personal CRM use case.
+**Assessment:** practical and complete for a personal CRM use case, with native device integration reducing manual data entry.
 
 ### Core retention loop (most important)
 1. Garden is sorted by urgency (time left).
@@ -101,7 +102,7 @@ This is a good separation for maintainability, though some critical business rul
 
 - **Cohesive product metaphor** that maps cleanly to actions and visuals.
 - **Solid local-first privacy posture** with no account dependency.
-- **High practical utility**: reminders, meetings, analytics, backup/restore.
+- **High practical utility**: native push notifications, device contact integration, reminders, meetings, analytics, backup/restore.
 - **Thoughtful engagement surfaces**: onboarding, keyboard shortcuts, urgency sorting.
 - **Reasonable performance posture** via targeted lazy loading.
 
