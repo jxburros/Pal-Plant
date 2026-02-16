@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Phone, CheckCircle2, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, Heart, Zap, ChevronDown, ChevronUp } from 'lucide-react';
-import { Friend } from '../types';
+import { ActionFeedback, Friend } from '../types';
 import { calculateTimeStatus, getProgressBarColor, getStatusColor, getPlantStage, getInitials, getAvatarColor } from '../utils/helpers';
+import InlineFeedback from './InlineFeedback';
 
 interface FriendCardProps {
   friend: Friend;
@@ -9,12 +10,17 @@ interface FriendCardProps {
   onDelete: (id: string) => void;
   onEdit: (friend: Friend) => void;
   onRequestMeeting: (friend: Friend) => void;
+  feedback?: ActionFeedback;
+  onDismissFeedback?: (friendId: string) => void;
 }
 
-const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, onEdit, onRequestMeeting }) => {
+const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, onEdit, onRequestMeeting, feedback, onDismissFeedback }) => {
   const { percentageLeft, daysLeft, isOverdue } = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showMechanics, setShowMechanics] = useState(false);
+  const handleDismissFeedback = useCallback(() => {
+    onDismissFeedback?.(friend.id);
+  }, [onDismissFeedback, friend.id]);
 
   const visualPercentage = Math.min(Math.max(percentageLeft, 0), 100);
   const statusColorClass = getStatusColor(percentageLeft);
@@ -184,6 +190,10 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
           </button>
         )}
       </div>
+
+      {feedback && (
+        <InlineFeedback feedback={feedback} onDismiss={handleDismissFeedback} />
+      )}
     </div>
   );
 };

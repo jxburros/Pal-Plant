@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X } from 'lucide-react';
-import { Friend, Tab, ContactLog, MeetingRequest, AppSettings } from './types';
+import { ActionFeedback, Friend, Tab, ContactLog, MeetingRequest, AppSettings } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
@@ -53,6 +53,7 @@ const App: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, ActionFeedback>>({});
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = generateId();
@@ -174,17 +175,25 @@ const App: React.FC = () => {
     trackEvent('FRIEND_DELETED', { friendId: id });
   };
 
+  const clearFeedback = useCallback((friendId: string) => {
+    setFeedbackMap(prev => {
+      const next = { ...prev };
+      delete next[friendId];
+      return next;
+    });
+  }, []);
+
   const markContacted = (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK') => {
     setFriends(prev => prev.map(f => {
       if (f.id !== id) return f;
 
       const result = processContactAction(f, type, new Date());
 
-      if (result.cadenceShortened) {
-        showToast(`${f.name}'s timer shortened to ${result.friend.frequencyDays} days (frequent contact detected).`, 'info');
-      }
-
       if (result.friend === f) return f;
+
+      // Show inline feedback
+      setFeedbackMap(prevMap => ({ ...prevMap, [id]: result.feedback }));
+      setTimeout(() => clearFeedback(id), 5500);
 
       const metadata: Record<string, string | number | boolean | undefined> = { friendId: f.id, type };
       const latestLog = result.friend.logs[0];
@@ -332,6 +341,8 @@ const App: React.FC = () => {
                     onDelete={deleteFriend}
                     onEdit={openEditModal}
                     onRequestMeeting={handleRequestMeeting}
+                    feedback={feedbackMap[friend.id]}
+                    onDismissFeedback={clearFeedback}
                   />
                 ))}
               </div>
