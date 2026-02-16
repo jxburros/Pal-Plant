@@ -622,27 +622,99 @@ export const getSmartNudges = (friends: Friend[]): SmartNudge[] => {
 
 export const THEMES: Record<ThemeId, ThemeColors> = {
   plant: {
-    bg: 'bg-[#f4f7f4]', cardBg: 'bg-white', textMain: 'text-[#2c3e2e]', textSub: 'text-[#6b7c6d]',
-    primary: 'bg-[#4a674e]', primaryText: 'text-white', accent: 'bg-[#8fb394]', border: 'border-[#e0e8e0]'
+    bg: 'bg-[#f4f7f4]',
+    cardBg: 'bg-white',
+    surfaceHover: 'bg-slate-50',
+    surfaceActive: 'bg-slate-100',
+    textMain: 'text-[#2c3e2e]',
+    textSub: 'text-[#6b7c6d]',
+    textDisabled: 'text-slate-300',
+    primary: 'bg-[#4a674e]',
+    primaryText: 'text-white',
+    primaryHover: 'bg-[#3a5740]',
+    accent: 'bg-[#8fb394]',
+    accentHover: 'bg-[#7fa384]',
+    border: 'border-[#e0e8e0]',
+    borderStrong: 'border-slate-200'
   },
   midnight: {
-    bg: 'bg-slate-900', cardBg: 'bg-slate-800', textMain: 'text-white', textSub: 'text-slate-400',
-    primary: 'bg-blue-600', primaryText: 'text-white', accent: 'bg-pink-500', border: 'border-slate-700'
+    bg: 'bg-slate-900',
+    cardBg: 'bg-slate-800',
+    surfaceHover: 'bg-slate-750',
+    surfaceActive: 'bg-slate-700',
+    textMain: 'text-slate-50',
+    textSub: 'text-slate-300',
+    textDisabled: 'text-slate-600',
+    primary: 'bg-blue-600',
+    primaryText: 'text-white',
+    primaryHover: 'bg-blue-700',
+    accent: 'bg-pink-500',
+    accentHover: 'bg-pink-600',
+    border: 'border-slate-700',
+    borderStrong: 'border-slate-600'
   },
   forest: {
-    bg: 'bg-stone-100', cardBg: 'bg-white', textMain: 'text-stone-800', textSub: 'text-stone-500',
-    primary: 'bg-emerald-800', primaryText: 'text-emerald-50', accent: 'bg-lime-600', border: 'border-stone-200'
+    bg: 'bg-stone-100',
+    cardBg: 'bg-white',
+    surfaceHover: 'bg-stone-50',
+    surfaceActive: 'bg-stone-100',
+    textMain: 'text-stone-800',
+    textSub: 'text-stone-500',
+    textDisabled: 'text-stone-300',
+    primary: 'bg-emerald-800',
+    primaryText: 'text-emerald-50',
+    primaryHover: 'bg-emerald-900',
+    accent: 'bg-lime-600',
+    accentHover: 'bg-lime-700',
+    border: 'border-stone-200',
+    borderStrong: 'border-stone-300'
   },
   ocean: {
-    bg: 'bg-sky-50', cardBg: 'bg-white', textMain: 'text-sky-950', textSub: 'text-sky-500',
-    primary: 'bg-sky-600', primaryText: 'text-white', accent: 'bg-cyan-400', border: 'border-sky-100'
+    bg: 'bg-sky-50',
+    cardBg: 'bg-white',
+    surfaceHover: 'bg-sky-25',
+    surfaceActive: 'bg-sky-100',
+    textMain: 'text-sky-950',
+    textSub: 'text-sky-600',
+    textDisabled: 'text-sky-300',
+    primary: 'bg-sky-600',
+    primaryText: 'text-white',
+    primaryHover: 'bg-sky-700',
+    accent: 'bg-cyan-400',
+    accentHover: 'bg-cyan-500',
+    border: 'border-sky-100',
+    borderStrong: 'border-sky-200'
   },
   sunset: {
-    bg: 'bg-orange-50', cardBg: 'bg-white', textMain: 'text-orange-950', textSub: 'text-orange-600',
-    primary: 'bg-orange-600', primaryText: 'text-white', accent: 'bg-yellow-400', border: 'border-orange-200'
+    bg: 'bg-orange-50',
+    cardBg: 'bg-white',
+    surfaceHover: 'bg-orange-25',
+    surfaceActive: 'bg-orange-100',
+    textMain: 'text-orange-950',
+    textSub: 'text-orange-600',
+    textDisabled: 'text-orange-300',
+    primary: 'bg-orange-600',
+    primaryText: 'text-white',
+    primaryHover: 'bg-orange-700',
+    accent: 'bg-yellow-400',
+    accentHover: 'bg-yellow-500',
+    border: 'border-orange-200',
+    borderStrong: 'border-orange-300'
   },
   berry: {
-    bg: 'bg-fuchsia-50', cardBg: 'bg-white', textMain: 'text-fuchsia-950', textSub: 'text-fuchsia-600',
-    primary: 'bg-fuchsia-700', primaryText: 'text-white', accent: 'bg-pink-500', border: 'border-fuchsia-200'
+    bg: 'bg-fuchsia-50',
+    cardBg: 'bg-white',
+    surfaceHover: 'bg-fuchsia-25',
+    surfaceActive: 'bg-fuchsia-100',
+    textMain: 'text-fuchsia-950',
+    textSub: 'text-fuchsia-600',
+    textDisabled: 'text-fuchsia-300',
+    primary: 'bg-fuchsia-700',
+    primaryText: 'text-white',
+    primaryHover: 'bg-fuchsia-800',
+    accent: 'bg-pink-500',
+    accentHover: 'bg-pink-600',
+    border: 'border-fuchsia-200',
+    borderStrong: 'border-fuchsia-300'
   }
 };
