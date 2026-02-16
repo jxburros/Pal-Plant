@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronRight, ChevronLeft, Sprout, Users, Calendar, Settings, Keyboard } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Sprout, Users, Calendar, Settings, Keyboard, TrendingUp, Clock, Award } from 'lucide-react';
 import { THEMES } from '../utils/helpers';
 import { AppSettings } from '../types';
 
@@ -14,6 +14,7 @@ interface TooltipStep {
   description: string;
   icon: React.ReactNode;
   shortcut?: string;
+  bullets?: string[];
 }
 
 const tooltipSteps: TooltipStep[] = [
@@ -24,17 +25,50 @@ const tooltipSteps: TooltipStep[] = [
     icon: <Sprout size={32} className="text-emerald-500" />
   },
   {
+    id: 'scoring',
+    title: 'How Scoring Works',
+    description: 'Your Garden Score reflects how consistently you show up for people. It\'s based on timing and follow-through.',
+    icon: <TrendingUp size={32} className="text-blue-500" />,
+    bullets: [
+      'Contact at the right time: +10 points',
+      'Contact too early repeatedly: May shorten your cadence',
+      'Wait too long: Points decrease the longer you wait'
+    ]
+  },
+  {
+    id: 'interactions',
+    title: 'Interaction Types',
+    description: 'Different types of contact have different effects on your relationships.',
+    icon: <Award size={32} className="text-purple-500" />,
+    bullets: [
+      'Regular Contact: Resets timer, builds score',
+      'Deep Connection: +15 points + 12 hour bonus',
+      'Quick Touch: +2 points, extends timer 30 min'
+    ]
+  },
+  {
+    id: 'timing',
+    title: 'Timing & Grace Periods',
+    description: 'The app includes built-in buffers to reduce stress and account for life\'s unpredictability.',
+    icon: <Clock size={32} className="text-orange-500" />,
+    bullets: [
+      'Timers run 20% longer than shown',
+      'A "10-day" timer actually gives you 12 days',
+      'This grace period helps you stay consistent'
+    ]
+  },
+  {
     id: 'garden',
     title: 'Your Garden',
     description: 'Each person is represented as a plant. Water them regularly by marking when you\'ve connected. Plants wilt if you wait too long!',
-    icon: <Users size={32} className="text-blue-500" />,
+    icon: <Users size={32} className="text-emerald-500" />,
     shortcut: 'G'
   },
   {
     id: 'meetings',
     title: 'Meeting Requests',
     description: 'Schedule and track meetings with people. You can export meetings to your calendar and set up reminders.',
-    icon: <Calendar size={32} className="text-purple-500" />,
+    icon: <Calendar size={32} className="text-indigo-500" />,
     shortcut: 'M'
   },
   {
@@ -48,7 +82,7 @@ const tooltipSteps: TooltipStep[] = [
     id: 'shortcuts',
     title: 'Keyboard Shortcuts',
     description: 'Press H for Home, G for Garden, M for Meetings, S for Settings, and N to add a new friend. Press ? anytime to see all shortcuts.',
-    icon: <Keyboard size={32} className="text-orange-500" />
+    icon: <Keyboard size={32} className="text-rose-500" />
   }
 ];
 
@@ -111,7 +145,18 @@ const OnboardingTooltips: React.FC<OnboardingTooltipsProps> = ({ settings, onCom
           </div>
 
           <h2 className="text-2xl font-bold text-slate-900 mb-3">{step.title}</h2>
-          <p className="text-slate-600 leading-relaxed mb-6">{step.description}</p>
+          <p className="text-slate-600 leading-relaxed mb-4">{step.description}</p>
+
+          {step.bullets && (
+            <ul className="text-left text-sm text-slate-700 space-y-2 mb-4 bg-slate-50 rounded-xl p-4">
+              {step.bullets.map((bullet, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <span className="text-emerald-500 mt-0.5">•</span>
+                  <span>{bullet}</span>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {step.shortcut && (
             <div className="mb-6 flex justify-center">

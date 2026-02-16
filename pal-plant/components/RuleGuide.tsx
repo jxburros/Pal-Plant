@@ -78,7 +78,7 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
               <ul className="mt-2 space-y-1 text-pink-700 text-xs">
                 <li><strong>Always:</strong> +15 points</li>
                 <li>Extends your timer by an extra 12 hours</li>
-                <li>24-hour cooldown between uses</li>
+                <li>24-hour cooldown (29 hours with grace buffer)</li>
               </ul>
             </div>
 
@@ -103,11 +103,22 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
           >
             <p>Each friend has a <strong>frequency timer</strong> (in days) that you set. This is how often you aim to contact them.</p>
 
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+              <p className="font-bold text-emerald-800">Built-in Grace Period</p>
+              <p className="text-xs text-emerald-700 mt-1">
+                All timers include a <strong>20% buffer</strong> to reduce stress. A 10-day timer actually gives you 12 days.
+                The UI shows the goal (10 days), but the system won't mark you overdue until the full buffered time passes.
+              </p>
+              <p className="text-xs text-emerald-700 mt-1">
+                This grace period applies to all timers: contact timers, deep connection cooldowns, and meeting request deadlines.
+              </p>
+            </div>
+
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="font-bold text-blue-800">Timer Battery</p>
               <p className="text-xs text-blue-700 mt-1">
                 The progress bar shows how much time is left before your next check-in is due.
-                As time passes, the bar drains. When it hits 0%, the friend is overdue.
+                As time passes, the bar drains. When it hits 0%, the friend is overdue (after grace period).
               </p>
             </div>
 
