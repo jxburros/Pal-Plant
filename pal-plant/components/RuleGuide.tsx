@@ -78,7 +78,7 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
               <ul className="mt-2 space-y-1 text-pink-700 text-xs">
                 <li><strong>Always:</strong> +15 points</li>
                 <li>Extends your timer by an extra 12 hours</li>
-                <li>24-hour cooldown (29 hours with grace buffer)</li>
+                <li>24-hour cooldown (28.8 hours with grace buffer)</li>
               </ul>
             </div>
 

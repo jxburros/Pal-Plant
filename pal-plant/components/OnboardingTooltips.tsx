@@ -43,7 +43,7 @@ const tooltipSteps: TooltipStep[] = [
     bullets: [
       'Regular Contact: Resets timer, builds score',
       'Deep Connection: +15 points + 12 hour bonus',
-      'Quick Touch: +2 points, extends timer 30 min'
+      'Quick Touch: +2 points, extends timer 30 minutes'
     ]
   },
   {

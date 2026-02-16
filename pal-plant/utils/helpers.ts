@@ -330,6 +330,10 @@ export const TIMER_BUFFER_MULTIPLIER = 1.2;
 /**
  * Calculate the time status for a friend's contact timer
  * Applies a 20% buffer so timers actually last longer than the displayed duration
+ * 
+ * Example: A 10-day timer displays "10 days" to the user, but the system
+ * uses 12 days (10 * 1.2) for calculations. The percentageLeft and daysLeft
+ * are based on the buffered duration, not the advertised duration.
  */
 export const calculateTimeStatus = (lastContacted: string, frequencyDays: number) => {
   const lastDate = new Date(lastContacted);
@@ -342,10 +346,10 @@ export const calculateTimeStatus = (lastContacted: string, frequencyDays: number
   const totalDurationMs = goalDate.getTime() - lastDate.getTime();
   const timeRemainingMs = goalDate.getTime() - now.getTime();
 
-  // Percentage of the "battery" left (based on actual buffered duration)
+  // Percentage of the "battery" left (based on actual buffered duration, not advertised)
   let percentageLeft = (timeRemainingMs / totalDurationMs) * 100;
 
-  // Days left (based on actual buffered duration, not advertised)
+  // Days left (based on actual buffered duration)
   // Note: UI may show advertised duration, but expiration uses adjusted duration
   const daysLeft = Math.ceil(timeRemainingMs / (1000 * 60 * 60 * 24));
 
