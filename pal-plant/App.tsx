@@ -279,8 +279,14 @@ const App: React.FC = () => {
 
   const deleteLog = useCallback((friendId: string, logId: string) => {
     engineDeleteLog(friendId, logId);
-    // Note: editingFriend is managed in useModalState, no need to update here
-  }, [engineDeleteLog]);
+    // Update editingFriend state if modal is open for this friend
+    if (modals.editingFriend && modals.editingFriend.id === friendId) {
+      const updatedFriend = friends.find(f => f.id === friendId);
+      if (updatedFriend) {
+        modals.updateEditingFriend(updatedFriend);
+      }
+    }
+  }, [engineDeleteLog, modals, friends]);
 
   const handleRequestMeeting = useCallback((friend: Friend) => {
     setMeetingRequests(prev => [{
