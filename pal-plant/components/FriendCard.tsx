@@ -132,7 +132,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
 
         {/* Progress Bar */}
         <div>
-          <div className="flex justify-between text-[10px] font-semibold ${theme.textSub} mb-1">
+          <div className={`flex justify-between text-[10px] font-semibold ${theme.textSub} mb-1`}>
             <span>Needs Attention</span>
             <span>Thriving</span>
           </div>
@@ -144,7 +144,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
       {/* Expandable Score Details */}
       <button
         onClick={() => setShowMechanics(prev => !prev)}
-        className={`w-full mt-1 mb-3 p-2.5 rounded-lg ${theme.surfaceHover} hover:${theme.surfaceActive.replace('bg-', '')} text-xs ${theme.textSub} font-semibold flex items-center justify-between transition-colors`}
+        className={`w-full mt-1 mb-3 p-2.5 rounded-lg ${theme.surfaceHover} hover:${theme.surfaceActive} text-xs ${theme.textSub} font-semibold flex items-center justify-between transition-colors`}
       >
         <span className="font-semibold">Why score changed?</span>
         {showMechanics ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -183,7 +183,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border ${
                   selectedChannel === ch.value
                     ? `${theme.primary} ${theme.primaryText} ${theme.borderStrong}`
-                    : `${theme.surfaceHover} ${theme.textSub} ${theme.border} hover:${theme.surfaceActive.replace('bg-', '')}`
+                    : `${theme.surfaceHover} ${theme.textSub} ${theme.border} hover:${theme.surfaceActive}`
                 }`}
               >
                 <Icon size={11} />
@@ -197,7 +197,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         <div className="flex gap-2">
           <button 
             onClick={() => onContact(friend.id, 'REGULAR', selectedChannel)} 
-            className={`flex-1 ${theme.primary} ${theme.primaryText} py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm hover:${theme.primaryHover.replace('bg-', '')}`} 
+            className={`flex-1 ${theme.primary} ${theme.primaryText} py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm hover:${theme.primaryHover}`} 
             aria-label={`Water ${friend.name} — log regular contact`}
           >
             <CheckCircle2 size={18} aria-hidden="true" />
@@ -229,7 +229,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         <div className="flex gap-2">
           <button 
             onClick={() => onRequestMeeting(friend)} 
-            className={`flex-1 ${theme.surfaceHover} ${theme.textSub} py-2 rounded-lg font-medium text-xs flex items-center justify-center gap-1.5 hover:${theme.surfaceActive.replace('bg-', '')} transition-colors border ${theme.border}`}
+            className={`flex-1 ${theme.surfaceHover} ${theme.textSub} py-2 rounded-lg font-medium text-xs flex items-center justify-center gap-1.5 hover:${theme.surfaceActive} transition-colors border ${theme.border}`}
             aria-label={`Schedule meeting with ${friend.name}`}
           >
             <CalendarPlus size={16} />
@@ -238,7 +238,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
 
           <button 
             onClick={() => onEdit(friend)} 
-            className={`flex-1 ${theme.surfaceHover} ${theme.textSub} py-2 rounded-lg font-medium text-xs flex items-center justify-center gap-1.5 hover:${theme.surfaceActive.replace('bg-', '')} transition-colors border ${theme.border}`}
+            className={`flex-1 ${theme.surfaceHover} ${theme.textSub} py-2 rounded-lg font-medium text-xs flex items-center justify-center gap-1.5 hover:${theme.surfaceActive} transition-colors border ${theme.border}`}
             aria-label={`Edit ${friend.name}`}
           >
             <Edit2 size={16} />
