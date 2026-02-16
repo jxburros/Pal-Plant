@@ -140,15 +140,29 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
 
   const activeRequests = requests.filter(r => r.status !== 'COMPLETE');
 
-  // Use useMemo to section requests into REQUESTED and SCHEDULED
-  const { requestedMeetings, scheduledMeetings } = useMemo(() => {
-    const now = new Date();
+  // Use useMemo to section requests into REQUESTED and SCHEDULED, and compute derived states
+  const { requestedMeetings, scheduledMeetings, staleRequests, overdueScheduled, upcomingScheduled } = useMemo(() => {
     const requested = activeRequests.filter(r => r.status === 'REQUESTED');
     const scheduled = activeRequests.filter(r => r.status === 'SCHEDULED');
     
+    // Stale requests are timeframe-aware and include the 20% grace buffer
+    const stale = requested.filter(r => {
+      const daysPassed = Math.floor((Date.now() - new Date(r.dateAdded).getTime()) / (1000 * 60 * 60 * 24));
+      const { staleDays } = getTimeframeMeta(r.desiredTimeframe);
+      return daysPassed > (staleDays * 1.2);
+    });
+
+    // Overdue and upcoming scheduled meetings
+    const now = new Date();
+    const overdue = scheduled.filter(r => r.scheduledDate && new Date(r.scheduledDate) < now);
+    const upcoming = scheduled.filter(r => r.scheduledDate && new Date(r.scheduledDate) >= now);
+    
     return {
       requestedMeetings: requested,
-      scheduledMeetings: scheduled
+      scheduledMeetings: scheduled,
+      staleRequests: stale,
+      overdueScheduled: overdue,
+      upcomingScheduled: upcoming
     };
   }, [activeRequests]);
 
@@ -158,24 +172,6 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
     m.scheduledDate &&
     new Date(m.scheduledDate) < new Date() &&
     !m.verified
-  );
-
-  // Stale requests are timeframe-aware and include the 20% grace buffer
-  const staleRequests = requestedMeetings.filter(r => {
-    const daysPassed = Math.floor((Date.now() - new Date(r.dateAdded).getTime()) / (1000 * 60 * 60 * 24));
-    const { staleDays } = getTimeframeMeta(r.desiredTimeframe);
-    return daysPassed > (staleDays * 1.2);
-  });
-
-  // Overdue meetings (separate from regular list for highlighting)
-  const overdueScheduled = scheduledMeetings.filter(r =>
-    r.scheduledDate &&
-    new Date(r.scheduledDate) < new Date()
-  );
-
-  const upcomingScheduled = scheduledMeetings.filter(r =>
-    r.scheduledDate &&
-    new Date(r.scheduledDate) >= new Date()
   );
 
   const handleReschedule = (req: MeetingRequest) => {
