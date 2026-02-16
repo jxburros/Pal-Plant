@@ -1,7 +1,7 @@
 import { getFirebaseMessaging } from './firebase';
 
 const FCM_TOKEN_KEY = 'pal_plant_fcm_token';
-const VAPID_KEY = 'YOUR_VAPID_KEY_HERE'; // TODO: Replace with actual VAPID key from Firebase Console
+const VAPID_KEY = 'BJYgoCs1JF5LsEYA9OqllAkseQxZDOv-JpvyvrdWR41YWB3wyH2-NXa1x28MhFAiSQhqggGyq_TicN_HD2GOu4o';
 
 /**
  * Registers the service worker for Firebase Cloud Messaging.
