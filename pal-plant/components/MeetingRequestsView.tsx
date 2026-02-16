@@ -4,6 +4,23 @@ import { MeetingRequest, MeetingTimeframe } from '../types';
 import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent, getGoogleCalendarUrl } from '../utils/helpers';
 import { AppSettings } from '../types';
 
+
+const getTimeframeMeta = (timeframe?: MeetingTimeframe) => {
+  switch (timeframe) {
+    case 'ASAP':
+      return { label: 'ASAP', bonus: 7, penalty: -4, staleDays: 3 };
+    case 'DAYS':
+      return { label: 'Within Days', bonus: 6, penalty: -3, staleDays: 7 };
+    case 'MONTH':
+      return { label: 'Within Month', bonus: 4, penalty: -1, staleDays: 30 };
+    case 'FLEXIBLE':
+      return { label: 'Flexible', bonus: 3, penalty: -1, staleDays: 45 };
+    case 'WEEK':
+    default:
+      return { label: 'Within Week', bonus: 5, penalty: -2, staleDays: 14 };
+  }
+};
+
 interface MeetingRequestsViewProps {
   requests: MeetingRequest[];
   onAddRequest: (req: MeetingRequest) => void;
@@ -115,12 +132,12 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
     !m.verified
   );
 
-  // Stale requests (>14 days in REQUESTED status with 20% buffer = 16.8 days, incurring garden score penalty)
+  // Stale requests are timeframe-aware and include the 20% grace buffer
   const staleRequests = activeRequests.filter(r => {
     if (r.status !== 'REQUESTED') return false;
     const daysPassed = Math.floor((Date.now() - new Date(r.dateAdded).getTime()) / (1000 * 60 * 60 * 24));
-    // Apply 20% buffer: 14 days * 1.2 = 16.8 days
-    return daysPassed > (14 * 1.2);
+    const { staleDays } = getTimeframeMeta(r.desiredTimeframe);
+    return daysPassed > (staleDays * 1.2);
   });
 
   // Overdue meetings (separate from regular list for highlighting)
@@ -168,8 +185,8 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                  <button
                    onClick={() => onUpdateRequest({ ...m, status: 'COMPLETE', verified: true })}
                    className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl"
-                 >
-                   Mark attended (+5 garden score)
+>
+                   Mark attended (+{getTimeframeMeta(m.desiredTimeframe).bonus} garden score)
                  </button>
                  <button
                    onClick={() => handleReschedule(m)}
@@ -199,7 +216,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
              </p>
            </div>
            <p className="text-[11px] text-red-600 mb-3">
-             Requests pending over 14 days incur a -2 garden score penalty each. Schedule, close, or delete them.
+             Timeframe deadlines use a 20% grace buffer. Stale requests incur penalties based on urgency level.
            </p>
            <div className="space-y-2">
              {staleRequests.map(r => {
@@ -208,7 +225,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                  <div key={r.id} className="flex items-center justify-between bg-white/60 p-2 rounded-xl">
                    <div>
                      <span className="font-bold text-slate-700 text-sm">{r.name}</span>
-                     <span className="text-xs text-red-500 ml-2">{daysPassed} days waiting (-2 score)</span>
+                     <span className="text-xs text-red-500 ml-2">{daysPassed} days waiting ({getTimeframeMeta(r.desiredTimeframe).penalty} score)</span>
                    </div>
                    <button
                      onClick={() => onUpdateRequest({ ...r, status: 'COMPLETE', verified: false })}
@@ -374,6 +391,7 @@ const MeetingCard: React.FC<{
   const [confirmComplete, setConfirmComplete] = useState(false);
 
   const urgency = getMeetingUrgency(req.dateAdded);
+  const timeframeMeta = getTimeframeMeta(req.desiredTimeframe);
 
   const saveSchedule = () => {
     if (schedDate && schedLoc) {
@@ -382,7 +400,7 @@ const MeetingCard: React.FC<{
     }
   };
 
-  const isStale = req.status === 'REQUESTED' && urgency.daysPassed > 14;
+  const isStale = req.status === 'REQUESTED' && urgency.daysPassed > (timeframeMeta.staleDays * 1.2);
 
   return (
     <div className={`${theme.cardBg} rounded-2xl shadow-sm border ${isOverdue ? 'border-red-300 ring-2 ring-red-100' : isStale ? 'border-amber-300' : theme.border} overflow-hidden`}>
@@ -433,11 +451,7 @@ const MeetingCard: React.FC<{
             {req.desiredTimeframe && (
               <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-blue-600 bg-blue-50 px-2 py-1 rounded-md inline-flex items-center gap-1">
                 <Clock size={12} />
-                {req.desiredTimeframe === 'ASAP' ? 'ASAP' : 
-                 req.desiredTimeframe === 'DAYS' ? 'Within Days' :
-                 req.desiredTimeframe === 'WEEK' ? 'Within Week' :
-                 req.desiredTimeframe === 'MONTH' ? 'Within Month' :
-                 'Flexible'}
+                {timeframeMeta.label}
               </div>
             )}
 
@@ -524,8 +538,9 @@ const MeetingCard: React.FC<{
 
         <div className="mt-3 p-2 rounded-lg bg-slate-50 border border-slate-100">
           <p className="text-[11px] text-slate-500">
-            Score impact: <span className="font-semibold text-green-600">Mark attended +5</span> · <span className="font-semibold text-amber-700">Close without meeting +0</span>{isStale ? <span className="font-semibold text-red-500"> · Stale penalty -2</span> : null}
+            Score impact: <span className="font-semibold text-green-600">Mark attended +{timeframeMeta.bonus}</span> · <span className="font-semibold text-amber-700">Close without meeting +0</span>{isStale ? <span className="font-semibold text-red-500"> · Stale penalty {timeframeMeta.penalty}</span> : null}
           </p>
+          <p className="text-[10px] text-slate-400 mt-1">Penalty starts after {Math.round(timeframeMeta.staleDays * 1.2)} days (20% grace included).</p>
         </div>
 
         {/* Action Buttons */}
@@ -543,7 +558,7 @@ const MeetingCard: React.FC<{
                </div>
              ) : (
                <button onClick={() => setConfirmComplete(true)} className="col-span-1 bg-green-50 text-green-600 hover:bg-green-100 py-2.5 rounded-xl text-xs font-bold transition-colors">
-                 Mark attended (+5)
+                 Mark attended (+{timeframeMeta.bonus})
                </button>
              )
            )}

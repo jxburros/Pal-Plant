@@ -84,14 +84,34 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
         // Request native push and local notification permissions
         try {
           const pushResult = await PushNotifications.checkPermissions();
-          if (pushResult.receive === 'prompt') {
-            await PushNotifications.requestPermissions();
+          const resolvedPushPermission = pushResult.receive === 'prompt'
+            ? (await PushNotifications.requestPermissions()).receive
+            : pushResult.receive;
+
+          if (resolvedPushPermission === 'granted') {
+            await PushNotifications.unregister().catch(() => undefined);
+            await PushNotifications.register();
           }
 
           const localResult = await LocalNotifications.checkPermissions();
           if (localResult.display === 'prompt') {
             await LocalNotifications.requestPermissions();
           }
+
+          PushNotifications.removeAllListeners();
+          PushNotifications.addListener('registration', async (token) => {
+            await saveMetadata('friendkeep_native_push_token', token.value);
+          });
+
+          PushNotifications.addListener('registrationError', (error) => {
+            console.warn('Native push registration error:', error);
+          });
+
+          PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            const title = notification.title || 'Pal Plant';
+            const body = notification.body || 'You have a new notification';
+            sendNotification(title, body);
+          });
         } catch {
           // Silently fail if permission request fails
         }
@@ -122,6 +142,9 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
 
     return () => {
       cleanupForegroundHandler?.();
+      if (isNative()) {
+        PushNotifications.removeAllListeners();
+      }
     };
   }, [reminders.pushEnabled]);
 

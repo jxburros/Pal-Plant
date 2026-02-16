@@ -1,4 +1,4 @@
-import { Friend, ThemeId, ThemeColors, MeetingRequest, ContactLog } from '../types';
+import { Friend, ThemeId, ThemeColors, MeetingRequest, ContactLog, MeetingTimeframe } from '../types';
 import { Sprout, Flower, Trees, Leaf, Skull } from 'lucide-react';
 import React from 'react';
 
@@ -502,6 +502,22 @@ export const calculateIndividualFriendScore = (logs: ContactLog[]): number => {
 export const calculateSocialGardenScore = (friends: Friend[], meetings: MeetingRequest[]): number => {
   if (friends.length === 0) return 0;
 
+  const getMeetingConfig = (timeframe?: MeetingTimeframe) => {
+    switch (timeframe) {
+      case 'ASAP':
+        return { bonus: 7, penalty: -4, staleAfterDays: 3 };
+      case 'DAYS':
+        return { bonus: 6, penalty: -3, staleAfterDays: 7 };
+      case 'MONTH':
+        return { bonus: 4, penalty: -1, staleAfterDays: 30 };
+      case 'FLEXIBLE':
+        return { bonus: 3, penalty: -1, staleAfterDays: 45 };
+      case 'WEEK':
+      default:
+        return { bonus: 5, penalty: -2, staleAfterDays: 14 };
+    }
+  };
+
   // 1. Average of Individual Friend Scores
   const totalFriendScore = friends.reduce((acc, f) => acc + f.individualScore, 0);
   const avgFriendScore = totalFriendScore / friends.length;
@@ -510,13 +526,15 @@ export const calculateSocialGardenScore = (friends: Friend[], meetings: MeetingR
   let meetingScore = 0;
 
   meetings.forEach(m => {
+    const config = getMeetingConfig(m.desiredTimeframe);
+
     if (m.status === 'COMPLETE' && m.verified) {
-      meetingScore += 5; // +5 for every completed, verified meeting
+      meetingScore += config.bonus;
     } else if (m.status === 'REQUESTED') {
-       // Penalty if sitting in requested too long (> 14 days with 20% buffer = 16.8 days)
+       // Penalty if sitting in requested too long (timeframe aware + 20% grace buffer)
        const urgency = getMeetingUrgency(m.dateAdded);
-       if (urgency.daysPassed > (14 * TIMER_BUFFER_MULTIPLIER)) {
-         meetingScore -= 2;
+       if (urgency.daysPassed > (config.staleAfterDays * TIMER_BUFFER_MULTIPLIER)) {
+         meetingScore += config.penalty;
        }
     }
   });
