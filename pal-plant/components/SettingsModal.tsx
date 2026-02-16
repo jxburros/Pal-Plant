@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { X, Moon, Sun, Type, Eye, Monitor, Download, Upload, Database, Bell, Users, Clock, Keyboard, HelpCircle, CheckCircle2, BookOpen, Copy, Share2 } from 'lucide-react';
 import { AppSettings, ThemeId } from '../types';
 import { THEMES } from '../utils/helpers';
 import { markBackupExportedNow } from '../hooks/useReminderEngine';
 import { exportAllData, importAllData } from '../utils/storage';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -108,8 +110,48 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     });
   };
 
-  const notificationsSupported = typeof Notification !== 'undefined';
-  const notificationPermission = notificationsSupported ? Notification.permission : 'denied';
+  const isNativePlatform = Capacitor.isNativePlatform();
+  const notificationsSupported = isNativePlatform || typeof Notification !== 'undefined';
+
+  const [nativePermission, setNativePermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
+  useEffect(() => {
+    if (isNativePlatform && isOpen) {
+      PushNotifications.checkPermissions().then(result => {
+        setNativePermission(result.receive as 'granted' | 'denied' | 'prompt');
+      }).catch(() => setNativePermission('prompt'));
+    }
+  }, [isNativePlatform, isOpen]);
+
+  const notificationPermission = isNativePlatform
+    ? nativePermission
+    : (typeof Notification !== 'undefined' ? Notification.permission : 'denied');
+
+  const handleTogglePush = async () => {
+    if (!notificationsSupported) return;
+
+    if (!settings.reminders?.pushEnabled) {
+      if (isNativePlatform) {
+        try {
+          const result = await PushNotifications.requestPermissions();
+          if (result.receive === 'granted') {
+            updateReminders({ pushEnabled: true });
+            setNativePermission('granted');
+          } else {
+            setNativePermission(result.receive as 'denied' | 'prompt');
+          }
+        } catch {
+          // Permission request failed
+        }
+      } else {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          updateReminders({ pushEnabled: true });
+        }
+      }
+    } else {
+      updateReminders({ pushEnabled: false });
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -156,19 +198,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className="font-medium text-slate-700">Push Notifications</span>
                 </div>
                 <button
-                  onClick={() => {
-                    if (!notificationsSupported) return;
-                    if (!settings.reminders?.pushEnabled) {
-                      Notification.requestPermission().then(permission => {
-                        if (permission === 'granted') {
-                          updateReminders({ pushEnabled: true });
-                        }
-                      });
-                    } else {
-                      updateReminders({ pushEnabled: !settings.reminders?.pushEnabled });
-                    }
-                  }}
-                  disabled={!notificationsSupported}
+                  onClick={handleTogglePush}
+                  disabled={!notificationsSupported || notificationPermission === 'denied'}
                   className={`w-12 h-6 rounded-full transition-colors relative ${settings.reminders?.pushEnabled ? 'bg-emerald-500' : 'bg-slate-200'} disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.reminders?.pushEnabled ? 'left-7' : 'left-1'}`} />
@@ -179,8 +210,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 {!notificationsSupported
                   ? 'Push notifications are not supported on this device/browser.'
                   : notificationPermission === 'denied'
-                  ? 'Push notifications are blocked. Re-enable notification permission in your browser settings.'
-                  : 'Push reminders are active through browser notifications when permission is granted.'}
+                  ? isNativePlatform
+                    ? 'Push notifications are blocked. Go to your device Settings > Apps > Pal Plant > Notifications to re-enable.'
+                    : 'Push notifications are blocked. Re-enable notification permission in your browser settings.'
+                  : settings.reminders?.pushEnabled
+                  ? 'Push reminders are enabled. You will receive notifications for overdue contacts and upcoming meetings.'
+                  : 'Enable push notifications to get reminders for overdue contacts and upcoming meetings.'}
               </p>
               {settings.reminders?.pushEnabled && (
                 <div className="bg-slate-50 p-3 rounded-xl">

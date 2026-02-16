@@ -47,5 +47,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSContactsUsageDescription</key>
+	<string>Pal Plant needs access to your contacts so you can import friends and pre-fill their details.</string>
 </dict>
 </plist>

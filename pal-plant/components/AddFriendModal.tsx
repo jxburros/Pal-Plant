@@ -15,9 +15,10 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Phone, Calendar, Mail, Upload, Tags, FileText, History, Trash2, Gift } from 'lucide-react';
+import { X, User, Phone, Calendar, Mail, Upload, Tags, FileText, History, Trash2, Gift, BookUser } from 'lucide-react';
 import { Friend, ContactLog } from '../types';
 import { generateId, fileToBase64, calculateTimeStatus, getInitials, getAvatarColor, sanitizeText, sanitizePhone, isValidEmail } from '../utils/helpers';
+import { pickSingleContact, isContactPickerAvailable } from '../utils/contacts';
 
 interface FriendModalProps {
   isOpen: boolean;
@@ -49,6 +50,7 @@ const FriendModal: React.FC<FriendModalProps> = ({
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [uploadError, setUploadError] = useState('');
+  const [contactImportLoading, setContactImportLoading] = useState(false);
 
   // Birthday State
   const [bdayMonth, setBdayMonth] = useState('1');
@@ -159,6 +161,29 @@ const FriendModal: React.FC<FriendModalProps> = ({
     }
   };
 
+  const handleImportFromContact = async () => {
+    setContactImportLoading(true);
+    setUploadError('');
+    try {
+      const contact = await pickSingleContact();
+      if (contact) {
+        if (contact.name) setName(contact.name);
+        if (contact.phone) setPhone(contact.phone);
+        if (contact.email) setEmail(contact.email);
+      }
+    } catch (error: any) {
+      if (error?.message === 'PERMISSION_DENIED') {
+        setUploadError('Contact permission was denied. Please allow access in your device settings.');
+      } else if (error?.message === 'UNSUPPORTED') {
+        setUploadError('Contact picker is not available on this device/browser.');
+      } else {
+        setUploadError('Could not import contact. Please try again.');
+      }
+    } finally {
+      setContactImportLoading(false);
+    }
+  };
+
   // Calculate stats for edit view
   let onTimePercentage = 0;
   let logsSorted: ContactLog[] = [];
@@ -231,6 +256,19 @@ const FriendModal: React.FC<FriendModalProps> = ({
              <p className="text-xs text-slate-400 mt-2 font-medium">Tap image to upload</p>
              {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
           </div>
+
+          {/* Import from Contacts */}
+          {isContactPickerAvailable() && (
+            <button
+              type="button"
+              onClick={handleImportFromContact}
+              disabled={contactImportLoading}
+              className="w-full py-2.5 rounded-xl border border-blue-200 bg-blue-50 font-bold text-blue-700 hover:bg-blue-100 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              <BookUser size={16} />
+              {contactImportLoading ? 'Loading contact…' : 'Fill from device contacts'}
+            </button>
+          )}
 
           {/* Core Info */}
           <div className="grid grid-cols-1 gap-4">
