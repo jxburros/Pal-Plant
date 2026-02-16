@@ -61,7 +61,7 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **Tailwind CSS** – Utility-first styling (via CDN)
 - **Lucide React** – Beautiful icons
 - **Recharts** – Data visualization
-- **Local Storage** – Persistent data storage (local-first, no cloud sync)
+- **IndexedDB Storage** – Persistent data storage with automatic localStorage fallback (local-first, no cloud sync)
 
 ## 🚀 Getting Started
 

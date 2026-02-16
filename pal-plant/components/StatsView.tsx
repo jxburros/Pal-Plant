@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, YAxis } from 'recharts';
 import { Friend, ContactLog } from '../types';
 import { calculateTimeStatus, calculateStreaks, getCohortStats } from '../utils/helpers';
 import { Trophy, Zap, AlertTriangle, Flame, Users, TrendingUp } from 'lucide-react';
-import { getAnalyticsSummary } from '../utils/analytics';
+import { getAnalyticsSummary, AnalyticsEventType } from '../utils/analytics';
 
 interface StatsViewProps {
   friends: Friend[];
@@ -11,6 +11,26 @@ interface StatsViewProps {
 
 const StatsView: React.FC<StatsViewProps> = ({ friends }) => {
   const [viewMode, setViewMode] = useState<'overview' | 'streaks' | 'cohorts'>('overview');
+  const [analyticsSummary, setAnalyticsSummary] = useState<Record<AnalyticsEventType, number>>({
+    CONTACT_LOGGED: 0,
+    FRIEND_ADDED: 0,
+    FRIEND_EDITED: 0,
+    FRIEND_DELETED: 0,
+    MEETING_CREATED: 0,
+    MEETING_SCHEDULED: 0,
+    MEETING_COMPLETED: 0,
+    MEETING_CLOSED: 0,
+    BULK_IMPORT: 0
+  });
+
+  // Load analytics data
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      const summary = await getAnalyticsSummary(7);
+      setAnalyticsSummary(summary);
+    };
+    loadAnalytics();
+  }, []);
   
   // Aggregate data
   const totalInteractions = friends.reduce((acc, f) => acc + f.logs.length, 0);
@@ -35,7 +55,6 @@ const StatsView: React.FC<StatsViewProps> = ({ friends }) => {
 
   // Streaks data
   const streakData = calculateStreaks(friends);
-  const analyticsSummary = getAnalyticsSummary(7);
   
   // Cohort data
   const cohortData = getCohortStats(friends);

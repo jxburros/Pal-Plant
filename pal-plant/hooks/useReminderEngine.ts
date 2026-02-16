@@ -5,6 +5,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { Friend, MeetingRequest } from '../types';
 import { calculateTimeStatus } from '../utils/helpers';
 import { initializeFCM, setupForegroundMessageHandler, getFCMToken } from '../utils/firebaseMessaging';
+import { getMetadata, saveMetadata } from '../utils/storage';
 
 interface ReminderConfig {
   pushEnabled: boolean;
@@ -129,9 +130,10 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
     if (!reminders.pushEnabled) return;
 
     const REMINDER_KEY = 'friendkeep_last_reminders';
-    const getReminderMap = (): Record<string, string> => {
+    const getReminderMap = async (): Promise<Record<string, string>> => {
       try {
-        return JSON.parse(localStorage.getItem(REMINDER_KEY) || '{}');
+        const data = await getMetadata(REMINDER_KEY);
+        return data ? JSON.parse(data) : {};
       } catch {
         return {};
       }
@@ -139,7 +141,7 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
 
     const maybeNotify = async () => {
       const now = new Date();
-      const reminderMap = getReminderMap();
+      const reminderMap = await getReminderMap();
 
       // Check for overdue friends
       for (const friend of friends) {
@@ -172,7 +174,7 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
         }
       }
 
-      localStorage.setItem(REMINDER_KEY, JSON.stringify(reminderMap));
+      await saveMetadata(REMINDER_KEY, JSON.stringify(reminderMap));
     };
 
     maybeNotify();
@@ -183,26 +185,30 @@ export const useReminderEngine = ({ friends, meetingRequests, reminders, onBacku
   useEffect(() => {
     if (!reminders.backupReminderEnabled) return;
 
-    const now = new Date();
-    const todayKey = now.toISOString().split('T')[0];
-    const lastReminderDay = localStorage.getItem(BACKUP_REMINDER_KEY);
-    if (lastReminderDay === todayKey) return;
+    const checkBackup = async () => {
+      const now = new Date();
+      const todayKey = now.toISOString().split('T')[0];
+      const lastReminderDay = await getMetadata(BACKUP_REMINDER_KEY);
+      if (lastReminderDay === todayKey) return;
 
-    const lastBackupRaw = localStorage.getItem(BACKUP_KEY);
-    if (!lastBackupRaw) {
-      onBackupReminder('Tip: Create your first backup from Settings → Data Management.');
-      localStorage.setItem(BACKUP_REMINDER_KEY, todayKey);
-      return;
-    }
+      const lastBackupRaw = await getMetadata(BACKUP_KEY);
+      if (!lastBackupRaw) {
+        onBackupReminder('Tip: Create your first backup from Settings → Data Management.');
+        await saveMetadata(BACKUP_REMINDER_KEY, todayKey);
+        return;
+      }
 
-    const daysSince = Math.floor((now.getTime() - new Date(lastBackupRaw).getTime()) / (1000 * 60 * 60 * 24));
-    if (daysSince >= reminders.backupReminderDays) {
-      onBackupReminder(`It's been ${daysSince} day(s) since your last backup. Open Settings to export a fresh backup.`);
-      localStorage.setItem(BACKUP_REMINDER_KEY, todayKey);
-    }
+      const daysSince = Math.floor((now.getTime() - new Date(lastBackupRaw).getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSince >= reminders.backupReminderDays) {
+        onBackupReminder(`It's been ${daysSince} day(s) since your last backup. Open Settings to export a fresh backup.`);
+        await saveMetadata(BACKUP_REMINDER_KEY, todayKey);
+      }
+    };
+
+    checkBackup();
   }, [reminders.backupReminderEnabled, reminders.backupReminderDays, onBackupReminder]);
 };
 
-export const markBackupExportedNow = () => {
-  localStorage.setItem(BACKUP_KEY, new Date().toISOString());
+export const markBackupExportedNow = async () => {
+  await saveMetadata(BACKUP_KEY, new Date().toISOString());
 };

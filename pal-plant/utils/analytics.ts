@@ -1,4 +1,5 @@
 import { getFirebaseAnalytics } from './firebase';
+import { getMetadata, saveMetadata } from './storage';
 
 export type AnalyticsEventType =
   | 'FRIEND_ADDED'
@@ -46,9 +47,9 @@ const sendToFirebaseAnalytics = async (type: AnalyticsEventType, metadata?: Anal
   }
 };
 
-export const getAnalyticsEvents = (): AnalyticsEvent[] => {
+export const getAnalyticsEvents = async (): Promise<AnalyticsEvent[]> => {
   try {
-    const raw = localStorage.getItem(EVENT_KEY);
+    const raw = await getMetadata(EVENT_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -57,8 +58,8 @@ export const getAnalyticsEvents = (): AnalyticsEvent[] => {
   }
 };
 
-export const trackEvent = (type: AnalyticsEventType, metadata?: AnalyticsEvent['metadata']): void => {
-  const current = getAnalyticsEvents();
+export const trackEvent = async (type: AnalyticsEventType, metadata?: AnalyticsEvent['metadata']): Promise<void> => {
+  const current = await getAnalyticsEvents();
   const next: AnalyticsEvent[] = [
     {
       id: generateEventId(),
@@ -69,13 +70,13 @@ export const trackEvent = (type: AnalyticsEventType, metadata?: AnalyticsEvent['
     ...current
   ].slice(0, EVENT_LIMIT);
 
-  localStorage.setItem(EVENT_KEY, JSON.stringify(next));
+  await saveMetadata(EVENT_KEY, JSON.stringify(next));
 
   // Also send to Firebase Analytics
   void sendToFirebaseAnalytics(type, metadata);
 };
 
-export const getAnalyticsSummary = (days = 7): Record<AnalyticsEventType, number> => {
+export const getAnalyticsSummary = async (days = 7): Promise<Record<AnalyticsEventType, number>> => {
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
   const summary = {
     FRIEND_ADDED: 0,
@@ -89,7 +90,8 @@ export const getAnalyticsSummary = (days = 7): Record<AnalyticsEventType, number
     BULK_IMPORT: 0
   } satisfies Record<AnalyticsEventType, number>;
 
-  getAnalyticsEvents().forEach(event => {
+  const events = await getAnalyticsEvents();
+  events.forEach(event => {
     if (new Date(event.timestamp).getTime() >= cutoff) {
       summary[event.type] += 1;
     }
