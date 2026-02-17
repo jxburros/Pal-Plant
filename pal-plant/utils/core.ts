@@ -35,13 +35,21 @@ export const generateId = (): string => {
  * Useful for storing images in IndexedDB or displaying without external URLs
  * 
  * @param file - The file to convert
- * @returns Promise that resolves to base64 data URL
+ * @returns Promise that resolves to base64 data URL (compressed for images)
  * @throws Error if file reading fails
  * @example
  * const base64 = await fileToBase64(imageFile);
- * // Returns: "data:image/png;base64,iVBORw0KG..."
+ * // Returns: "data:image/jpeg;base64,/9j/4AAQ..." (compressed)
  */
-export const fileToBase64 = (file: File): Promise<string> => {
+export const fileToBase64 = async (file: File): Promise<string> => {
+  // Use compression for images to reduce storage footprint
+  const { compressImage, isImageFile } = await import('./imageCompression');
+  
+  if (isImageFile(file)) {
+    return compressImage(file);
+  }
+  
+  // For non-image files, use standard base64 conversion
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
