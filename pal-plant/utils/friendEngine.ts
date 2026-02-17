@@ -183,3 +183,28 @@ export const removeFriendLog = (friend: Friend, logId: string): Friend => {
     individualScore: newScore
   };
 };
+
+/**
+ * Process a group contact by applying the specified interaction type to all members
+ * @param friends - All friends in the system
+ * @param memberIds - Array of friend IDs that are in the group
+ * @param type - Type of interaction to apply ('REGULAR' or 'QUICK')
+ * @param now - Current timestamp
+ * @param channel - Optional communication channel
+ * @returns Updated friends array with all group members contacted
+ */
+export const processGroupContact = (
+  friends: Friend[],
+  memberIds: string[],
+  type: 'REGULAR' | 'QUICK',
+  now: Date = new Date(),
+  channel?: ContactChannel
+): Friend[] => {
+  return friends.map(friend => {
+    if (memberIds.includes(friend.id)) {
+      const result = processContactAction(friend, type, now, channel);
+      return result.friend;
+    }
+    return friend;
+  });
+};

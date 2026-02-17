@@ -17,6 +17,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Keyboard } from 'lucide-react';
 import { Tab } from '../types';
+import { Capacitor } from '@capacitor/core';
 
 interface KeyboardShortcutsProps {
   onNavigate: (tab: Tab) => void;
@@ -87,8 +88,14 @@ export const useKeyboardShortcuts = (
   onOpenSettings: () => void
 ) => {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  
+  // Hide shortcuts on mobile platforms
+  const isWebPlatform = Capacitor.getPlatform() === 'web';
 
   useEffect(() => {
+    // Don't register keyboard shortcuts on mobile
+    if (!isWebPlatform) return;
+    
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't trigger shortcuts when typing in an input
       const target = e.target as HTMLElement;
@@ -131,11 +138,12 @@ export const useKeyboardShortcuts = (
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onNavigate, onOpenAddModal, onOpenSettings]);
+  }, [onNavigate, onOpenAddModal, onOpenSettings, isWebPlatform]);
 
   return {
     showShortcutsModal,
     setShowShortcutsModal,
+    isWebPlatform, // Export for conditional rendering
     ShortcutsModal: () => (
       <KeyboardShortcutsModal 
         isOpen={showShortcutsModal} 

@@ -74,7 +74,8 @@ export interface MeetingRequest {
   // Verification
   verified?: boolean; // Has the user confirmed attendance?
 
-  linkedFriendId?: string;
+  linkedIds?: string[]; // Array of linked Friend IDs for group meetings
+  linkedFriendId?: string; // Legacy field for backward compatibility
 }
 
 export enum Tab {
@@ -124,4 +125,10 @@ export interface ThemeColors {
   primaryText: string;
   accent: string;
   border: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  memberIds: string[]; // Array of Friend.id values
 }

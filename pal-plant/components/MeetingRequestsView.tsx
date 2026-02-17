@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Calendar, UserPlus, X, Check, MapPin, Briefcase, Mail, Phone, Upload, Clock, Download, Users, AlertTriangle, RefreshCw } from 'lucide-react';
 import { MeetingRequest, MeetingTimeframe } from '../types';
 import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent, getGoogleCalendarUrl } from '../utils/helpers';
@@ -140,6 +140,32 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
 
   const activeRequests = requests.filter(r => r.status !== 'COMPLETE');
 
+  // Use useMemo to section requests into REQUESTED and SCHEDULED, and compute derived states
+  const { requestedMeetings, scheduledMeetings, staleRequests, overdueScheduled, upcomingScheduled } = useMemo(() => {
+    const requested = activeRequests.filter(r => r.status === 'REQUESTED');
+    const scheduled = activeRequests.filter(r => r.status === 'SCHEDULED');
+    
+    // Stale requests are timeframe-aware and include the 20% grace buffer
+    const stale = requested.filter(r => {
+      const daysPassed = Math.floor((Date.now() - new Date(r.dateAdded).getTime()) / (1000 * 60 * 60 * 24));
+      const { staleDays } = getTimeframeMeta(r.desiredTimeframe);
+      return daysPassed > (staleDays * 1.2);
+    });
+
+    // Overdue and upcoming scheduled meetings
+    const now = new Date();
+    const overdue = scheduled.filter(r => r.scheduledDate && new Date(r.scheduledDate) < now);
+    const upcoming = scheduled.filter(r => r.scheduledDate && new Date(r.scheduledDate) >= now);
+    
+    return {
+      requestedMeetings: requested,
+      scheduledMeetings: scheduled,
+      staleRequests: stale,
+      overdueScheduled: overdue,
+      upcomingScheduled: upcoming
+    };
+  }, [activeRequests]);
+
   // Past-due scheduled meetings that need verification
   const pastDueMeetings = requests.filter(m =>
     m.status === 'SCHEDULED' &&
@@ -147,27 +173,6 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
     new Date(m.scheduledDate) < new Date() &&
     !m.verified
   );
-
-  // Stale requests are timeframe-aware and include the 20% grace buffer
-  const staleRequests = activeRequests.filter(r => {
-    if (r.status !== 'REQUESTED') return false;
-    const daysPassed = Math.floor((Date.now() - new Date(r.dateAdded).getTime()) / (1000 * 60 * 60 * 24));
-    const { staleDays } = getTimeframeMeta(r.desiredTimeframe);
-    return daysPassed > (staleDays * 1.2);
-  });
-
-  // Overdue meetings (separate from regular list for highlighting)
-  const overdueScheduled = activeRequests.filter(r =>
-    r.status === 'SCHEDULED' &&
-    r.scheduledDate &&
-    new Date(r.scheduledDate) < new Date()
-  );
-
-  const normalRequests = activeRequests.filter(r => {
-    // Exclude overdue scheduled (they're shown separately)
-    if (r.status === 'SCHEDULED' && r.scheduledDate && new Date(r.scheduledDate) < new Date()) return false;
-    return true;
-  });
 
   const handleReschedule = (req: MeetingRequest) => {
     onUpdateRequest({ ...req, status: 'REQUESTED', scheduledDate: undefined, location: undefined });
@@ -362,27 +367,61 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
          </button>
        )}
 
-       {/* List */}
-       <div className="space-y-4">
-         {normalRequests.length === 0 && overdueScheduled.length === 0 && !isAdding && (
+       {/* List - Sectioned by Status */}
+       <div className="space-y-6">
+         {requestedMeetings.length === 0 && scheduledMeetings.length === 0 && !isAdding && (
            <div className={`text-center py-10 ${theme.textSub}`}>
              <p>No pending requests.</p>
            </div>
          )}
 
-         {normalRequests.map(req => (
-           <MeetingCard
-             key={req.id}
-             req={req}
-             theme={theme}
-             onEdit={() => startEdit(req)}
-             onSchedule={(date, loc) => handleSchedule(req, date, loc)}
-             onMarkAttended={() => handleMarkAttended(req)}
-             onCloseWithoutMeeting={() => handleCloseWithoutMeeting(req)}
-             onReschedule={() => handleReschedule(req)}
-             onDelete={() => onDeleteRequest(req.id)}
-           />
-         ))}
+         {/* Requested Section */}
+         {requestedMeetings.length > 0 && (
+           <div>
+             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+               <UserPlus size={14} /> Pending Requests ({requestedMeetings.length})
+             </h3>
+             <div className="space-y-3">
+               {requestedMeetings.map(req => (
+                 <MeetingCard
+                   key={req.id}
+                   req={req}
+                   theme={theme}
+                   onEdit={() => startEdit(req)}
+                   onSchedule={(date, loc) => handleSchedule(req, date, loc)}
+                   onMarkAttended={() => handleMarkAttended(req)}
+                   onCloseWithoutMeeting={() => handleCloseWithoutMeeting(req)}
+                   onReschedule={() => handleReschedule(req)}
+                   onDelete={() => onDeleteRequest(req.id)}
+                 />
+               ))}
+             </div>
+           </div>
+         )}
+
+         {/* Scheduled Section */}
+         {scheduledMeetings.length > 0 && (
+           <div>
+             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+               <Calendar size={14} /> Scheduled Meetings ({scheduledMeetings.length})
+             </h3>
+             <div className="space-y-3">
+               {upcomingScheduled.map(req => (
+                 <MeetingCard
+                   key={req.id}
+                   req={req}
+                   theme={theme}
+                   onEdit={() => startEdit(req)}
+                   onSchedule={(date, loc) => handleSchedule(req, date, loc)}
+                   onMarkAttended={() => handleMarkAttended(req)}
+                   onCloseWithoutMeeting={() => handleCloseWithoutMeeting(req)}
+                   onReschedule={() => handleReschedule(req)}
+                   onDelete={() => onDeleteRequest(req.id)}
+                 />
+               ))}
+             </div>
+           </div>
+         )}
        </div>
     </div>
   );
