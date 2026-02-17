@@ -92,63 +92,30 @@ const App: React.FC = () => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const [settings, setSettings] = useState<AppSettings>(() => {
-    // Temporary sync read for initial render (will be replaced by async load)
-    const saved = localStorage.getItem('friendkeep_settings');
-    const defaults: AppSettings = {
-      theme: 'plant',
-      textSize: 'normal',
-      highContrast: false,
-      reducedMotion: false,
-      reminders: {
-        pushEnabled: false,
-        reminderHoursBefore: 24,
-        backupReminderEnabled: true,
-        backupReminderDays: 7
-      },
-      hasSeenOnboarding: false
-    };
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        ...defaults,
-        ...parsed,
-        reminders: {
-          ...defaults.reminders,
-          ...(parsed.reminders || {})
-        }
-      };
-    }
-    return defaults;
+  const [settings, setSettings] = useState<AppSettings>({
+    theme: 'plant',
+    textSize: 'normal',
+    highContrast: false,
+    reducedMotion: false,
+    reminders: {
+      pushEnabled: false,
+      reminderHoursBefore: 24,
+      backupReminderEnabled: true,
+      backupReminderDays: 7
+    },
+    hasSeenOnboarding: false
   });
 
   const {
     friends, setFriends, feedbackMap, markContacted, clearFeedback,
     deleteFriend, deleteLog: engineDeleteLog, saveFriend, bulkImport
-  } = useFriendsEngine(() => {
-    // Temporary sync read for initial render (will be replaced by async load)
-    const saved = localStorage.getItem('friendkeep_data');
-    if (!saved) return [];
-    return JSON.parse(saved);
-  });
+  } = useFriendsEngine(() => []);
 
-  const [categories, setCategories] = useState<string[]>(() => {
-    // Temporary sync read for initial render (will be replaced by async load)
-    const saved = localStorage.getItem('friendkeep_categories');
-    return saved ? JSON.parse(saved) : ['Friends', 'Romantic', 'Business', 'Family'];
-  });
+  const [categories, setCategories] = useState<string[]>(['Friends', 'Romantic', 'Business', 'Family']);
 
-  const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>(() => {
-    // Temporary sync read for initial render (will be replaced by async load)
-    const saved = localStorage.getItem('friendkeep_meetings');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>([]);
 
-  const [groups, setGroups] = useState<Group[]>(() => {
-    // Temporary sync read for initial render (will be replaced by async load)
-    const saved = localStorage.getItem('friendkeep_groups');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [groups, setGroups] = useState<Group[]>([]);
 
   // Initialize storage and load data on mount
   useEffect(() => {
@@ -229,11 +196,6 @@ const App: React.FC = () => {
     if (!isStorageReady) return;
     debouncedSaveSettings(settings);
   }, [settings, isStorageReady]);
-
-  useEffect(() => {
-    localStorage.removeItem('friendkeep_accounts');
-    localStorage.removeItem('friendkeep_nudges');
-  }, []);
 
   useEffect(() => {
     if (!settings.hasSeenOnboarding) {
