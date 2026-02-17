@@ -16,8 +16,8 @@
 
 import React, { useState, useRef, useMemo } from 'react';
 import { Calendar, UserPlus, X, Check, MapPin, Briefcase, Mail, Phone, Upload, Clock, Download, Users, AlertTriangle, RefreshCw } from 'lucide-react';
-import { MeetingRequest, MeetingTimeframe } from '../types';
-import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent, getGoogleCalendarUrl } from '../utils/helpers';
+import { MeetingRequest, MeetingTimeframe, Friend } from '../types';
+import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent, getGoogleCalendarUrl, getInitials, getAvatarColor } from '../utils/helpers';
 import { AppSettings } from '../types';
 
 
@@ -43,10 +43,11 @@ interface MeetingRequestsViewProps {
   onUpdateRequest: (req: MeetingRequest) => void;
   onDeleteRequest: (id: string) => void;
   settings: AppSettings;
+  friends?: Friend[];
 }
 
 const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
-  requests, onAddRequest, onUpdateRequest, onDeleteRequest, settings
+  requests, onAddRequest, onUpdateRequest, onDeleteRequest, settings, friends = []
 }) => {
   const theme = THEMES[settings.theme];
   const [isAdding, setIsAdding] = useState(false);
@@ -61,11 +62,12 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
   const [photo, setPhoto] = useState('');
   const [category, setCategory] = useState<'Friend' | 'Family' | 'Business' | 'Other'>('Friend');
   const [desiredTimeframe, setDesiredTimeframe] = useState<MeetingTimeframe | ''>('');
+  const [linkedIds, setLinkedIds] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
-    setName(''); setOrg(''); setPhone(''); setEmail(''); setNotes(''); setPhoto(''); setCategory('Friend'); setDesiredTimeframe('');
+    setName(''); setOrg(''); setPhone(''); setEmail(''); setNotes(''); setPhoto(''); setCategory('Friend'); setDesiredTimeframe(''); setLinkedIds([]);
     setEditingId(null);
     setIsAdding(false);
   };
@@ -80,7 +82,8 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
         onUpdateRequest({
           ...existing,
           name, organization: org, phone, email, notes, photo, category,
-          desiredTimeframe: desiredTimeframe || undefined
+          desiredTimeframe: desiredTimeframe || undefined,
+          linkedIds: linkedIds.length > 0 ? linkedIds : undefined
         });
       }
     } else {
@@ -95,7 +98,8 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
         category,
         status: 'REQUESTED',
         dateAdded: new Date().toISOString(),
-        desiredTimeframe: desiredTimeframe || undefined
+        desiredTimeframe: desiredTimeframe || undefined,
+        linkedIds: linkedIds.length > 0 ? linkedIds : undefined
       });
     }
     resetForm();
@@ -110,6 +114,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
     setPhoto(req.photo || '');
     setCategory(req.category || 'Friend');
     setDesiredTimeframe(req.desiredTimeframe || '');
+    setLinkedIds(req.linkedIds || (req.linkedFriendId ? [req.linkedFriendId] : []));
     setEditingId(req.id);
     setIsAdding(true);
   };
@@ -280,6 +285,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                  onReschedule={() => handleReschedule(req)}
                  onDelete={() => onDeleteRequest(req.id)}
                  isOverdue
+                 friends={friends}
                />
              ))}
            </div>
@@ -349,6 +355,52 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                   This helps prioritize your meetings but is not required.
                 </p>
               </div>
+
+              {/* Link to Friends */}
+              {friends.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                    <Users size={14} />
+                    Link to Friends (Optional)
+                  </label>
+                  <div className="max-h-40 overflow-y-auto bg-slate-50 rounded-xl border border-slate-200 p-2 space-y-1">
+                    {friends.map(friend => {
+                      const isSelected = linkedIds.includes(friend.id);
+                      return (
+                        <label
+                          key={friend.id}
+                          className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+                            isSelected ? 'bg-blue-100 border border-blue-300' : 'hover:bg-slate-100'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setLinkedIds(prev => [...prev, friend.id]);
+                              } else {
+                                setLinkedIds(prev => prev.filter(id => id !== friend.id));
+                              }
+                            }}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                          />
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold"
+                            style={{ backgroundColor: getAvatarColor(friend.avatarSeed || 0) }}
+                          >
+                            {getInitials(friend.name)}
+                          </div>
+                          <span className="text-sm font-medium text-slate-700">{friend.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-slate-500 italic">
+                    Selected friends will be marked as contacted when you confirm attending this meeting.
+                  </p>
+                </div>
+              )}
               
               <textarea placeholder="Notes..." value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl text-sm outline-none border border-transparent focus:border-slate-300 transition-all h-20 resize-none" maxLength={500} />
 
@@ -393,6 +445,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                    onCloseWithoutMeeting={() => handleCloseWithoutMeeting(req)}
                    onReschedule={() => handleReschedule(req)}
                    onDelete={() => onDeleteRequest(req.id)}
+                   friends={friends}
                  />
                ))}
              </div>
@@ -417,6 +470,7 @@ const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
                    onCloseWithoutMeeting={() => handleCloseWithoutMeeting(req)}
                    onReschedule={() => handleReschedule(req)}
                    onDelete={() => onDeleteRequest(req.id)}
+                   friends={friends}
                  />
                ))}
              </div>
@@ -438,7 +492,8 @@ const MeetingCard: React.FC<{
   onReschedule: () => void;
   onDelete: () => void;
   isOverdue?: boolean;
-}> = ({ req, theme, onEdit, onSchedule, onMarkAttended, onCloseWithoutMeeting, onReschedule, onDelete, isOverdue = false }) => {
+  friends?: Friend[];
+}> = ({ req, theme, onEdit, onSchedule, onMarkAttended, onCloseWithoutMeeting, onReschedule, onDelete, isOverdue = false, friends = [] }) => {
   const [isScheduling, setIsScheduling] = useState(false);
   const [schedDate, setSchedDate] = useState(req.scheduledDate || '');
   const [schedLoc, setSchedLoc] = useState(req.location || '');
@@ -509,6 +564,44 @@ const MeetingCard: React.FC<{
                 {timeframeMeta.label}
               </div>
             )}
+
+             {/* Linked Friends Display */}
+             {(() => {
+               const linkedIds = req.linkedIds || (req.linkedFriendId ? [req.linkedFriendId] : []);
+               const linkedFriends = friends.filter(f => linkedIds.includes(f.id));
+               if (linkedFriends.length > 0) {
+                 return (
+                   <div className="mt-2">
+                     <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                       <Users size={10} /> 
+                       Linked ({linkedFriends.length})
+                     </div>
+                     <div className="flex flex-wrap gap-1">
+                       {linkedFriends.slice(0, 3).map(friend => (
+                         <div
+                           key={friend.id}
+                           className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-lg border border-slate-200"
+                         >
+                           <div
+                             className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-semibold"
+                             style={{ backgroundColor: getAvatarColor(friend.avatarSeed || 0) }}
+                           >
+                             {getInitials(friend.name)}
+                           </div>
+                           <span className="text-[10px] font-medium text-slate-700">{friend.name}</span>
+                         </div>
+                       ))}
+                       {linkedFriends.length > 3 && (
+                         <div className="px-2 py-1 bg-slate-100 rounded-lg border border-slate-200 text-[10px] font-medium text-slate-600">
+                           +{linkedFriends.length - 3} more
+                         </div>
+                       )}
+                     </div>
+                   </div>
+                 );
+               }
+               return null;
+             })()}
 
              <div className="flex gap-3 mt-2">
                 {req.phone && <a href={`tel:${req.phone}`} className="text-slate-400 hover:text-green-600"><Phone size={14}/></a>}

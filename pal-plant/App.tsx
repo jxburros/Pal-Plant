@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download } from 'lucide-react';
-import { Friend, Tab, ContactLog, MeetingRequest, AppSettings } from './types';
+import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
@@ -27,13 +27,15 @@ import { generateId, calculateTimeStatus, THEMES } from './utils/helpers';
 import { trackEvent } from './utils/analytics';
 import { useReminderEngine } from './hooks/useReminderEngine';
 import { useFriendsEngine } from './hooks/useFriendsEngine';
-import { initStorage, getFriends, getMeetings, getCategories, getSettings, exportAllData, importAllData, saveMetadata, getMetadata } from './utils/storage';
-import { debouncedSaveFriends, debouncedSaveMeetings, debouncedSaveCategories, debouncedSaveSettings } from './utils/debouncedStorage';
+import { initStorage, getFriends, getMeetings, getCategories, getSettings, exportAllData, importAllData, saveMetadata, getMetadata, getGroups } from './utils/storage';
+import { debouncedSaveFriends, debouncedSaveMeetings, debouncedSaveCategories, debouncedSaveSettings, debouncedSaveGroups } from './utils/debouncedStorage';
 
 const StatsView = lazy(() => import('./components/StatsView'));
 const OnboardingTooltips = lazy(() => import('./components/OnboardingTooltips'));
 const BulkImportModal = lazy(() => import('./components/BulkImportModal'));
 const RuleGuide = lazy(() => import('./components/RuleGuide'));
+const MeetingFollowUpModal = lazy(() => import('./components/MeetingFollowUpModal'));
+const GroupManagementModal = lazy(() => import('./components/GroupManagementModal'));
 
 interface Toast {
   id: string;
@@ -75,6 +77,9 @@ const App: React.FC = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showBackupBanner, setShowBackupBanner] = useState(false);
   const [isStorageReady, setIsStorageReady] = useState(false);
+  const [meetingFollowUp, setMeetingFollowUp] = useState<MeetingRequest | null>(null);
+  const [lastOpened, setLastOpened] = useState<Date>(new Date());
+  const [isGroupManagementOpen, setIsGroupManagementOpen] = useState(false);
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = generateId();
@@ -138,6 +143,12 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [groups, setGroups] = useState<Group[]>(() => {
+    // Temporary sync read for initial render (will be replaced by async load)
+    const saved = localStorage.getItem('friendkeep_groups');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Initialize storage and load data on mount
   useEffect(() => {
     const loadData = async () => {
@@ -146,17 +157,20 @@ const App: React.FC = () => {
         await initStorage();
 
         // Load all data from storage
-        const [loadedFriends, loadedMeetings, loadedCategories, loadedSettings] = await Promise.all([
+        const [loadedFriends, loadedMeetings, loadedCategories, loadedSettings, loadedGroups, lastOpenedStr] = await Promise.all([
           getFriends(),
           getMeetings(),
           getCategories(),
-          getSettings()
+          getSettings(),
+          getGroups(),
+          getMetadata('lastOpened')
         ]);
 
         // Update state with loaded data (even if empty)
         setFriends(loadedFriends);
         setMeetingRequests(loadedMeetings);
         setCategories(loadedCategories);
+        setGroups(loadedGroups);
         
         if (loadedSettings) {
           setSettings(prev => ({
@@ -167,6 +181,11 @@ const App: React.FC = () => {
               ...(loadedSettings.reminders || {})
             }
           }));
+        }
+
+        // Load last opened timestamp
+        if (lastOpenedStr) {
+          setLastOpened(new Date(lastOpenedStr));
         }
 
         setIsStorageReady(true);
@@ -197,6 +216,12 @@ const App: React.FC = () => {
     if (!isStorageReady) return;
     debouncedSaveMeetings(meetingRequests);
   }, [meetingRequests, isStorageReady]);
+
+  // Save groups with debouncing
+  useEffect(() => {
+    if (!isStorageReady) return;
+    debouncedSaveGroups(groups);
+  }, [groups, isStorageReady]);
 
   // Save settings with debouncing
   useEffect(() => {
@@ -269,6 +294,33 @@ const App: React.FC = () => {
     const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // Save lastOpened timestamp on unmount
+  useEffect(() => {
+    return () => {
+      saveMetadata('lastOpened', new Date().toISOString()).catch(err => {
+        console.error('Error saving lastOpened timestamp:', err);
+      });
+    };
+  }, []);
+
+  // Detect passed meetings since last opened
+  useEffect(() => {
+    if (!isStorageReady || meetingFollowUp) return;
+
+    const now = new Date();
+    const passedMeetings = meetingRequests.filter(m => {
+      if (m.status !== 'SCHEDULED' || !m.scheduledDate) return false;
+      const scheduledDate = new Date(m.scheduledDate);
+      // Check if meeting has passed since lastOpened
+      return scheduledDate > lastOpened && scheduledDate <= now;
+    });
+
+    // Show follow-up for the first passed meeting
+    if (passedMeetings.length > 0) {
+      setMeetingFollowUp(passedMeetings[0]);
+    }
+  }, [isStorageReady, meetingRequests, lastOpened, meetingFollowUp]);
 
   // Memoize theme colors and text size to avoid recalculation on every render
   const themeColors = useMemo(() => THEMES[settings.theme], [settings.theme]);
@@ -374,6 +426,41 @@ const App: React.FC = () => {
     showToast(`Cadence updated to ${newFrequencyDays} days`, 'success');
   }, [setFriends, showToast]);
 
+  // Handle meeting follow-up confirmation
+  const handleMeetingFollowUpConfirm = useCallback((meetingId: string, linkedIds: string[]) => {
+    // Mark all linked friends as contacted
+    if (linkedIds.length > 0) {
+      linkedIds.forEach(friendId => {
+        markContacted(friendId, 'REGULAR');
+      });
+      showToast(`Marked ${linkedIds.length} contact${linkedIds.length > 1 ? 's' : ''} as updated`, 'success');
+    }
+    
+    // Update meeting status to COMPLETE
+    setMeetingRequests(prev => prev.map(r => 
+      r.id === meetingId ? { ...r, status: 'COMPLETE' as const, verified: true } : r
+    ));
+    trackEvent('MEETING_COMPLETED', { meetingId, participantCount: linkedIds.length });
+  }, [markContacted, showToast]);
+
+  // Handle meeting follow-up dismissal
+  const handleMeetingFollowUpDismiss = useCallback((meetingId: string) => {
+    // Update meeting status to COMPLETE but not verified
+    setMeetingRequests(prev => prev.map(r => 
+      r.id === meetingId ? { ...r, status: 'COMPLETE' as const, verified: false } : r
+    ));
+    trackEvent('MEETING_DISMISSED', { meetingId });
+  }, []);
+
+  // Handle group contact action
+  const handleGroupContact = useCallback((memberIds: string[], type: 'REGULAR' | 'QUICK') => {
+    memberIds.forEach(friendId => {
+      markContacted(friendId, type);
+    });
+    showToast(`Contacted ${memberIds.length} friend${memberIds.length > 1 ? 's' : ''}!`, 'success');
+    setIsGroupManagementOpen(false);
+  }, [markContacted, showToast]);
+
   return (
     <div data-theme={settings.theme} className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -439,9 +526,15 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex justify-between items-center text-xs font-bold text-slate-600 px-1 mt-2">
-              <button onClick={() => setIsBulkImportOpen(true)} className="underline decoration-dotted underline-offset-4">
-                Import contacts into your garden
-              </button>
+              <div className="flex gap-3">
+                <button onClick={() => setIsBulkImportOpen(true)} className="underline decoration-dotted underline-offset-4">
+                  Import contacts
+                </button>
+                <button onClick={() => setIsGroupManagementOpen(true)} className="underline decoration-dotted underline-offset-4 flex items-center gap-1">
+                  <Users size={12} />
+                  Manage Groups ({groups.length})
+                </button>
+              </div>
               <button onClick={openAddModal} className="text-emerald-700">New plant</button>
             </div>
           </div>
@@ -509,6 +602,7 @@ const App: React.FC = () => {
             onUpdateRequest={handleUpdateMeetingRequest}
             onDeleteRequest={handleDeleteMeetingRequest}
             settings={settings}
+            friends={friends}
           />
         )}
       </main>
@@ -570,6 +664,32 @@ const App: React.FC = () => {
       {isRuleGuideOpen && (
         <Suspense fallback={null}>
           <RuleGuide isOpen={isRuleGuideOpen} onClose={() => setIsRuleGuideOpen(false)} />
+        </Suspense>
+      )}
+
+      {meetingFollowUp && (
+        <Suspense fallback={null}>
+          <MeetingFollowUpModal
+            isOpen={!!meetingFollowUp}
+            onClose={() => setMeetingFollowUp(null)}
+            meeting={meetingFollowUp}
+            friends={friends}
+            onConfirm={handleMeetingFollowUpConfirm}
+            onDismiss={handleMeetingFollowUpDismiss}
+          />
+        </Suspense>
+      )}
+
+      {isGroupManagementOpen && (
+        <Suspense fallback={null}>
+          <GroupManagementModal
+            isOpen={isGroupManagementOpen}
+            onClose={() => setIsGroupManagementOpen(false)}
+            groups={groups}
+            friends={friends}
+            onSaveGroups={setGroups}
+            onContactGroup={handleGroupContact}
+          />
         </Suspense>
       )}
 
