@@ -44,6 +44,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
   const [parsedContacts, setParsedContacts] = useState<ParsedContact[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set());
   const [duplicates, setDuplicates] = useState<Array<{ newContact: ParsedContact; existingFriend: Friend; similarity: number }>>([]);
+  const [duplicateResolutions, setDuplicateResolutions] = useState<Map<string, 'skip' | 'overwrite' | 'merge'>>(new Map());
   const [defaultCategory, setDefaultCategory] = useState(categories[0] || 'Friends');
   const [defaultFrequency, setDefaultFrequency] = useState(7);
   const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
@@ -144,26 +145,74 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
     if (dupes.length > 0 && step !== 'duplicates') {
       setDuplicates(dupes);
+      // Initialize default resolutions (skip all)
+      const initialResolutions = new Map<string, 'skip' | 'overwrite' | 'merge'>();
+      dupes.forEach(d => initialResolutions.set(d.newContact.name, 'skip'));
+      setDuplicateResolutions(initialResolutions);
       setStep('duplicates');
       return;
     }
 
-    const newFriends: Friend[] = contactsToImport.map(contact => ({
-      id: generateId(),
-      name: contact.name,
-      phone: contact.phone,
-      email: contact.email,
-      category: contact.category || defaultCategory,
-      frequencyDays: defaultFrequency,
-      lastContacted: new Date().toISOString(),
-      individualScore: 50,
-      quickTouchesAvailable: 0,
-      cyclesSinceLastQuickTouch: 0,
-      logs: [],
-      avatarSeed: Math.floor(Math.random() * 10000)
-    }));
+    // Process contacts based on resolution decisions
+    const newFriends: Friend[] = [];
+    const friendsToUpdate: Friend[] = [];
 
-    onImport(newFriends);
+    contactsToImport.forEach(contact => {
+      const resolution = duplicateResolutions.get(contact.name);
+      const duplicate = duplicates.find(d => d.newContact.name === contact.name);
+
+      if (duplicate && resolution === 'skip') {
+        // Skip this contact
+        return;
+      }
+
+      if (duplicate && resolution === 'overwrite') {
+        // Overwrite existing friend with new data
+        const updatedFriend: Friend = {
+          ...duplicate.existingFriend,
+          name: contact.name,
+          phone: contact.phone || duplicate.existingFriend.phone,
+          email: contact.email || duplicate.existingFriend.email,
+          category: contact.category || defaultCategory,
+          frequencyDays: defaultFrequency,
+          // Keep existing logs, score, and interaction history
+        };
+        friendsToUpdate.push(updatedFriend);
+        return;
+      }
+
+      if (duplicate && resolution === 'merge') {
+        // Merge new data with existing friend (preserve existing data where new data is missing)
+        const mergedFriend: Friend = {
+          ...duplicate.existingFriend,
+          phone: contact.phone || duplicate.existingFriend.phone,
+          email: contact.email || duplicate.existingFriend.email,
+          notes: duplicate.existingFriend.notes || undefined,
+          // Keep existing category, frequency, logs, and interaction history
+        };
+        friendsToUpdate.push(mergedFriend);
+        return;
+      }
+
+      // No duplicate or no resolution needed - create new friend
+      newFriends.push({
+        id: generateId(),
+        name: contact.name,
+        phone: contact.phone,
+        email: contact.email,
+        category: contact.category || defaultCategory,
+        frequencyDays: defaultFrequency,
+        lastContacted: new Date().toISOString(),
+        individualScore: 50,
+        quickTouchesAvailable: 0,
+        cyclesSinceLastQuickTouch: 0,
+        logs: [],
+        avatarSeed: Math.floor(Math.random() * 10000)
+      });
+    });
+
+    // Combine new friends with updated friends for import
+    onImport([...newFriends, ...friendsToUpdate]);
     resetAndClose();
   };
 
@@ -172,6 +221,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
     setParsedContacts([]);
     setSelectedContacts(new Set());
     setDuplicates([]);
+    setDuplicateResolutions(new Map());
     setParseError('');
     onClose();
   };
@@ -378,22 +428,81 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
             <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl">
               <div className="flex items-center gap-2 text-yellow-700 mb-2">
                 <AlertTriangle size={18} />
-                <span className="font-bold">Confirm Import</span>
+                <span className="font-bold">Resolve Conflicts</span>
               </div>
               <p className="text-sm text-yellow-700">
-                Some contacts may already exist. Do you want to continue importing?
+                {duplicates.length} contact{duplicates.length > 1 ? 's' : ''} may already exist. Choose how to handle each conflict.
               </p>
             </div>
 
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {duplicates.map((d, i) => (
-                <div key={i} className="p-3 bg-slate-50 rounded-xl">
-                  <p className="font-medium text-slate-800">"{d.newContact.name}"</p>
-                  <p className="text-xs text-slate-500">
-                    Similar to existing: "{d.existingFriend.name}" ({d.similarity}% match)
-                  </p>
-                </div>
-              ))}
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {duplicates.map((d, i) => {
+                const resolution = duplicateResolutions.get(d.newContact.name) || 'skip';
+                return (
+                  <div key={i} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="mb-3">
+                      <p className="font-medium text-slate-800">New: {d.newContact.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {[d.newContact.phone, d.newContact.email].filter(Boolean).join(' • ') || 'No contact info'}
+                      </p>
+                      <p className="text-xs text-yellow-600 mt-1">
+                        ↓ Matches existing: {d.existingFriend.name} ({d.similarity}% similar)
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => {
+                          const newResolutions = new Map(duplicateResolutions);
+                          newResolutions.set(d.newContact.name, 'skip');
+                          setDuplicateResolutions(newResolutions);
+                        }}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                          resolution === 'skip'
+                            ? 'bg-yellow-500 text-white'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        Skip
+                      </button>
+                      <button
+                        onClick={() => {
+                          const newResolutions = new Map(duplicateResolutions);
+                          newResolutions.set(d.newContact.name, 'overwrite');
+                          setDuplicateResolutions(newResolutions);
+                        }}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                          resolution === 'overwrite'
+                            ? 'bg-red-500 text-white'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        Overwrite
+                      </button>
+                      <button
+                        onClick={() => {
+                          const newResolutions = new Map(duplicateResolutions);
+                          newResolutions.set(d.newContact.name, 'merge');
+                          setDuplicateResolutions(newResolutions);
+                        }}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                          resolution === 'merge'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        Merge
+                      </button>
+                    </div>
+                    
+                    <div className="mt-2 text-[10px] text-slate-500">
+                      {resolution === 'skip' && '• Contact will not be imported'}
+                      {resolution === 'overwrite' && '• Replace existing contact with new data'}
+                      {resolution === 'merge' && '• Keep existing data, add missing info from new contact'}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -404,46 +513,10 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
                 Go Back
               </button>
               <button
-                onClick={() => {
-                  // Skip duplicates from selection
-                  const newSelected = new Set(selectedContacts);
-                  parsedContacts.forEach((contact, index) => {
-                    if (duplicateNames.has(contact.name.toLowerCase())) {
-                      newSelected.delete(index);
-                    }
-                  });
-                  setSelectedContacts(newSelected);
-                  // Force import
-                  setStep('review');
-                }}
-                className="flex-1 py-3 rounded-xl border border-yellow-400 font-bold text-yellow-700 hover:bg-yellow-50"
-              >
-                Skip Duplicates
-              </button>
-              <button
-                onClick={() => {
-                  // Import anyway
-                  const contactsToImport = parsedContacts.filter((_, i) => selectedContacts.has(i));
-                  const newFriends: Friend[] = contactsToImport.map(contact => ({
-                    id: generateId(),
-                    name: contact.name,
-                    phone: contact.phone,
-                    email: contact.email,
-                    category: contact.category || defaultCategory,
-                    frequencyDays: defaultFrequency,
-                    lastContacted: new Date().toISOString(),
-                    individualScore: 50,
-                    quickTouchesAvailable: 0,
-                    cyclesSinceLastQuickTouch: 0,
-                    logs: [],
-                    avatarSeed: Math.floor(Math.random() * 10000)
-                  }));
-                  onImport(newFriends);
-                  resetAndClose();
-                }}
+                onClick={handleImport}
                 className={`flex-1 py-3 rounded-xl font-bold text-white ${theme.primary}`}
               >
-                Import Anyway
+                Apply & Import
               </button>
             </div>
           </div>
