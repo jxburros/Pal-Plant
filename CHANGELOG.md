@@ -1,5 +1,17 @@
 # Pal-Plant - Changelog
 
+## [Unreleased] - 2026-02-17
+
+### 📖 Documentation
+- **Documentation Reorganization**: Restructured and cleaned up all documentation
+  - Created `docs/` directory for organized documentation structure
+  - Consolidated 3 Firebase documents into single comprehensive guide (`docs/FIREBASE.md`)
+  - Archived historical documents (`AUDIT_FINAL_REPORT.md`, `REFACTORING_SUMMARY.md`, `ISSUES_IMPLEMENTATION_SUMMARY.md`, `APP_ANALYSIS.md`) to `docs/archive/`
+  - Removed obsolete `ToDo.md` (all tasks completed)
+  - Removed redundant `pal-plant/README.md`
+  - Updated all cross-references to reflect new structure
+  - Code is now the source of truth - documentation matches actual implementation
+
 ## [Unreleased] - 2026-02-16
 
 ### 🔒 Security & Privacy
@@ -108,6 +120,7 @@ Additional improvements planned:
 ---
 
 ## Links
-- [Firebase Usage Policy](pal-plant/FIREBASE_USAGE.md)
-- [Implementation Summary](ISSUES_IMPLEMENTATION_SUMMARY.md)
-- [Full Audit Report](AUDIT_FINAL_REPORT.md)
+- [Firebase Configuration Guide](docs/FIREBASE.md)
+- [Archived Documentation](docs/archive/)
+- [Implementation Summary](docs/archive/ISSUES_IMPLEMENTATION_SUMMARY.md)
+- [Full Audit Report](docs/archive/AUDIT_FINAL_REPORT.md)
