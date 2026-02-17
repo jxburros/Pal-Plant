@@ -327,7 +327,15 @@ export const generateId = (): string => {
   return Math.random().toString(36).substring(2, 9);
 };
 
-export const fileToBase64 = (file: File): Promise<string> => {
+export const fileToBase64 = async (file: File): Promise<string> => {
+  // Use compression for images to reduce storage footprint
+  const { compressImage, isImageFile } = await import('./imageCompression');
+  
+  if (isImageFile(file)) {
+    return compressImage(file);
+  }
+  
+  // For non-image files, use standard base64 conversion
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);

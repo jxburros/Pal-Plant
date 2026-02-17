@@ -31,6 +31,7 @@ interface AppState {
 interface AppActions {
   setFriends: React.Dispatch<React.SetStateAction<Friend[]>>;
   markContacted: (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK') => void;
+  markContactedBatch: (ids: string[], type: 'REGULAR' | 'DEEP' | 'QUICK') => void;
   clearFeedback: (friendId: string) => void;
   deleteFriend: (id: string) => void;
   deleteLog: (friendId: string, logId: string) => void;
@@ -65,38 +66,18 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const {
-    friends, setFriends, feedbackMap, markContacted, clearFeedback,
+    friends, setFriends, feedbackMap, markContacted, markContactedBatch, clearFeedback,
     deleteFriend, deleteLog, saveFriend, bulkImport
-  } = useFriendsEngine(() => {
-    const saved = localStorage.getItem('friendkeep_data');
-    if (!saved) return [];
-    return JSON.parse(saved);
-  });
+  } = useFriendsEngine([]);
 
-  const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>(() => {
-    const saved = localStorage.getItem('friendkeep_meetings');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>([]);
 
-  const [settings, setSettingsState] = useState<AppSettings>(() => {
-    const saved = localStorage.getItem('friendkeep_settings');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return { ...DEFAULT_SETTINGS, ...parsed, reminders: { ...DEFAULT_SETTINGS.reminders, ...(parsed.reminders || {}) } };
-    }
-    return DEFAULT_SETTINGS;
-  });
+  const [settings, setSettingsState] = useState<AppSettings>(DEFAULT_SETTINGS);
 
-  const [categories, setCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('friendkeep_categories');
-    return saved ? JSON.parse(saved) : ['Friends', 'Romantic', 'Business', 'Family'];
-  });
+  const [categories, setCategories] = useState<string[]>(['Friends', 'Romantic', 'Business', 'Family']);
 
-  // Persist to localStorage
-  useEffect(() => { localStorage.setItem('friendkeep_data', JSON.stringify(friends)); }, [friends]);
-  useEffect(() => { localStorage.setItem('friendkeep_meetings', JSON.stringify(meetingRequests)); }, [meetingRequests]);
-  useEffect(() => { localStorage.setItem('friendkeep_settings', JSON.stringify(settings)); }, [settings]);
-  useEffect(() => { localStorage.setItem('friendkeep_categories', JSON.stringify(categories)); }, [categories]);
+  // localStorage persistence removed - now handled exclusively by IndexedDB in App.tsx
+  // This prevents race conditions and conflicting writes between localStorage and IndexedDB
 
   const setSettings = useCallback((s: AppSettings) => setSettingsState(s), []);
 
@@ -122,7 +103,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const value: AppContextType = {
     friends, meetingRequests, settings, categories, feedbackMap,
-    setFriends, markContacted, clearFeedback, deleteFriend, deleteLog,
+    setFriends, markContacted, markContactedBatch, clearFeedback, deleteFriend, deleteLog,
     saveFriend, bulkImportFriends: bulkImport,
     setMeetingRequests, addMeetingRequest, updateMeetingRequest, deleteMeetingRequest,
     setSettings, setCategories, addCategory
