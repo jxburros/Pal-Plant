@@ -24,6 +24,7 @@ interface UseFriendsEngineReturn {
   setFriends: React.Dispatch<React.SetStateAction<Friend[]>>;
   feedbackMap: Record<string, ActionFeedback>;
   markContacted: (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK', channel?: ContactChannel) => void;
+  markContactedBatch: (ids: string[], type: 'REGULAR' | 'DEEP' | 'QUICK', channel?: ContactChannel) => void;
   clearFeedback: (friendId: string) => void;
   deleteFriend: (id: string) => void;
   deleteLog: (friendId: string, logId: string) => void;
@@ -63,6 +64,36 @@ export const useFriendsEngine = (initialFriends: Friend[] | (() => Friend[])): U
     }));
   }, [clearFeedback]);
 
+  // Batch version of markContacted - processes multiple friends in a single state update
+  const markContactedBatch = useCallback((ids: string[], type: 'REGULAR' | 'DEEP' | 'QUICK', channel?: ContactChannel) => {
+    if (ids.length === 0) return;
+    
+    const idsSet = new Set(ids);
+    const now = new Date();
+    const newFeedback: Record<string, ActionFeedback> = {};
+
+    setFriends(prev => prev.map(f => {
+      if (!idsSet.has(f.id)) return f;
+
+      const result = processContactAction(f, type, now, channel);
+      if (result.friend === f) return f;
+
+      // Collect feedback for all processed friends
+      newFeedback[f.id] = result.feedback;
+
+      const metadata: Record<string, string | number | boolean | undefined> = { friendId: f.id, type };
+      const latestLog = result.friend.logs[0];
+      if (latestLog?.scoreDelta !== undefined) metadata.scoreChange = latestLog.scoreDelta;
+      trackEvent('CONTACT_LOGGED', metadata);
+
+      return result.friend;
+    }));
+
+    // Show inline feedback for all processed friends
+    setFeedbackMap(prevMap => ({ ...prevMap, ...newFeedback }));
+    ids.forEach(id => setTimeout(() => clearFeedback(id), 5500));
+  }, [clearFeedback]);
+
   const deleteFriend = useCallback((id: string) => {
     setFriends(prev => prev.filter(f => f.id !== id));
     trackEvent('FRIEND_DELETED', { friendId: id });
@@ -95,6 +126,7 @@ export const useFriendsEngine = (initialFriends: Friend[] | (() => Friend[])): U
     setFriends,
     feedbackMap,
     markContacted,
+    markContactedBatch,
     clearFeedback,
     deleteFriend,
     deleteLog,

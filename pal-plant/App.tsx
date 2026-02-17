@@ -287,14 +287,6 @@ const App: React.FC = () => {
     () => setIsSettingsOpen(true)
   );
 
-  // Refresh time-based calculations every minute
-  // Use a timestamp instead of recreating entire friends array
-  const [currentTime, setCurrentTime] = useState(Date.now());
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Save lastOpened timestamp on unmount
   useEffect(() => {
     return () => {
@@ -379,14 +371,16 @@ const App: React.FC = () => {
   }, [friends, selectedCategory, searchQuery]);
 
   const sortedFriends = useMemo(() => {
-    // Force recalculation when currentTime changes (every minute)
-    const _ = currentTime;
+    // Re-sort when switching to LIST tab to show current time-based status
+    // Avoids constant re-sorting while viewing (prevents scroll jumps)
+    const _ = activeTab === Tab.LIST ? Date.now() : 0;
+    
     return [...filteredFriends].sort((a, b) => {
       const aStatus = calculateTimeStatus(a.lastContacted, a.frequencyDays);
       const bStatus = calculateTimeStatus(b.lastContacted, b.frequencyDays);
       return aStatus.percentageLeft - bStatus.percentageLeft;
     });
-  }, [filteredFriends, currentTime]);
+  }, [filteredFriends, activeTab]);
 
   const handleNavigateToFriend = useCallback((friendName: string) => {
     setActiveTab(Tab.LIST);
