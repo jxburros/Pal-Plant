@@ -34,6 +34,7 @@ const StatsView = lazy(() => import('./components/StatsView'));
 const OnboardingTooltips = lazy(() => import('./components/OnboardingTooltips'));
 const BulkImportModal = lazy(() => import('./components/BulkImportModal'));
 const RuleGuide = lazy(() => import('./components/RuleGuide'));
+const MeetingFollowUpModal = lazy(() => import('./components/MeetingFollowUpModal'));
 
 interface Toast {
   id: string;
@@ -75,6 +76,8 @@ const App: React.FC = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showBackupBanner, setShowBackupBanner] = useState(false);
   const [isStorageReady, setIsStorageReady] = useState(false);
+  const [meetingFollowUp, setMeetingFollowUp] = useState<MeetingRequest | null>(null);
+  const [lastOpened, setLastOpened] = useState<Date>(new Date());
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = generateId();
@@ -146,11 +149,12 @@ const App: React.FC = () => {
         await initStorage();
 
         // Load all data from storage
-        const [loadedFriends, loadedMeetings, loadedCategories, loadedSettings] = await Promise.all([
+        const [loadedFriends, loadedMeetings, loadedCategories, loadedSettings, lastOpenedStr] = await Promise.all([
           getFriends(),
           getMeetings(),
           getCategories(),
-          getSettings()
+          getSettings(),
+          getMetadata('lastOpened')
         ]);
 
         // Update state with loaded data (even if empty)
@@ -167,6 +171,11 @@ const App: React.FC = () => {
               ...(loadedSettings.reminders || {})
             }
           }));
+        }
+
+        // Load last opened timestamp
+        if (lastOpenedStr) {
+          setLastOpened(new Date(lastOpenedStr));
         }
 
         setIsStorageReady(true);
@@ -269,6 +278,33 @@ const App: React.FC = () => {
     const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // Save lastOpened timestamp on unmount
+  useEffect(() => {
+    return () => {
+      saveMetadata('lastOpened', new Date().toISOString()).catch(err => {
+        console.error('Error saving lastOpened timestamp:', err);
+      });
+    };
+  }, []);
+
+  // Detect passed meetings since last opened
+  useEffect(() => {
+    if (!isStorageReady || meetingFollowUp) return;
+
+    const now = new Date();
+    const passedMeetings = meetingRequests.filter(m => {
+      if (m.status !== 'SCHEDULED' || !m.scheduledDate) return false;
+      const scheduledDate = new Date(m.scheduledDate);
+      // Check if meeting has passed since lastOpened
+      return scheduledDate > lastOpened && scheduledDate <= now;
+    });
+
+    // Show follow-up for the first passed meeting
+    if (passedMeetings.length > 0) {
+      setMeetingFollowUp(passedMeetings[0]);
+    }
+  }, [isStorageReady, meetingRequests, lastOpened, meetingFollowUp]);
 
   // Memoize theme colors and text size to avoid recalculation on every render
   const themeColors = useMemo(() => THEMES[settings.theme], [settings.theme]);
@@ -373,6 +409,32 @@ const App: React.FC = () => {
     ));
     showToast(`Cadence updated to ${newFrequencyDays} days`, 'success');
   }, [setFriends, showToast]);
+
+  // Handle meeting follow-up confirmation
+  const handleMeetingFollowUpConfirm = useCallback((meetingId: string, linkedIds: string[]) => {
+    // Mark all linked friends as contacted
+    if (linkedIds.length > 0) {
+      linkedIds.forEach(friendId => {
+        markContacted(friendId, 'REGULAR');
+      });
+      showToast(`Marked ${linkedIds.length} contact${linkedIds.length > 1 ? 's' : ''} as updated`, 'success');
+    }
+    
+    // Update meeting status to COMPLETE
+    setMeetingRequests(prev => prev.map(r => 
+      r.id === meetingId ? { ...r, status: 'COMPLETE' as const, verified: true } : r
+    ));
+    trackEvent('MEETING_COMPLETED', { meetingId, participantCount: linkedIds.length });
+  }, [markContacted, showToast]);
+
+  // Handle meeting follow-up dismissal
+  const handleMeetingFollowUpDismiss = useCallback((meetingId: string) => {
+    // Update meeting status to COMPLETE but not verified
+    setMeetingRequests(prev => prev.map(r => 
+      r.id === meetingId ? { ...r, status: 'COMPLETE' as const, verified: false } : r
+    ));
+    trackEvent('MEETING_DISMISSED', { meetingId });
+  }, []);
 
   return (
     <div data-theme={settings.theme} className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
@@ -570,6 +632,19 @@ const App: React.FC = () => {
       {isRuleGuideOpen && (
         <Suspense fallback={null}>
           <RuleGuide isOpen={isRuleGuideOpen} onClose={() => setIsRuleGuideOpen(false)} />
+        </Suspense>
+      )}
+
+      {meetingFollowUp && (
+        <Suspense fallback={null}>
+          <MeetingFollowUpModal
+            isOpen={!!meetingFollowUp}
+            onClose={() => setMeetingFollowUp(null)}
+            meeting={meetingFollowUp}
+            friends={friends}
+            onConfirm={handleMeetingFollowUpConfirm}
+            onDismiss={handleMeetingFollowUpDismiss}
+          />
         </Suspense>
       )}
 
