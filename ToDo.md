@@ -16,19 +16,19 @@
 *Background: This requires a new data entity. Add a `Group` interface to `types.ts`.*
 - [x] **Group Data Model**: Define `Group` with `id`, `name`, and `memberIds` (linking to `Friend.id`).
 - [x] **Mass Interaction Logic**: Update `friendEngine.ts` to include a `processGroupContact` function that iterates through `memberIds` and applies a `REGULAR` or `QUICK` touch to each.
-- [ ] **Group UI**: Add a "Groups" sub-tab in the Garden view to manage these collections. (Deferred - requires extensive UI work)
+- [x] **Group UI**: Add a "Groups" sub-tab in the Garden view to manage these collections.
 
 ## 📅 Meeting Requests Tab Refactor
 *Background: The `MeetingRequestsView.tsx` currently displays a single list. It should be split based on the `status` field.*
 - [x] **Sectioned Layout**: Use `useMemo` to filter `meetingRequests` into `requested` (`status === 'REQUESTED'`) and `scheduled` (`status === 'SCHEDULED'`).
 - [x] **Group/Multi-Person Meetings**: Update `MeetingRequest` interface in `types.ts` to replace `linkedFriendId` with `linkedIds: string[]`.
-- [ ] **UI Support for Multi-person**: Update the meeting card to display multiple avatars or a group name. (Deferred - requires complex UI changes)
+- [x] **UI Support for Multi-person**: Update the meeting card to display multiple avatars or a group name.
 
 ## 🔄 Post-Meeting Follow-up
 *Background: The app already re-renders every minute to check time status. You can leverage this to check for passed meetings.*
-- [ ] **Detection Logic**: In `App.tsx`, compare `new Date()` against `scheduledDate` for all `SCHEDULED` meetings. (Deferred - requires state management updates)
-- [ ] **Prompt Overlay**: If a meeting has passed since the last `lastOpened` timestamp, trigger a modal asking: "Did you meet with [Names]?" (Deferred - requires modal implementation)
-- [ ] **Batch Processing**: If 'Yes', loop through `linkedIds` and call `markContacted` for each associated friend. (Core function available via processGroupContact)
+- [x] **Detection Logic**: In `App.tsx`, compare `new Date()` against `scheduledDate` for all `SCHEDULED` meetings.
+- [x] **Prompt Overlay**: If a meeting has passed since the last `lastOpened` timestamp, trigger a modal asking: "Did you meet with [Names]?"
+- [x] **Batch Processing**: If 'Yes', loop through `linkedIds` and call `markContacted` for each associated friend. (Core function available via processGroupContact)
 
 ## 📖 Onboarding & Help Section
 *Background: Onboarding is currently managed by `OnboardingTooltips.tsx`.*
