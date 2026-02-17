@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download } from 'lucide-react';
-import { Friend, Tab, ContactLog, MeetingRequest, AppSettings } from './types';
+import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
@@ -27,14 +27,15 @@ import { generateId, calculateTimeStatus, THEMES } from './utils/helpers';
 import { trackEvent } from './utils/analytics';
 import { useReminderEngine } from './hooks/useReminderEngine';
 import { useFriendsEngine } from './hooks/useFriendsEngine';
-import { initStorage, getFriends, getMeetings, getCategories, getSettings, exportAllData, importAllData, saveMetadata, getMetadata } from './utils/storage';
-import { debouncedSaveFriends, debouncedSaveMeetings, debouncedSaveCategories, debouncedSaveSettings } from './utils/debouncedStorage';
+import { initStorage, getFriends, getMeetings, getCategories, getSettings, exportAllData, importAllData, saveMetadata, getMetadata, getGroups } from './utils/storage';
+import { debouncedSaveFriends, debouncedSaveMeetings, debouncedSaveCategories, debouncedSaveSettings, debouncedSaveGroups } from './utils/debouncedStorage';
 
 const StatsView = lazy(() => import('./components/StatsView'));
 const OnboardingTooltips = lazy(() => import('./components/OnboardingTooltips'));
 const BulkImportModal = lazy(() => import('./components/BulkImportModal'));
 const RuleGuide = lazy(() => import('./components/RuleGuide'));
 const MeetingFollowUpModal = lazy(() => import('./components/MeetingFollowUpModal'));
+const GroupManagementModal = lazy(() => import('./components/GroupManagementModal'));
 
 interface Toast {
   id: string;
@@ -78,6 +79,7 @@ const App: React.FC = () => {
   const [isStorageReady, setIsStorageReady] = useState(false);
   const [meetingFollowUp, setMeetingFollowUp] = useState<MeetingRequest | null>(null);
   const [lastOpened, setLastOpened] = useState<Date>(new Date());
+  const [isGroupManagementOpen, setIsGroupManagementOpen] = useState(false);
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = generateId();
@@ -141,6 +143,12 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [groups, setGroups] = useState<Group[]>(() => {
+    // Temporary sync read for initial render (will be replaced by async load)
+    const saved = localStorage.getItem('friendkeep_groups');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Initialize storage and load data on mount
   useEffect(() => {
     const loadData = async () => {
@@ -149,11 +157,12 @@ const App: React.FC = () => {
         await initStorage();
 
         // Load all data from storage
-        const [loadedFriends, loadedMeetings, loadedCategories, loadedSettings, lastOpenedStr] = await Promise.all([
+        const [loadedFriends, loadedMeetings, loadedCategories, loadedSettings, loadedGroups, lastOpenedStr] = await Promise.all([
           getFriends(),
           getMeetings(),
           getCategories(),
           getSettings(),
+          getGroups(),
           getMetadata('lastOpened')
         ]);
 
@@ -161,6 +170,7 @@ const App: React.FC = () => {
         setFriends(loadedFriends);
         setMeetingRequests(loadedMeetings);
         setCategories(loadedCategories);
+        setGroups(loadedGroups);
         
         if (loadedSettings) {
           setSettings(prev => ({
@@ -206,6 +216,12 @@ const App: React.FC = () => {
     if (!isStorageReady) return;
     debouncedSaveMeetings(meetingRequests);
   }, [meetingRequests, isStorageReady]);
+
+  // Save groups with debouncing
+  useEffect(() => {
+    if (!isStorageReady) return;
+    debouncedSaveGroups(groups);
+  }, [groups, isStorageReady]);
 
   // Save settings with debouncing
   useEffect(() => {
@@ -436,6 +452,15 @@ const App: React.FC = () => {
     trackEvent('MEETING_DISMISSED', { meetingId });
   }, []);
 
+  // Handle group contact action
+  const handleGroupContact = useCallback((memberIds: string[], type: 'REGULAR' | 'QUICK') => {
+    memberIds.forEach(friendId => {
+      markContacted(friendId, type);
+    });
+    showToast(`Contacted ${memberIds.length} friend${memberIds.length > 1 ? 's' : ''}!`, 'success');
+    setIsGroupManagementOpen(false);
+  }, [markContacted, showToast]);
+
   return (
     <div data-theme={settings.theme} className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -501,9 +526,15 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex justify-between items-center text-xs font-bold text-slate-600 px-1 mt-2">
-              <button onClick={() => setIsBulkImportOpen(true)} className="underline decoration-dotted underline-offset-4">
-                Import contacts into your garden
-              </button>
+              <div className="flex gap-3">
+                <button onClick={() => setIsBulkImportOpen(true)} className="underline decoration-dotted underline-offset-4">
+                  Import contacts
+                </button>
+                <button onClick={() => setIsGroupManagementOpen(true)} className="underline decoration-dotted underline-offset-4 flex items-center gap-1">
+                  <Users size={12} />
+                  Manage Groups ({groups.length})
+                </button>
+              </div>
               <button onClick={openAddModal} className="text-emerald-700">New plant</button>
             </div>
           </div>
@@ -645,6 +676,19 @@ const App: React.FC = () => {
             friends={friends}
             onConfirm={handleMeetingFollowUpConfirm}
             onDismiss={handleMeetingFollowUpDismiss}
+          />
+        </Suspense>
+      )}
+
+      {isGroupManagementOpen && (
+        <Suspense fallback={null}>
+          <GroupManagementModal
+            isOpen={isGroupManagementOpen}
+            onClose={() => setIsGroupManagementOpen(false)}
+            groups={groups}
+            friends={friends}
+            onSaveGroups={setGroups}
+            onContactGroup={handleGroupContact}
           />
         </Suspense>
       )}

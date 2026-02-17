@@ -26,10 +26,10 @@
  * - Storage quota monitoring
  */
 
-import { Friend, MeetingRequest, AppSettings } from '../types';
+import { Friend, MeetingRequest, AppSettings, Group } from '../types';
 
 const DB_NAME = 'PalPlantDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // Store names
 const STORES = {
@@ -37,7 +37,8 @@ const STORES = {
   MEETINGS: 'meetings',
   CATEGORIES: 'categories',
   SETTINGS: 'settings',
-  METADATA: 'metadata'
+  METADATA: 'metadata',
+  GROUPS: 'groups'
 } as const;
 
 // localStorage keys (for migration and fallback)
@@ -46,6 +47,7 @@ const LEGACY_KEYS = {
   MEETINGS: 'friendkeep_meetings',
   CATEGORIES: 'friendkeep_categories',
   SETTINGS: 'friendkeep_settings',
+  GROUPS: 'friendkeep_groups',
   LAST_BACKUP: 'friendkeep_last_backup_at',
   REMINDERS: 'friendkeep_reminders',
   BACKUP_REMINDER: 'friendkeep_backup_reminder',
@@ -212,6 +214,10 @@ function initDB(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(STORES.METADATA)) {
         db.createObjectStore(STORES.METADATA, { keyPath: 'key' });
+      }
+
+      if (!db.objectStoreNames.contains(STORES.GROUPS)) {
+        db.createObjectStore(STORES.GROUPS, { keyPath: 'id' });
       }
     };
 
@@ -846,6 +852,58 @@ export async function removeMetadata(key: string): Promise<void> {
 }
 
 /**
+ * Groups operations
+ */
+export async function getGroups(): Promise<Group[]> {
+  if (useLocalStorageFallback) {
+    const data = localStorage.getItem(LEGACY_KEYS.GROUPS);
+    return data ? JSON.parse(data) : [];
+  }
+
+  try {
+    return await getAll<Group>(STORES.GROUPS);
+  } catch (error) {
+    console.error('Error getting groups:', error);
+    const data = localStorage.getItem(LEGACY_KEYS.GROUPS);
+    return data ? JSON.parse(data) : [];
+  }
+}
+
+export async function saveGroups(groups: Group[]): Promise<void> {
+  if (useLocalStorageFallback) {
+    localStorage.setItem(LEGACY_KEYS.GROUPS, JSON.stringify(groups));
+    return;
+  }
+
+  try {
+    const db = await getDB();
+    const transaction = db.transaction(STORES.GROUPS, 'readwrite');
+    const store = transaction.objectStore(STORES.GROUPS);
+
+    // Clear existing data
+    await new Promise<void>((resolve, reject) => {
+      const clearRequest = store.clear();
+      clearRequest.onsuccess = () => resolve();
+      clearRequest.onerror = () => reject(clearRequest.error);
+    });
+
+    // Batch all put operations
+    const putPromises = groups.map(group =>
+      new Promise<void>((resolve, reject) => {
+        const putRequest = store.put(group);
+        putRequest.onsuccess = () => resolve();
+        putRequest.onerror = () => reject(putRequest.error);
+      })
+    );
+
+    await Promise.all(putPromises);
+  } catch (error) {
+    console.error('Error saving groups:', error);
+    localStorage.setItem(LEGACY_KEYS.GROUPS, JSON.stringify(groups));
+  }
+}
+
+/**
  * Migration from localStorage to IndexedDB
  */
 export async function migrateFromLocalStorage(): Promise<boolean> {
@@ -943,11 +1001,13 @@ export async function exportAllData() {
   const meetings = await getMeetings();
   const categories = await getCategories();
   const settings = await getSettings();
+  const groups = await getGroups();
 
   return {
     friends,
     meetings,
     categories,
+    groups,
     settings: settings || {},
     exportDate: new Date().toISOString(),
     version: 2
@@ -961,5 +1021,6 @@ export async function importAllData(data: any): Promise<void> {
   if (data.friends) await saveFriends(data.friends);
   if (data.meetings) await saveMeetings(data.meetings);
   if (data.categories) await saveCategories(data.categories);
+  if (data.groups) await saveGroups(data.groups);
   if (data.settings) await saveSettings(data.settings);
 }

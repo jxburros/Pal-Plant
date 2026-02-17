@@ -21,12 +21,12 @@
  * and improve performance for frequent updates
  */
 
-import { Friend, MeetingRequest, AppSettings } from '../types';
-import { saveFriends, saveMeetings, saveCategories, saveSettings } from './storage';
+import { Friend, MeetingRequest, AppSettings, Group } from '../types';
+import { saveFriends, saveMeetings, saveCategories, saveSettings, saveGroups } from './storage';
 
 const DEBOUNCE_DELAY = 1000; // 1 second
 
-type StorageType = 'friends' | 'meetings' | 'categories' | 'settings';
+type StorageType = 'friends' | 'meetings' | 'categories' | 'settings' | 'groups';
 
 interface PendingWrite {
   type: StorageType;
@@ -59,6 +59,9 @@ async function flushWrite(type: StorageType): Promise<void> {
         break;
       case 'settings':
         await saveSettings(pending.data);
+        break;
+      case 'groups':
+        await saveGroups(pending.data);
         break;
     }
   } catch (error) {
@@ -101,6 +104,10 @@ export function debouncedSaveCategories(categories: string[]): void {
 
 export function debouncedSaveSettings(settings: AppSettings): void {
   scheduleWrite('settings', settings);
+}
+
+export function debouncedSaveGroups(groups: Group[]): void {
+  scheduleWrite('groups', groups);
 }
 
 /**
@@ -148,6 +155,9 @@ if (typeof window !== 'undefined') {
               break;
             case 'settings':
               localStorage.setItem('friendkeep_settings', JSON.stringify(pending.data));
+              break;
+            case 'groups':
+              localStorage.setItem('friendkeep_groups', JSON.stringify(pending.data));
               break;
           }
         } catch (error) {
