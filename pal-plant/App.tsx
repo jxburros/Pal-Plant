@@ -343,7 +343,7 @@ const App: React.FC = () => {
       name: friend.name,
       status: 'REQUESTED',
       dateAdded: new Date().toISOString(),
-      linkedFriendId: friend.id,
+      linkedIds: [friend.id],
       category: friend.category === 'Family' ? 'Family' : 'Friend'
     }, ...prev]);
     trackEvent('MEETING_CREATED', { friendId: friend.id });
