@@ -40,8 +40,31 @@ interface ReminderEngineArgs {
 const BACKUP_KEY = 'friendkeep_last_backup_at';
 const BACKUP_REMINDER_KEY = 'friendkeep_last_backup_reminder_day';
 const NOTIFICATION_DELAY_MS = 1000; // Delay before showing notification (1 second)
+const NOTIFICATION_CHANNEL_ID = 'pal-plant-reminders';
+
+let notificationChannelCreated = false;
 
 const isNative = () => Capacitor.isNativePlatform();
+
+// Create notification channel for Android (called once)
+const createNotificationChannel = async () => {
+  if (notificationChannelCreated || Capacitor.getPlatform() !== 'android') {
+    return;
+  }
+
+  try {
+    await LocalNotifications.createChannel({
+      id: NOTIFICATION_CHANNEL_ID,
+      name: 'Reminders',
+      description: 'Pal Plant reminders for contacts and meetings',
+      importance: 4,
+      visibility: 1,
+    });
+    notificationChannelCreated = true;
+  } catch (error) {
+    console.warn('Failed to create notification channel:', error);
+  }
+};
 
 // Helper to send notifications using Capacitor (native only)
 const sendNotification = async (title: string, body: string) => {
@@ -51,15 +74,14 @@ const sendNotification = async (title: string, body: string) => {
   }
 
   try {
-    // Create notification channel for Android
-    if (Capacitor.getPlatform() === 'android') {
-      await LocalNotifications.createChannel({
-        id: 'pal-plant-reminders',
-        name: 'Reminders',
-        description: 'Pal Plant reminders for contacts and meetings',
-        importance: 4,
-        visibility: 1,
-      });
+    // Ensure channel is created on Android
+    await createNotificationChannel();
+
+    // Check if local notification permissions are granted
+    const permissions = await LocalNotifications.checkPermissions();
+    if (permissions.display !== 'granted') {
+      console.warn('Local notification permission not granted');
+      return;
     }
 
     // Schedule a local notification
@@ -70,12 +92,12 @@ const sendNotification = async (title: string, body: string) => {
           body,
           id: Date.now(),
           schedule: { at: new Date(Date.now() + NOTIFICATION_DELAY_MS) },
-          channelId: 'pal-plant-reminders',
+          channelId: NOTIFICATION_CHANNEL_ID,
         },
       ],
     });
-  } catch {
-    // Silently fail if notification cannot be sent
+  } catch (error) {
+    console.warn('Failed to send notification:', error);
   }
 };
 
