@@ -20,7 +20,6 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Friend, MeetingRequest } from '../types';
 import { calculateTimeStatus } from '../utils/helpers';
-import { initializeFCM, setupForegroundMessageHandler, getFCMToken } from '../utils/firebaseMessaging';
 import { getMetadata, saveMetadata } from '../utils/storage';
 
 interface ReminderConfig {
@@ -44,120 +43,89 @@ const NOTIFICATION_DELAY_MS = 1000; // Delay before showing notification (1 seco
 
 const isNative = () => Capacitor.isNativePlatform();
 
-// Helper to send notifications using the appropriate API
+// Helper to send notifications using Capacitor (native only)
 const sendNotification = async (title: string, body: string) => {
-  if (isNative()) {
-    // Use native local notifications for Android/iOS
-    try {
-      // Create notification channel for Android
-      if (Capacitor.getPlatform() === 'android') {
-        await LocalNotifications.createChannel({
-          id: 'pal-plant-reminders',
-          name: 'Reminders',
-          description: 'Pal Plant reminders for contacts and meetings',
-          importance: 4,
-          visibility: 1,
-        });
-      }
+  if (!isNative()) {
+    // Web notifications not supported - notifications are Capacitor-only
+    return;
+  }
 
-      // Schedule a local notification
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            title,
-            body,
-            id: Date.now(),
-            schedule: { at: new Date(Date.now() + NOTIFICATION_DELAY_MS) },
-            channelId: 'pal-plant-reminders',
-          },
-        ],
-      });
-    } catch {
-      // Silently fail if notification cannot be sent
-    }
-  } else {
-    // Use web notifications (FCM handles background, browser API for foreground)
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, {
-        body,
-        icon: '/icon.svg',
-        badge: '/badge.svg',
-        tag: 'pal-plant-reminder',
+  try {
+    // Create notification channel for Android
+    if (Capacitor.getPlatform() === 'android') {
+      await LocalNotifications.createChannel({
+        id: 'pal-plant-reminders',
+        name: 'Reminders',
+        description: 'Pal Plant reminders for contacts and meetings',
+        importance: 4,
+        visibility: 1,
       });
     }
+
+    // Schedule a local notification
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          title,
+          body,
+          id: Date.now(),
+          schedule: { at: new Date(Date.now() + NOTIFICATION_DELAY_MS) },
+          channelId: 'pal-plant-reminders',
+        },
+      ],
+    });
+  } catch {
+    // Silently fail if notification cannot be sent
   }
 };
 
 export const useReminderEngine = ({ friends, meetingRequests, reminders, onBackupReminder, onQuickBackup }: ReminderEngineArgs) => {
-  // Request permissions and initialize FCM on mount
+  // Request permissions for native push notifications on mount
   useEffect(() => {
-    if (!reminders.pushEnabled) return;
-
-    let cleanupForegroundHandler: (() => void) | undefined;
+    if (!reminders.pushEnabled || !isNative()) return;
 
     const requestPermissions = async () => {
-      if (isNative()) {
-        // Request native push and local notification permissions
-        try {
-          const pushResult = await PushNotifications.checkPermissions();
-          const resolvedPushPermission = pushResult.receive === 'prompt'
-            ? (await PushNotifications.requestPermissions()).receive
-            : pushResult.receive;
+      try {
+        // Request native push notification permissions
+        const pushResult = await PushNotifications.checkPermissions();
+        const resolvedPushPermission = pushResult.receive === 'prompt'
+          ? (await PushNotifications.requestPermissions()).receive
+          : pushResult.receive;
 
-          if (resolvedPushPermission === 'granted') {
-            await PushNotifications.unregister().catch(() => undefined);
-            await PushNotifications.register();
-          }
-
-          const localResult = await LocalNotifications.checkPermissions();
-          if (localResult.display === 'prompt') {
-            await LocalNotifications.requestPermissions();
-          }
-
-          PushNotifications.removeAllListeners();
-          PushNotifications.addListener('registration', async (token) => {
-            await saveMetadata('friendkeep_native_push_token', token.value);
-          });
-
-          PushNotifications.addListener('registrationError', (error) => {
-            console.warn('Native push registration error:', error);
-          });
-
-          PushNotifications.addListener('pushNotificationReceived', (notification) => {
-            const title = notification.title || 'Pal Plant';
-            const body = notification.body || 'You have a new notification';
-            sendNotification(title, body);
-          });
-        } catch {
-          // Silently fail if permission request fails
+        if (resolvedPushPermission === 'granted') {
+          await PushNotifications.unregister().catch(() => undefined);
+          await PushNotifications.register();
         }
-      } else {
-        // Initialize Firebase Cloud Messaging for web
-        try {
-          await initializeFCM();
 
-          // Set up foreground message handler for FCM
-          cleanupForegroundHandler = setupForegroundMessageHandler((payload) => {
-            // Display notification when app is in foreground
-            const title = payload.notification?.title || 'Pal Plant';
-            const body = payload.notification?.body || 'You have a new notification';
-            sendNotification(title, body);
-          }) || undefined;
-        } catch (error) {
-          console.warn('Failed to initialize FCM:', error);
-
-          // Fallback to requesting basic web notification permissions
-          if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-          }
+        // Request local notification permissions
+        const localResult = await LocalNotifications.checkPermissions();
+        if (localResult.display === 'prompt') {
+          await LocalNotifications.requestPermissions();
         }
+
+        // Set up listeners
+        PushNotifications.removeAllListeners();
+        PushNotifications.addListener('registration', async (token) => {
+          await saveMetadata('friendkeep_native_push_token', token.value);
+        });
+
+        PushNotifications.addListener('registrationError', (error) => {
+          console.warn('Native push registration error:', error);
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          const title = notification.title || 'Pal Plant';
+          const body = notification.body || 'You have a new notification';
+          sendNotification(title, body);
+        });
+      } catch {
+        // Silently fail if permission request fails
       }
     };
 
     requestPermissions();
 
     return () => {
-      cleanupForegroundHandler?.();
       if (isNative()) {
         PushNotifications.removeAllListeners();
       }
