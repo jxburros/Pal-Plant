@@ -571,6 +571,7 @@ const App: React.FC = () => {
             onUpdateRequest={handleUpdateMeetingRequest}
             onDeleteRequest={handleDeleteMeetingRequest}
             settings={settings}
+            friends={friends}
           />
         )}
       </main>
