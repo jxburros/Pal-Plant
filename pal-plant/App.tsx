@@ -73,6 +73,7 @@ const App: React.FC = () => {
   const [isRuleGuideOpen, setIsRuleGuideOpen] = useState(false);
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [healthFilter, setHealthFilter] = useState<'All' | 'Healthy' | 'Wilting' | 'Withering'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showBackupBanner, setShowBackupBanner] = useState(false);
@@ -366,9 +367,20 @@ const App: React.FC = () => {
       const matchesCategory = selectedCategory === 'All' || f.category === selectedCategory;
       const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         f.notes?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Health filter
+      if (healthFilter !== 'All') {
+        const status = calculateTimeStatus(f.lastContacted, f.frequencyDays);
+        const percentage = status.percentageLeft;
+        
+        if (healthFilter === 'Withering' && percentage > 0) return false;
+        if (healthFilter === 'Wilting' && (percentage <= 0 || percentage >= 25)) return false;
+        if (healthFilter === 'Healthy' && percentage < 25) return false;
+      }
+      
       return matchesCategory && matchesSearch;
     });
-  }, [friends, selectedCategory, searchQuery]);
+  }, [friends, selectedCategory, searchQuery, healthFilter]);
 
   const sortedFriends = useMemo(() => {
     // Re-sort when switching to LIST tab to show current time-based status
@@ -517,6 +529,34 @@ const App: React.FC = () => {
               {categories.map(cat => (
                 <button key={cat} onClick={() => handleSelectCategory(cat)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat ? `${themeColors.primary} text-white border-transparent` : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}>{cat}</button>
               ))}
+            </div>
+
+            {/* Health Status Filters */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-6 px-6">
+              <button 
+                onClick={() => setHealthFilter('All')} 
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'All' ? 'bg-slate-600 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+              >
+                All Health
+              </button>
+              <button 
+                onClick={() => setHealthFilter('Healthy')} 
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Healthy' ? 'bg-emerald-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+              >
+                🌱 Healthy
+              </button>
+              <button 
+                onClick={() => setHealthFilter('Wilting')} 
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Wilting' ? 'bg-yellow-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+              >
+                🍂 Wilting
+              </button>
+              <button 
+                onClick={() => setHealthFilter('Withering')} 
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Withering' ? 'bg-red-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+              >
+                💀 Withering
+              </button>
             </div>
 
             <div className="flex justify-between items-center text-xs font-bold text-slate-600 px-1 mt-2">
