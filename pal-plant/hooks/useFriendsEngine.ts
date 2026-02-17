@@ -64,7 +64,15 @@ export const useFriendsEngine = (initialFriends: Friend[] | (() => Friend[])): U
     }));
   }, [clearFeedback]);
 
-  // Batch version of markContacted - processes multiple friends in a single state update
+  /**
+   * Batch version of markContacted - processes multiple friends in a single state update.
+   * Use this when logging interactions with multiple friends simultaneously (e.g., group meetings)
+   * to avoid triggering multiple re-renders.
+   * 
+   * @param ids - Array of friend IDs to mark as contacted
+   * @param type - Type of interaction ('REGULAR', 'DEEP', or 'QUICK')
+   * @param channel - Optional contact channel
+   */
   const markContactedBatch = useCallback((ids: string[], type: 'REGULAR' | 'DEEP' | 'QUICK', channel?: ContactChannel) => {
     if (ids.length === 0) return;
     

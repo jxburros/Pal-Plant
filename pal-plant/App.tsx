@@ -344,7 +344,7 @@ const App: React.FC = () => {
       name: friend.name,
       status: 'REQUESTED',
       dateAdded: new Date().toISOString(),
-      linkedIds: [friend.id],
+      linkedIds: [friend.id], // Using linkedIds array (backward compat handled in MeetingRequestsView)
       category: friend.category === 'Family' ? 'Family' : 'Friend'
     }, ...prev]);
     trackEvent('MEETING_CREATED', { friendId: friend.id });

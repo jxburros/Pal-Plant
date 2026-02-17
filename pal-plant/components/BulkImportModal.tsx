@@ -167,7 +167,8 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
       }
 
       if (duplicate && resolution === 'overwrite') {
-        // Overwrite existing friend with new data
+        // Overwrite: Replace contact info but preserve history and scoring
+        // Preserves: logs, individualScore, quickTouchesAvailable, cyclesSinceLastQuickTouch, avatarSeed
         const updatedFriend: Friend = {
           ...duplicate.existingFriend,
           name: contact.name,
@@ -175,20 +176,18 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
           email: contact.email || duplicate.existingFriend.email,
           category: contact.category || defaultCategory,
           frequencyDays: defaultFrequency,
-          // Keep existing logs, score, and interaction history
         };
         friendsToUpdate.push(updatedFriend);
         return;
       }
 
       if (duplicate && resolution === 'merge') {
-        // Merge new data with existing friend (preserve existing data where new data is missing)
+        // Merge: Fill in missing contact info, keep all existing data
+        // Updates only undefined/missing fields from new contact
         const mergedFriend: Friend = {
           ...duplicate.existingFriend,
           phone: contact.phone || duplicate.existingFriend.phone,
           email: contact.email || duplicate.existingFriend.email,
-          notes: duplicate.existingFriend.notes || undefined,
-          // Keep existing category, frequency, logs, and interaction history
         };
         friendsToUpdate.push(mergedFriend);
         return;
