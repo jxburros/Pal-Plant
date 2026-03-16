@@ -16,6 +16,7 @@
 
 import { Capacitor } from '@capacitor/core';
 import { Contacts } from '@capacitor-community/contacts';
+import { checkPermission, requestPermission } from './permissions';
 
 export interface DeviceContact {
   name: string;
@@ -30,31 +31,16 @@ const isNative = () => Capacitor.isNativePlatform();
  * Returns true if permission was granted.
  */
 export const requestContactsPermission = async (): Promise<boolean> => {
-  if (!isNative()) return true; // Web handles via browser API
-  try {
-    const requestResult = await Contacts.requestPermissions();
-    if (requestResult.contacts === 'granted') return true;
-    // On some Android versions / plugin combos the request result is stale;
-    // re-check the actual permission state to catch the "user tapped Allow"
-    // case that the request promise didn't reflect.
-    const checkResult = await Contacts.checkPermissions();
-    return checkResult.contacts === 'granted';
-  } catch {
-    return false;
-  }
+  const status = await requestPermission('contacts');
+  return status === 'granted';
 };
 
 /**
  * Check if contacts permission is currently granted.
  */
 export const checkContactsPermission = async (): Promise<boolean> => {
-  if (!isNative()) return true;
-  try {
-    const result = await Contacts.checkPermissions();
-    return result.contacts === 'granted';
-  } catch {
-    return false;
-  }
+  const status = await checkPermission('contacts');
+  return status === 'granted';
 };
 
 /**
