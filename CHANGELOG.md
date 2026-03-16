@@ -1,5 +1,17 @@
 # Pal-Plant - Changelog
 
+## [Unreleased] - 2026-03-16
+
+### 📖 Documentation
+- **Documentation Audit**: Updated all documentation to match current codebase state
+  - Removed all Firebase references from README and docs (Firebase was removed from the codebase)
+  - Updated README tech stack: removed Firebase Cloud Messaging, removed "(via CDN)" from Tailwind CSS, added PWA entry, updated Capacitor description
+  - Updated README Reminders feature: now accurately describes Capacitor-only native push notifications
+  - Updated README dev server URL from port 5173 to 3000 (matching `vite.config.ts`)
+  - Updated README project structure: added `hooks/AppContext.tsx`, added `utils/contacts.ts`, removed `utils/firebase.ts` and `utils/firebaseMessaging.ts`, updated `public/` to reflect PWA icons (removed `firebase-messaging-sw.js`)
+  - Rewrote `docs/FIREBASE.md` as a Push Notifications Guide reflecting Capacitor-only architecture
+  - Updated `docs/README.md` to reference the Push Notifications Guide
+
 ## [Unreleased] - 2026-02-17
 
 ### 📖 Documentation
@@ -120,7 +132,7 @@ Additional improvements planned:
 ---
 
 ## Links
-- [Firebase Configuration Guide](docs/FIREBASE.md)
+- [Push Notifications Guide](docs/FIREBASE.md)
 - [Archived Documentation](docs/archive/)
 - [Implementation Summary](docs/archive/ISSUES_IMPLEMENTATION_SUMMARY.md)
 - [Full Audit Report](docs/archive/AUDIT_FINAL_REPORT.md)
