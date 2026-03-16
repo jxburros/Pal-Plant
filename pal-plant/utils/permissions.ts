@@ -16,9 +16,8 @@
 
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { Contacts } from '@capacitor-community/contacts';
 
-export type PermissionKind = 'notifications' | 'contacts';
+export type PermissionKind = 'notifications';
 export type PermissionStatus = 'granted' | 'denied' | 'prompt' | 'blocked';
 
 const isNative = () => Capacitor.isNativePlatform();
@@ -32,7 +31,6 @@ export const checkPermission = async (kind: PermissionKind): Promise<PermissionS
       if (typeof Notification === 'undefined') return 'denied';
       return mapWebNotificationPermission(Notification.permission);
     }
-    // Contacts on web are always "available" (handled by browser picker API)
     return 'granted';
   }
 
@@ -40,10 +38,6 @@ export const checkPermission = async (kind: PermissionKind): Promise<PermissionS
     if (kind === 'notifications') {
       const result = await LocalNotifications.checkPermissions();
       return mapCapacitorPermission(result.display);
-    }
-    if (kind === 'contacts') {
-      const result = await Contacts.checkPermissions();
-      return mapCapacitorPermission(result.contacts);
     }
   } catch {
     return 'denied';
@@ -73,28 +67,11 @@ export const requestPermission = async (kind: PermissionKind): Promise<Permissio
       const result = await LocalNotifications.requestPermissions();
       return mapCapacitorPermission(result.display);
     }
-    if (kind === 'contacts') {
-      const result = await Contacts.requestPermissions();
-      const status = mapCapacitorPermission(result.contacts);
-      if (status === 'granted') return 'granted';
-      // Double-check: on some Android/plugin combos the request result
-      // is stale but the OS actually granted the permission.
-      const recheck = await Contacts.checkPermissions();
-      return mapCapacitorPermission(recheck.contacts);
-    }
   } catch {
     return 'denied';
   }
 
   return 'denied';
-};
-
-/**
- * Whether the user needs to go to device Settings to re-enable a
- * blocked permission.  UI code should show guidance when this is true.
- */
-export const isPermissionBlocked = (status: PermissionStatus): boolean => {
-  return status === 'blocked';
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────

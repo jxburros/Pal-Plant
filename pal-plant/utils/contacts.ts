@@ -16,32 +16,23 @@
 
 import { Capacitor } from '@capacitor/core';
 import { Contacts } from '@capacitor-community/contacts';
-import { checkPermission, requestPermission } from './permissions';
 
 export interface DeviceContact {
   name: string;
   phone?: string;
   email?: string;
+  birthday?: string; // "MM-DD" format, matches Friend.birthday
 }
 
 const isNative = () => Capacitor.isNativePlatform();
 
-/**
- * Request contacts permission on native platforms.
- * Returns true if permission was granted.
- */
-export const requestContactsPermission = async (): Promise<boolean> => {
-  const status = await requestPermission('contacts');
-  return status === 'granted';
-};
-
-/**
- * Check if contacts permission is currently granted.
- */
-export const checkContactsPermission = async (): Promise<boolean> => {
-  const status = await checkPermission('contacts');
-  return status === 'granted';
-};
+/** Shared projection — every call site uses the same fields. */
+const CONTACT_PROJECTION = {
+  name: true,
+  phones: true,
+  emails: true,
+  birthday: true,
+} as const;
 
 /**
  * Pick multiple contacts from the device for bulk import.
@@ -80,19 +71,26 @@ export const isContactPickerAvailable = (): boolean => {
 
 // ─── Native Implementation ──────────────────────────────────────
 
+/**
+ * Get all contacts. The native plugin handles the permission request
+ * internally — if READ_CONTACTS hasn't been granted yet, it shows the
+ * system dialog and then proceeds to fetch contacts via its own
+ * @PermissionCallback.  We must NOT call requestPermissions() separately
+ * because doing so creates two competing permission flows that race and
+ * can crash the app or return stale results.
+ */
 async function getAllContactsNative(): Promise<DeviceContact[]> {
-  const hasPermission = await requestContactsPermission();
-  if (!hasPermission) {
-    throw new Error('PERMISSION_DENIED');
+  let result;
+  try {
+    result = await Contacts.getContacts({ projection: CONTACT_PROJECTION });
+  } catch (err: any) {
+    // The native plugin rejects with this message when the user denies
+    // the permission dialog that it shows internally.
+    if (typeof err?.message === 'string' && err.message.toLowerCase().includes('permission')) {
+      throw new Error('PERMISSION_DENIED');
+    }
+    throw err;
   }
-
-  const result = await Contacts.getContacts({
-    projection: {
-      name: true,
-      phones: true,
-      emails: true,
-    },
-  });
 
   if (!result.contacts || result.contacts.length === 0) {
     return [];
@@ -103,23 +101,37 @@ async function getAllContactsNative(): Promise<DeviceContact[]> {
       name: contact.name?.display || contact.name?.given || '',
       phone: contact.phones?.[0]?.number || undefined,
       email: contact.emails?.[0]?.address || undefined,
+      birthday: formatBirthday(contact.birthday),
     }))
     .filter((c) => c.name.trim() !== '');
 }
 
+/**
+ * Pick a single contact via the native contact picker intent.
+ *
+ * Known plugin limitation: if the user taps Back / cancels the picker,
+ * the underlying native callback never resolves or rejects the promise.
+ * We work around this with a timeout so the UI doesn't hang forever.
+ */
 async function pickSingleContactNative(): Promise<DeviceContact | null> {
-  const hasPermission = await requestContactsPermission();
-  if (!hasPermission) {
-    throw new Error('PERMISSION_DENIED');
-  }
+  const PICKER_TIMEOUT_MS = 120_000; // 2 minutes — generous for slow devices
 
-  const result = await Contacts.pickContact({
-    projection: {
-      name: true,
-      phones: true,
-      emails: true,
-    },
-  });
+  let result;
+  try {
+    result = await withTimeout(
+      Contacts.pickContact({ projection: CONTACT_PROJECTION }),
+      PICKER_TIMEOUT_MS,
+    );
+  } catch (err: any) {
+    if (err?.message === 'TIMEOUT') {
+      // User likely cancelled the picker
+      return null;
+    }
+    if (typeof err?.message === 'string' && err.message.toLowerCase().includes('permission')) {
+      throw new Error('PERMISSION_DENIED');
+    }
+    throw err;
+  }
 
   if (!result.contact) {
     return null;
@@ -133,6 +145,7 @@ async function pickSingleContactNative(): Promise<DeviceContact | null> {
     name,
     phone: contact.phones?.[0]?.number || undefined,
     email: contact.emails?.[0]?.address || undefined,
+    birthday: formatBirthday(contact.birthday),
   };
 }
 
@@ -178,4 +191,33 @@ async function pickContactsWebSingle(): Promise<DeviceContact[]> {
       email: Array.isArray(entry.email) ? String(entry.email[0] || '') : undefined,
     }))
     .filter((entry) => entry.name !== '');
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────
+
+/**
+ * Convert the plugin's BirthdayPayload ({ month, day, year? }) to the
+ * "MM-DD" string format used by the Friend type.
+ */
+function formatBirthday(
+  bday: { month?: number | null; day?: number | null; year?: number | null } | null | undefined,
+): string | undefined {
+  if (!bday || bday.month == null || bday.day == null) return undefined;
+  const mm = String(bday.month).padStart(2, '0');
+  const dd = String(bday.day).padStart(2, '0');
+  return `${mm}-${dd}`;
+}
+
+/**
+ * Race a promise against a timeout.  Rejects with Error('TIMEOUT') if
+ * the timeout fires first.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('TIMEOUT')), ms);
+    promise.then(
+      (val) => { clearTimeout(timer); resolve(val); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
 }

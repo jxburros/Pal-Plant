@@ -210,6 +210,12 @@ const FriendModal: React.FC<FriendModalProps> = ({
         if (contact.name) setName(contact.name);
         if (contact.phone) setPhone(contact.phone);
         if (contact.email) setEmail(contact.email);
+        if (contact.birthday) {
+          setHasBirthday(true);
+          const [m, d] = contact.birthday.split('-');
+          setBdayMonth(String(parseInt(m, 10)));
+          setBdayDay(String(parseInt(d, 10)));
+        }
       }
     } catch (error: any) {
       if (error?.message === 'PERMISSION_DENIED') {
