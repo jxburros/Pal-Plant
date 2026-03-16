@@ -2,7 +2,7 @@
 
 ## Overview
 
-Pal-Plant uses **Capacitor** for push notifications on Android and iOS. Firebase Cloud Messaging (FCM) was previously used for web push notifications but has been **removed** from the codebase. All push notification delivery is now handled natively via Capacitor plugins.
+Pal-Plant uses **Capacitor** for push notifications on Android and iOS. All push notification delivery is handled natively via Capacitor plugins.
 
 > **Web push notifications are not available in this build.** Push reminders require an Android or iOS device.
 
@@ -122,7 +122,7 @@ pal-plant/
 
 **Remote Push Notifications:**
 - Managed by `@capacitor/push-notifications`
-- Requires a push notification backend (e.g., Firebase Admin SDK, APNs, or similar)
+- Requires a push notification backend (e.g., APNs or similar)
 - The app registers a device token on startup when push is enabled
 - Token is stored locally and can be sent to your own backend for delivery
 
@@ -142,7 +142,7 @@ pal-plant/
 
 ### Remote Push Notifications
 
-Remote push requires a backend that can send messages via APNs (iOS) or FCM/FCM-compatible service (Android). This is optional and not included in the app itself.
+Remote push requires a backend that can send messages via APNs (iOS) or a compatible push service (Android). This is optional and not included in the app itself.
 
 ---
 
@@ -181,6 +181,5 @@ Remote push requires a backend that can send messages via APNs (iOS) or FCM/FCM-
 
 ---
 
-**Last Updated:** 2026-03-16  
-**Previous Firebase SDK:** Removed (was 10.7.1)  
-**Current Notification Stack:** Capacitor `@capacitor/push-notifications` + `@capacitor/local-notifications`
+**Last Updated:** 2026-03-16
+**Notification Stack:** Capacitor `@capacitor/push-notifications` + `@capacitor/local-notifications`

@@ -18,7 +18,7 @@
  * Local-only analytics for Pal-Plant
  * 
  * IMPORTANT: This is a LOCAL analytics system only.
- * No data is sent to external services (Firebase Analytics is NOT used).
+ * No data is sent to external services.
  * All analytics events are stored locally for user's personal insights only.
  * This maintains the app's local-first privacy model.
  */
