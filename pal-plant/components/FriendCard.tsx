@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Phone, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, ChevronDown, ChevronUp, PhoneCall, Video, Users } from 'lucide-react';
+import { Phone, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, ChevronDown, ChevronUp, PhoneCall, Video, Users, Gamepad2 } from 'lucide-react';
 import { ActionFeedback, ContactChannel, Friend, CHANNEL_WEIGHTS, CHANNEL_SCORE_BONUS } from '../types';
 import { calculateTimeStatus, getProgressBarColor, getStatusColor, getPlantStage, getInitials, getAvatarColor } from '../utils/helpers';
 import InlineFeedback from './InlineFeedback';
@@ -33,6 +33,7 @@ interface FriendCardProps {
 const CHANNEL_OPTIONS: { value: ContactChannel; label: string; icon: typeof Phone; color: string; activeColor: string }[] = [
   { value: 'text', label: 'Text', icon: MessageCircle, color: 'text-blue-500 border-blue-200 hover:bg-blue-50', activeColor: 'bg-blue-500 text-white border-blue-500' },
   { value: 'call', label: 'Call', icon: PhoneCall, color: 'text-emerald-600 border-emerald-200 hover:bg-emerald-50', activeColor: 'bg-emerald-600 text-white border-emerald-600' },
+  { value: 'gaming', label: 'Gaming', icon: Gamepad2, color: 'text-indigo-500 border-indigo-200 hover:bg-indigo-50', activeColor: 'bg-indigo-500 text-white border-indigo-500' },
   { value: 'video', label: 'Video', icon: Video, color: 'text-purple-500 border-purple-200 hover:bg-purple-50', activeColor: 'bg-purple-500 text-white border-purple-500' },
   { value: 'in-person', label: 'In Person', icon: Users, color: 'text-orange-500 border-orange-200 hover:bg-orange-50', activeColor: 'bg-orange-500 text-white border-orange-500' },
 ];
@@ -40,6 +41,7 @@ const CHANNEL_OPTIONS: { value: ContactChannel; label: string; icon: typeof Phon
 const CHANNEL_LABELS: Record<ContactChannel, string> = {
   'text': 'Text',
   'call': 'Phone Call',
+  'gaming': 'Gaming',
   'video': 'Video Call',
   'in-person': 'In Person',
 };

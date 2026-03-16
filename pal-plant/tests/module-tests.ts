@@ -374,8 +374,12 @@ test('CHANNEL_WEIGHTS: in-person has weight 1.25', () => {
   assert.equal(CHANNEL_WEIGHTS['in-person'], 1.25);
 });
 
+test('CHANNEL_WEIGHTS: gaming has weight 1.05', () => {
+  assert.equal(CHANNEL_WEIGHTS['gaming'], 1.05);
+});
+
 test('CHANNEL_WEIGHTS: covers all channels', () => {
-  const channels: ContactChannel[] = ['text', 'call', 'video', 'in-person'];
+  const channels: ContactChannel[] = ['text', 'call', 'gaming', 'video', 'in-person'];
   channels.forEach(ch => {
     assert.ok(CHANNEL_WEIGHTS[ch] !== undefined, `Missing weight for ${ch}`);
     assert.ok(typeof CHANNEL_WEIGHTS[ch] === 'number', `Weight for ${ch} must be a number`);
@@ -383,17 +387,22 @@ test('CHANNEL_WEIGHTS: covers all channels', () => {
   });
 });
 
+test('CHANNEL_SCORE_BONUS: gaming has bonus 8', () => {
+  assert.equal(CHANNEL_SCORE_BONUS['gaming'], 8);
+});
+
 test('CHANNEL_SCORE_BONUS: covers all channels with positive values', () => {
-  const channels: ContactChannel[] = ['text', 'call', 'video', 'in-person'];
+  const channels: ContactChannel[] = ['text', 'call', 'gaming', 'video', 'in-person'];
   channels.forEach(ch => {
     assert.ok(CHANNEL_SCORE_BONUS[ch] !== undefined, `Missing bonus for ${ch}`);
     assert.ok(CHANNEL_SCORE_BONUS[ch] > 0, `Bonus for ${ch} must be positive`);
   });
 });
 
-test('CHANNEL_SCORE_BONUS: in-person > video > call > text', () => {
+test('CHANNEL_SCORE_BONUS: in-person > video > gaming > call > text', () => {
   assert.ok(CHANNEL_SCORE_BONUS['in-person'] > CHANNEL_SCORE_BONUS['video']);
-  assert.ok(CHANNEL_SCORE_BONUS['video'] > CHANNEL_SCORE_BONUS['call']);
+  assert.ok(CHANNEL_SCORE_BONUS['video'] > CHANNEL_SCORE_BONUS['gaming']);
+  assert.ok(CHANNEL_SCORE_BONUS['gaming'] > CHANNEL_SCORE_BONUS['call']);
   assert.ok(CHANNEL_SCORE_BONUS['call'] > CHANNEL_SCORE_BONUS['text']);
 });
 

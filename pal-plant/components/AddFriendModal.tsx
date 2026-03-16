@@ -15,16 +15,44 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Phone, Calendar, Mail, Upload, Tags, FileText, History, Trash2, Gift, BookUser } from 'lucide-react';
-import { Friend, ContactLog } from '../types';
+import { X, User, Phone, Calendar, Mail, Upload, Tags, FileText, History, Trash2, Gift, BookUser, Edit2, Check, Plus, MessageCircle, PhoneCall, Video, Users, Gamepad2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Friend, ContactLog, ContactChannel } from '../types';
 import { generateId, fileToBase64, calculateTimeStatus, getInitials, getAvatarColor, sanitizeText, sanitizePhone, isValidEmail } from '../utils/helpers';
 import { pickSingleContact, isContactPickerAvailable } from '../utils/contacts';
+
+const CHANNEL_ICONS: Record<ContactChannel, typeof MessageCircle> = {
+  'text': MessageCircle,
+  'call': PhoneCall,
+  'gaming': Gamepad2,
+  'video': Video,
+  'in-person': Users,
+};
+
+const CHANNEL_LABELS: Record<ContactChannel, string> = {
+  'text': 'Text',
+  'call': 'Call',
+  'gaming': 'Gaming',
+  'video': 'Video',
+  'in-person': 'In Person',
+};
+
+const CHANNEL_COLORS: Record<ContactChannel, string> = {
+  'text': 'text-blue-500',
+  'call': 'text-emerald-600',
+  'gaming': 'text-indigo-500',
+  'video': 'text-purple-500',
+  'in-person': 'text-orange-500',
+};
+
+const ALL_CHANNELS: ContactChannel[] = ['text', 'call', 'gaming', 'video', 'in-person'];
 
 interface FriendModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (friend: Friend) => void;
   onDeleteLog?: (friendId: string, logId: string) => void;
+  onEditLog?: (friendId: string, logId: string, updates: { channel?: ContactChannel; date?: string }) => void;
+  onAddPastInteraction?: (friendId: string, channel: ContactChannel, date: string) => void;
   initialData?: Friend | null;
   categories: string[];
   onAddCategory: (category: string) => void;
@@ -35,6 +63,8 @@ const FriendModal: React.FC<FriendModalProps> = ({
   onClose,
   onSave,
   onDeleteLog,
+  onEditLog,
+  onAddPastInteraction,
   initialData,
   categories,
   onAddCategory
@@ -51,6 +81,15 @@ const FriendModal: React.FC<FriendModalProps> = ({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [contactImportLoading, setContactImportLoading] = useState(false);
+
+  // Interaction history state
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editChannel, setEditChannel] = useState<ContactChannel>('call');
+  const [editDate, setEditDate] = useState('');
+  const [showAddPast, setShowAddPast] = useState(false);
+  const [addPastChannel, setAddPastChannel] = useState<ContactChannel>('call');
+  const [addPastDate, setAddPastDate] = useState('');
+  const [showAllLogs, setShowAllLogs] = useState(false);
 
   // Birthday State
   const [bdayMonth, setBdayMonth] = useState('1');
@@ -93,6 +132,9 @@ const FriendModal: React.FC<FriendModalProps> = ({
       }
       setIsAddingCategory(false);
       setNewCategoryName('');
+      setEditingLogId(null);
+      setShowAddPast(false);
+      setShowAllLogs(false);
     }
   }, [isOpen, initialData, categories]);
 
@@ -429,36 +471,221 @@ const FriendModal: React.FC<FriendModalProps> = ({
              <div className="border-t border-slate-100 pt-6 mt-6">
                 <div className="flex justify-between items-center mb-4">
                    <h3 className="font-bold text-slate-800 flex items-center gap-2"><History size={18}/> Interaction History</h3>
-                   <span className={`px-2 py-1 rounded-md text-xs font-bold ${onTimePercentage >= 80 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                      {onTimePercentage}% On Time
-                   </span>
+                   <div className="flex items-center gap-2">
+                     <span className={`px-2 py-1 rounded-md text-xs font-bold ${onTimePercentage >= 80 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {onTimePercentage}% On Time
+                     </span>
+                     <span className="px-2 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-600">
+                        {logsSorted.length} total
+                     </span>
+                   </div>
                 </div>
 
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                   {logsSorted.slice(0, 10).map(log => (
-                      <div key={log.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm">
-                         <div>
-                            <p className="font-medium text-slate-700">{new Date(log.date).toLocaleDateString()}</p>
-                            <p className="text-[10px] text-slate-400">{new Date(log.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                         </div>
-                         <div className="flex items-center gap-3">
-                            <span className={`text-xs ${log.percentageRemaining < 0 ? 'text-red-500' : 'text-green-500'}`}>
-                               {log.percentageRemaining < 0 ? 'Late' : 'On Time'}
-                            </span>
-                            {onDeleteLog && (
+                {/* Add Past Interaction */}
+                {onAddPastInteraction && (
+                  <div className="mb-3">
+                    {!showAddPast ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddPast(true);
+                          setAddPastDate(new Date().toISOString().slice(0, 16));
+                          setAddPastChannel('call');
+                        }}
+                        className="w-full py-2 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                      >
+                        <Plus size={16} />
+                        Add Past Interaction
+                      </button>
+                    ) : (
+                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-3 animate-in fade-in slide-in-from-top-2">
+                        <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">Log a Past Interaction</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ALL_CHANNELS.map(ch => {
+                            const Icon = CHANNEL_ICONS[ch];
+                            return (
                               <button
+                                key={ch}
                                 type="button"
-                                onClick={() => onDeleteLog(initialData.id, log.id)}
-                                className="text-slate-300 hover:text-red-500 transition-colors"
+                                onClick={() => setAddPastChannel(ch)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                                  addPastChannel === ch
+                                    ? 'bg-slate-900 text-white border-slate-900'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                                }`}
                               >
-                                <Trash2 size={16} />
+                                <Icon size={13} />
+                                {CHANNEL_LABELS[ch]}
                               </button>
-                            )}
-                         </div>
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="datetime-local"
+                          value={addPastDate}
+                          max={new Date().toISOString().slice(0, 16)}
+                          onChange={(e) => setAddPastDate(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (addPastDate) {
+                                onAddPastInteraction(initialData.id, addPastChannel, new Date(addPastDate).toISOString());
+                                setShowAddPast(false);
+                              }
+                            }}
+                            disabled={!addPastDate}
+                            className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                            <Check size={14} />
+                            Add Entry
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddPast(false)}
+                            className="px-4 bg-slate-200 text-slate-600 py-2 rounded-lg font-bold text-sm hover:bg-slate-300 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
-                   ))}
-                   {logsSorted.length === 0 && <p className="text-sm text-slate-400 italic">No interaction history.</p>}
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                   {(showAllLogs ? logsSorted : logsSorted.slice(0, 10)).map(log => {
+                      const Icon = CHANNEL_ICONS[log.channel] || MessageCircle;
+                      const isEditing = editingLogId === log.id;
+
+                      return (
+                        <div key={log.id} className={`bg-slate-50 p-3 rounded-lg border text-sm transition-colors ${isEditing ? 'border-blue-300 bg-blue-50' : 'border-slate-100'}`}>
+                          {isEditing ? (
+                            // Editing mode
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap gap-1.5">
+                                {ALL_CHANNELS.map(ch => {
+                                  const ChIcon = CHANNEL_ICONS[ch];
+                                  return (
+                                    <button
+                                      key={ch}
+                                      type="button"
+                                      onClick={() => setEditChannel(ch)}
+                                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold border transition-colors ${
+                                        editChannel === ch
+                                          ? 'bg-slate-900 text-white border-slate-900'
+                                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                                      }`}
+                                    >
+                                      <ChIcon size={12} />
+                                      {CHANNEL_LABELS[ch]}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <input
+                                type="datetime-local"
+                                value={editDate}
+                                max={new Date().toISOString().slice(0, 16)}
+                                onChange={(e) => setEditDate(e.target.value)}
+                                className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onEditLog && editDate) {
+                                      onEditLog(initialData.id, log.id, {
+                                        channel: editChannel,
+                                        date: new Date(editDate).toISOString()
+                                      });
+                                    }
+                                    setEditingLogId(null);
+                                  }}
+                                  className="flex-1 bg-blue-600 text-white py-1.5 rounded-lg font-bold text-xs hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                                >
+                                  <Check size={12} /> Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingLogId(null)}
+                                  className="px-3 bg-slate-200 text-slate-600 py-1.5 rounded-lg font-bold text-xs hover:bg-slate-300 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            // Display mode
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2.5">
+                                <div className={`${CHANNEL_COLORS[log.channel]} bg-white border border-slate-200 rounded-lg p-1.5`}>
+                                  <Icon size={14} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium text-slate-700">{CHANNEL_LABELS[log.channel] || log.channel}</p>
+                                    {log.scoreDelta !== undefined && (
+                                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                        log.scoreDelta > 0 ? 'bg-emerald-100 text-emerald-700' :
+                                        log.scoreDelta < 0 ? 'bg-red-100 text-red-700' :
+                                        'bg-slate-100 text-slate-500'
+                                      }`}>
+                                        {log.scoreDelta > 0 ? '+' : ''}{log.scoreDelta} pts
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-slate-400">
+                                    {new Date(log.date).toLocaleDateString()} {new Date(log.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${log.percentageRemaining < 0 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                                   {log.percentageRemaining < 0 ? 'Late' : 'On Time'}
+                                </span>
+                                {onEditLog && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingLogId(log.id);
+                                      setEditChannel(log.channel);
+                                      setEditDate(new Date(log.date).toISOString().slice(0, 16));
+                                    }}
+                                    className="text-slate-300 hover:text-blue-500 transition-colors"
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                                )}
+                                {onDeleteLog && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onDeleteLog(initialData.id, log.id)}
+                                    className="text-slate-300 hover:text-red-500 transition-colors"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                   })}
+                   {logsSorted.length === 0 && <p className="text-sm text-slate-400 italic">No interaction history yet.</p>}
                 </div>
+                {logsSorted.length > 10 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllLogs(!showAllLogs)}
+                    className="w-full mt-2 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center justify-center gap-1 transition-colors"
+                  >
+                    {showAllLogs ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    {showAllLogs ? 'Show Less' : `Show All ${logsSorted.length} Interactions`}
+                  </button>
+                )}
              </div>
           )}
 

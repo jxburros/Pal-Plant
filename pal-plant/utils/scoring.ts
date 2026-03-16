@@ -110,36 +110,111 @@ export const calculateInteractionScore = (
 };
 
 /**
- * Recalculates a friend's total individual score based on history
- * Starts at 50 (neutral) and applies all score deltas from logs
- * Result is clamped between 0 and 100
- * 
- * @param logs - Array of contact logs with score deltas
+ * Three-Tier Time-Weighted scoring model for individual friends.
+ *
+ * Tier 1 (Momentum):    0–30 days old  → 25% weight
+ * Tier 2 (Consistency): 31–89 days old → 40% weight
+ * Tier 3 (Foundation):  90–730 days old → 35% weight
+ *
+ * Interactions older than 2 years (730 days) fall off entirely.
+ * Each tier starts at a neutral baseline of 50 and accumulates deltas.
+ * The final score is the weighted average of tier scores, clamped 0-100.
+ *
+ * @param logs - Array of contact logs with score deltas and dates
  * @returns Final individual score (0-100)
  */
 export const calculateIndividualFriendScore = (logs: ContactLog[]): number => {
-  // Start neutral
-  let score = 50;
+  const now = new Date();
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-  // We weight recent logs more heavily? For now, flat sum clamped 0-100
+  let tier1Score = 50; // Momentum: 0-30 days
+  let tier2Score = 50; // Consistency: 31-89 days
+  let tier3Score = 50; // Foundation: 90-730 days
+
+  let tier1Count = 0;
+  let tier2Count = 0;
+  let tier3Count = 0;
+
   logs.forEach(log => {
-    score += (log.scoreDelta || 0);
+    const logDate = new Date(log.date);
+    const ageInDays = (now.getTime() - logDate.getTime()) / MS_PER_DAY;
+
+    // Interactions older than 2 years fall off
+    if (ageInDays > 730) return;
+
+    const delta = log.scoreDelta || 0;
+
+    if (ageInDays <= 30) {
+      tier1Score += delta;
+      tier1Count++;
+    } else if (ageInDays <= 89) {
+      tier2Score += delta;
+      tier2Count++;
+    } else {
+      tier3Score += delta;
+      tier3Count++;
+    }
   });
 
-  return Math.max(0, Math.min(100, score));
+  // Clamp each tier individually
+  tier1Score = Math.max(0, Math.min(100, tier1Score));
+  tier2Score = Math.max(0, Math.min(100, tier2Score));
+  tier3Score = Math.max(0, Math.min(100, tier3Score));
+
+  // Weighted average: Momentum 25%, Consistency 40%, Foundation 35%
+  const weightedScore = (tier1Score * 0.25) + (tier2Score * 0.40) + (tier3Score * 0.35);
+
+  return Math.max(0, Math.min(100, Math.round(weightedScore)));
 };
 
 /**
- * Calculates the global Social Garden Score
- * 
- * Algorithm:
- * 1. Average all individual friend scores
- * 2. Add meeting bonuses/penalties:
- *    - Completed & verified meeting: +5 points
- *    - Requested meeting sitting >14 days (with buffer): -2 points
- * 3. Normalize meeting score by number of friends
- * 4. Clamp final result to 0-100
- * 
+ * Daily Wilt: Once a timer passes its buffered deadline, the plant loses
+ * -2 points every 24 hours until contact is made.
+ *
+ * @param lastContacted - ISO timestamp of last contact
+ * @param frequencyDays - Target contact frequency in days
+ * @returns Number of wilt points to subtract (always <= 0)
+ */
+export const calculateDailyWilt = (lastContacted: string, frequencyDays: number): number => {
+  const { isOverdue, daysLeft } = calculateTimeStatus(lastContacted, frequencyDays);
+  if (!isOverdue) return 0;
+  const daysOverdue = Math.abs(daysLeft);
+  return -(daysOverdue * 2);
+};
+
+/**
+ * Check if a friend qualifies for the Resurrection Penalty.
+ * If a plant is "Withered" (Score < 10), the first interaction logged
+ * provides 50% fewer points.
+ *
+ * @param currentScore - The friend's current individual score
+ * @returns true if resurrection penalty should apply
+ */
+export const isWitheredForResurrection = (currentScore: number): boolean => {
+  return currentScore < 10;
+};
+
+/**
+ * Check if texting diminishing returns should apply.
+ * If the last 5 interactions were all 'text', the next text grants 50% fewer points.
+ *
+ * @param logs - The friend's contact log history
+ * @returns true if diminishing returns apply
+ */
+export const hasTextingDiminishingReturns = (logs: ContactLog[]): boolean => {
+  const recent = logs.slice(0, 5);
+  if (recent.length < 5) return false;
+  return recent.every(l => l.channel === 'text');
+};
+
+/**
+ * Calculates the global Social Garden Score using frequency-weighted average.
+ *
+ * Formula: S_garden = sum(S_friend * 1/Frequency) / sum(1/Frequency)
+ *
+ * This prioritizes high-maintenance (frequent) relationships in the global score.
+ * Meeting boosts are applied with time decay and group scaling.
+ *
  * @param friends - Array of all friends
  * @param meetings - Array of all meeting requests
  * @returns Global score (0-100)
@@ -147,27 +222,60 @@ export const calculateIndividualFriendScore = (logs: ContactLog[]): number => {
 export const calculateSocialGardenScore = (friends: Friend[], meetings: MeetingRequest[]): number => {
   if (friends.length === 0) return 0;
 
-  // 1. Average of Individual Friend Scores
-  const totalFriendScore = friends.reduce((acc, f) => acc + f.individualScore, 0);
-  const avgFriendScore = totalFriendScore / friends.length;
+  // 1. Frequency-weighted average of Individual Friend Scores
+  // S_garden = sum(S_friend * 1/freq) / sum(1/freq)
+  let weightedScoreSum = 0;
+  let weightSum = 0;
 
-  // 2. Meeting Bonuses/Penalties
-  let meetingScore = 0;
+  friends.forEach(f => {
+    // Apply daily wilt to each friend's score for the global calculation
+    const wiltPenalty = calculateDailyWilt(f.lastContacted, f.frequencyDays);
+    const effectiveScore = Math.max(0, Math.min(100, f.individualScore + wiltPenalty));
+
+    const freqWeight = 1 / Math.max(1, f.frequencyDays);
+    weightedScoreSum += effectiveScore * freqWeight;
+    weightSum += freqWeight;
+  });
+
+  const weightedAvg = weightSum > 0 ? weightedScoreSum / weightSum : 0;
+
+  // 2. Meeting Boosts with time decay and group scaling
+  let meetingBoost = 0;
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
   meetings.forEach(m => {
     if (m.status === 'COMPLETE' && m.verified) {
-      meetingScore += 5; // +5 for every completed, verified meeting
+      const completedDate = new Date(m.scheduledDate || m.dateAdded);
+      const ageInDays = (Date.now() - completedDate.getTime()) / MS_PER_DAY;
+
+      // Time decay: Full influence 0-30 days, Moderate 31-90 days, none after
+      let decayMultiplier = 0;
+      if (ageInDays <= 30) {
+        decayMultiplier = 1.0; // Full influence
+      } else if (ageInDays <= 90) {
+        decayMultiplier = 0.5; // Moderate influence
+      }
+
+      if (decayMultiplier > 0) {
+        const baseBoost = 5;
+        // Group scaling: boost * sqrt(friends in meeting)
+        const linkedCount = m.linkedIds ? m.linkedIds.length : (m.linkedFriendId ? 1 : 1);
+        const groupScaling = Math.sqrt(Math.max(1, linkedCount));
+        meetingBoost += baseBoost * decayMultiplier * groupScaling;
+      }
     } else if (m.status === 'REQUESTED') {
-       // Penalty if sitting in requested too long (> 14 days with 20% buffer = 16.8 days)
-       const urgency = getMeetingUrgency(m.dateAdded);
-       if (urgency.daysPassed > (14 * TIMER_BUFFER_MULTIPLIER)) {
-         meetingScore -= 2;
-       }
+      // Penalty if sitting in requested too long (> 14 days with 20% buffer = 16.8 days)
+      const urgency = getMeetingUrgency(m.dateAdded);
+      if (urgency.daysPassed > (14 * TIMER_BUFFER_MULTIPLIER)) {
+        meetingBoost -= 2;
+      }
     }
   });
 
-  // Calculate final
-  return Math.round(Math.max(0, Math.min(100, avgFriendScore + (meetingScore / Math.max(1, friends.length)))));
+  // Normalize meeting boost by friend count
+  const normalizedBoost = meetingBoost / Math.max(1, friends.length);
+
+  return Math.round(Math.max(0, Math.min(100, weightedAvg + normalizedBoost)));
 };
 
 /**

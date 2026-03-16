@@ -15,6 +15,7 @@
  */
 
 import { Friend, ThemeId, ThemeColors, MeetingRequest, ContactLog, MeetingTimeframe, ContactChannel, CHANNEL_SCORE_BONUS } from '../types';
+import { calculateDailyWilt as _calculateDailyWilt } from './scoring';
 import { Sprout, Flower, Trees, Leaf, Skull } from 'lucide-react';
 import React from 'react';
 import { TIMER_BUFFER_MULTIPLIER } from './scoring';
@@ -496,65 +497,95 @@ export const calculateInteractionScore = (
 };
 
 /**
- * Recalculates a friend's total individual score based on history
+ * Three-Tier Time-Weighted scoring model for individual friends.
+ * Tier 1 (Momentum): 0–30 days = 25%, Tier 2 (Consistency): 31–89 days = 40%,
+ * Tier 3 (Foundation): 90–730 days = 35%. Interactions > 2 years fall off.
  */
 export const calculateIndividualFriendScore = (logs: ContactLog[]): number => {
-  // Start neutral
-  let score = 50;
+  const now = new Date();
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-  // We weight recent logs more heavily? For now, flat sum clamped 0-100
+  let tier1Score = 50;
+  let tier2Score = 50;
+  let tier3Score = 50;
+
   logs.forEach(log => {
-    score += (log.scoreDelta || 0);
+    const logDate = new Date(log.date);
+    const ageInDays = (now.getTime() - logDate.getTime()) / MS_PER_DAY;
+    if (ageInDays > 730) return;
+
+    const delta = log.scoreDelta || 0;
+    if (ageInDays <= 30) {
+      tier1Score += delta;
+    } else if (ageInDays <= 89) {
+      tier2Score += delta;
+    } else {
+      tier3Score += delta;
+    }
   });
 
-  return Math.max(0, Math.min(100, score));
+  tier1Score = Math.max(0, Math.min(100, tier1Score));
+  tier2Score = Math.max(0, Math.min(100, tier2Score));
+  tier3Score = Math.max(0, Math.min(100, tier3Score));
+
+  const weightedScore = (tier1Score * 0.25) + (tier2Score * 0.40) + (tier3Score * 0.35);
+  return Math.max(0, Math.min(100, Math.round(weightedScore)));
 };
 
 /**
- * Global Score Algorithm
+ * Global Score: frequency-weighted average with meeting boosts (time decay + group scaling).
+ * S_garden = sum(S_friend * 1/Frequency) / sum(1/Frequency)
  */
 export const calculateSocialGardenScore = (friends: Friend[], meetings: MeetingRequest[]): number => {
   if (friends.length === 0) return 0;
 
-  const getMeetingConfig = (timeframe?: MeetingTimeframe) => {
-    switch (timeframe) {
-      case 'ASAP':
-        return { bonus: 7, penalty: -4, staleAfterDays: 3 };
-      case 'DAYS':
-        return { bonus: 6, penalty: -3, staleAfterDays: 7 };
-      case 'MONTH':
-        return { bonus: 4, penalty: -1, staleAfterDays: 30 };
-      case 'FLEXIBLE':
-        return { bonus: 3, penalty: -1, staleAfterDays: 45 };
-      case 'WEEK':
-      default:
-        return { bonus: 5, penalty: -2, staleAfterDays: 14 };
-    }
-  };
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-  // 1. Average of Individual Friend Scores
-  const totalFriendScore = friends.reduce((acc, f) => acc + f.individualScore, 0);
-  const avgFriendScore = totalFriendScore / friends.length;
+  // 1. Frequency-weighted average
+  let weightedScoreSum = 0;
+  let weightSum = 0;
 
-  // 2. Meeting Bonuses/Penalties
-  let meetingScore = 0;
+  friends.forEach(f => {
+    const wiltPenalty = _calculateDailyWilt(f.lastContacted, f.frequencyDays);
+    const effectiveScore = Math.max(0, Math.min(100, f.individualScore + wiltPenalty));
+    const freqWeight = 1 / Math.max(1, f.frequencyDays);
+    weightedScoreSum += effectiveScore * freqWeight;
+    weightSum += freqWeight;
+  });
+
+  const weightedAvg = weightSum > 0 ? weightedScoreSum / weightSum : 0;
+
+  // 2. Meeting Boosts with time decay and group scaling
+  let meetingBoost = 0;
 
   meetings.forEach(m => {
-    const config = getMeetingConfig(m.desiredTimeframe);
-
     if (m.status === 'COMPLETE' && m.verified) {
-      meetingScore += config.bonus;
+      const completedDate = new Date(m.scheduledDate || m.dateAdded);
+      const ageInDays = (Date.now() - completedDate.getTime()) / MS_PER_DAY;
+
+      let decayMultiplier = 0;
+      if (ageInDays <= 30) {
+        decayMultiplier = 1.0;
+      } else if (ageInDays <= 90) {
+        decayMultiplier = 0.5;
+      }
+
+      if (decayMultiplier > 0) {
+        const baseBoost = 5;
+        const linkedCount = m.linkedIds ? m.linkedIds.length : (m.linkedFriendId ? 1 : 1);
+        const groupScaling = Math.sqrt(Math.max(1, linkedCount));
+        meetingBoost += baseBoost * decayMultiplier * groupScaling;
+      }
     } else if (m.status === 'REQUESTED') {
-       // Penalty if sitting in requested too long (timeframe aware + 20% grace buffer)
-       const urgency = getMeetingUrgency(m.dateAdded);
-       if (urgency.daysPassed > (config.staleAfterDays * TIMER_BUFFER_MULTIPLIER)) {
-         meetingScore += config.penalty;
-       }
+      const urgency = getMeetingUrgency(m.dateAdded);
+      if (urgency.daysPassed > (14 * TIMER_BUFFER_MULTIPLIER)) {
+        meetingBoost -= 2;
+      }
     }
   });
 
-  // Calculate final
-  return Math.round(Math.max(0, Math.min(100, avgFriendScore + (meetingScore / Math.max(1, friends.length)))));
+  const normalizedBoost = meetingBoost / Math.max(1, friends.length);
+  return Math.round(Math.max(0, Math.min(100, weightedAvg + normalizedBoost)));
 };
 
 export const getUpcomingBirthdays = (friends: Friend[]) => {
@@ -604,9 +635,9 @@ export interface SmartNudge {
 }
 
 /**
- * Analyze friend interaction patterns and recommend cadence adjustments.
- * - Consistently early contacts (>80% remaining) → suggest shorter cadence
- * - Consistently overdue contacts (negative remaining) → suggest longer cadence
+ * Dynamic Frequency Calibration: 3/5 threshold with 2-365 day soft limits.
+ * - "Slow Down": 3/5 too early (>80% timer left) → shorter cadence
+ * - "Grace": 3/5 overdue → longer cadence
  */
 export const getSmartNudges = (friends: Friend[]): SmartNudge[] => {
   const nudges: SmartNudge[] = [];
@@ -618,7 +649,7 @@ export const getSmartNudges = (friends: Friend[]): SmartNudge[] => {
     const earlyCount = recentLogs.filter(l => l.percentageRemaining > 80).length;
     const overdueCount = recentLogs.filter(l => l.percentageRemaining < 0).length;
 
-    if (earlyCount >= Math.ceil(recentLogs.length * 0.6) && f.frequencyDays > 2) {
+    if (earlyCount >= 3 && f.frequencyDays > 2) {
       const suggested = Math.max(2, Math.round(f.frequencyDays * 0.6));
       if (suggested < f.frequencyDays) {
         nudges.push({
@@ -632,8 +663,8 @@ export const getSmartNudges = (friends: Friend[]): SmartNudge[] => {
       }
     }
 
-    if (overdueCount >= Math.ceil(recentLogs.length * 0.6) && f.frequencyDays < 90) {
-      const suggested = Math.min(90, Math.round(f.frequencyDays * 1.5));
+    if (overdueCount >= 3 && f.frequencyDays < 365) {
+      const suggested = Math.min(365, Math.round(f.frequencyDays * 1.5));
       if (suggested > f.frequencyDays) {
         nudges.push({
           friendId: f.id,

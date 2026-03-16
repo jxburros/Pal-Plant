@@ -27,6 +27,7 @@ import { generateId, calculateTimeStatus, THEMES } from './utils/helpers';
 import { trackEvent } from './utils/analytics';
 import { useReminderEngine } from './hooks/useReminderEngine';
 import { useFriendsEngine } from './hooks/useFriendsEngine';
+import { editFriendLog, addPastLog as addPastLogFn } from './utils/friendEngine';
 import { initStorage, getFriends, getMeetings, getCategories, getSettings, exportAllData, importAllData, saveMetadata, getMetadata, getGroups } from './utils/storage';
 import { debouncedSaveFriends, debouncedSaveMeetings, debouncedSaveCategories, debouncedSaveSettings, debouncedSaveGroups } from './utils/debouncedStorage';
 
@@ -108,7 +109,8 @@ const App: React.FC = () => {
 
   const {
     friends, setFriends, feedbackMap, markContacted, clearFeedback,
-    deleteFriend, deleteLog: engineDeleteLog, saveFriend, bulkImport
+    deleteFriend, deleteLog: engineDeleteLog, editLog: engineEditLog,
+    addPastInteraction: engineAddPastInteraction, saveFriend, bulkImport
   } = useFriendsEngine(() => []);
 
   const [categories, setCategories] = useState<string[]>(['Friends', 'Romantic', 'Business', 'Family']);
@@ -297,6 +299,26 @@ const App: React.FC = () => {
     engineDeleteLog(friendId, logId);
     if (editingFriend?.id === friendId) {
       setEditingFriend(prev => prev ? ({ ...prev, logs: prev.logs.filter(l => l.id !== logId) }) : null);
+    }
+  };
+
+  const editLog = (friendId: string, logId: string, updates: { channel?: ContactChannel; date?: string }) => {
+    engineEditLog(friendId, logId, updates);
+    if (editingFriend?.id === friendId) {
+      setEditingFriend(prev => {
+        if (!prev) return null;
+        return editFriendLog(prev, logId, updates);
+      });
+    }
+  };
+
+  const handleAddPastInteraction = (friendId: string, channel: ContactChannel, date: string) => {
+    engineAddPastInteraction(friendId, channel, date);
+    if (editingFriend?.id === friendId) {
+      setEditingFriend(prev => {
+        if (!prev) return null;
+        return addPastLogFn(prev, channel, date);
+      });
     }
   };
 
@@ -622,6 +644,8 @@ const App: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveFriend}
         onDeleteLog={deleteLog}
+        onEditLog={editLog}
+        onAddPastInteraction={handleAddPastInteraction}
         initialData={editingFriend}
         categories={categories}
         onAddCategory={handleAddCategory}

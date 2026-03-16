@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export type ContactChannel = 'call' | 'text' | 'video' | 'in-person';
+export type ContactChannel = 'call' | 'text' | 'video' | 'in-person' | 'gaming';
 
 /**
  * Interaction weights control how much of the timer is restored when
@@ -27,6 +27,7 @@ export type ContactChannel = 'call' | 'text' | 'video' | 'in-person';
 export const CHANNEL_WEIGHTS: Record<ContactChannel, number> = {
   'text':      0.5,
   'call':      1.0,
+  'gaming':    1.05,
   'video':     1.15,
   'in-person': 1.25,
 };
@@ -38,6 +39,7 @@ export const CHANNEL_WEIGHTS: Record<ContactChannel, number> = {
 export const CHANNEL_SCORE_BONUS: Record<ContactChannel, number> = {
   'text':      3,
   'call':      7,
+  'gaming':    8,
   'video':     9,
   'in-person': 12,
 };
