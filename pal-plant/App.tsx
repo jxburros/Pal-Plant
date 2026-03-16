@@ -559,7 +559,7 @@ const App: React.FC = () => {
         )}
       </header>
 
-      <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 pb-40 max-w-2xl mx-auto w-full">
+      <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:px-6 sm:pt-6 pb-40 max-w-2xl mx-auto w-full">
         {activeTab === Tab.HOME ? (
           <HomeView
             friends={friends}
