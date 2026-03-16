@@ -16,7 +16,7 @@
 
 import { useState, useCallback } from 'react';
 import { ActionFeedback, ContactChannel, Friend } from '../types';
-import { processContactAction, removeFriendLog } from '../utils/friendEngine';
+import { processContactAction, removeFriendLog, editFriendLog, addPastLog } from '../utils/friendEngine';
 import { trackEvent } from '../utils/analytics';
 
 interface UseFriendsEngineReturn {
@@ -28,6 +28,8 @@ interface UseFriendsEngineReturn {
   clearFeedback: (friendId: string) => void;
   deleteFriend: (id: string) => void;
   deleteLog: (friendId: string, logId: string) => void;
+  editLog: (friendId: string, logId: string, updates: { channel?: ContactChannel; date?: string }) => void;
+  addPastInteraction: (friendId: string, channel: ContactChannel, date: string) => void;
   saveFriend: (friend: Friend, isEditing: boolean) => void;
   bulkImport: (newFriends: Friend[]) => void;
 }
@@ -113,6 +115,21 @@ export const useFriendsEngine = (initialFriends: Friend[] | (() => Friend[])): U
     }
   }, []);
 
+  const editLog = useCallback((friendId: string, logId: string, updates: { channel?: ContactChannel; date?: string }) => {
+    setFriends(prev => prev.map(f => {
+      if (f.id !== friendId) return f;
+      return editFriendLog(f, logId, updates);
+    }));
+  }, []);
+
+  const addPastInteraction = useCallback((friendId: string, channel: ContactChannel, date: string) => {
+    setFriends(prev => prev.map(f => {
+      if (f.id !== friendId) return f;
+      return addPastLog(f, channel, date);
+    }));
+    trackEvent('CONTACT_LOGGED', { friendId, channel, isPastEntry: true });
+  }, []);
+
   const bulkImport = useCallback((newFriends: Friend[]) => {
     setFriends(prev => [...newFriends, ...prev]);
     trackEvent('BULK_IMPORT', { count: newFriends.length });
@@ -127,6 +144,8 @@ export const useFriendsEngine = (initialFriends: Friend[] | (() => Friend[])): U
     clearFeedback,
     deleteFriend,
     deleteLog,
+    editLog,
+    addPastInteraction,
     saveFriend,
     bulkImport
   };

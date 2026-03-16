@@ -127,6 +127,99 @@ export const removeFriendLog = (friend: Friend, logId: string): Friend => {
 };
 
 /**
+ * Edit an existing contact log entry (channel and/or date).
+ * Recalculates the score delta based on the new values and recalculates friend score.
+ */
+export const editFriendLog = (
+  friend: Friend,
+  logId: string,
+  updates: { channel?: ContactChannel; date?: string }
+): Friend => {
+  const updatedLogs = friend.logs.map(log => {
+    if (log.id !== logId) return log;
+
+    const newChannel = updates.channel ?? log.channel;
+    const newDate = updates.date ?? log.date;
+
+    // Recalculate score delta with the updated channel
+    const daysOverdue = log.percentageRemaining < 0 ? Math.abs(Math.ceil(log.percentageRemaining / 100 * log.daysWaitGoal)) : 0;
+    const newScoreDelta = calculateInteractionScore(newChannel, log.percentageRemaining, daysOverdue);
+
+    return {
+      ...log,
+      channel: newChannel,
+      date: newDate,
+      scoreDelta: newScoreDelta,
+    };
+  });
+
+  const newScore = calculateIndividualFriendScore(updatedLogs);
+  const sortedLogs = [...updatedLogs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return {
+    ...friend,
+    logs: updatedLogs,
+    lastContacted: sortedLogs.length > 0 ? sortedLogs[0].date : friend.lastContacted,
+    individualScore: newScore,
+  };
+};
+
+/**
+ * Add a past interaction log entry. The user specifies the date and channel.
+ * Score delta is calculated based on where the date falls relative to the friend's
+ * contact history at that point in time.
+ */
+export const addPastLog = (
+  friend: Friend,
+  channel: ContactChannel,
+  date: string
+): Friend => {
+  // Find the log that was most recent *before* this past date to determine timer state
+  const pastDate = new Date(date);
+  const sortedExisting = [...friend.logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const precedingLog = sortedExisting.find(l => new Date(l.date) < pastDate);
+
+  let percentageRemaining = 50; // Default: assume sweet spot if no prior data
+  let daysOverdue = 0;
+
+  if (precedingLog) {
+    // Calculate what the timer status would have been at the past date
+    const status = calculateTimeStatus(precedingLog.date, friend.frequencyDays);
+    // Adjust for the actual past date rather than now
+    const lastDate = new Date(precedingLog.date);
+    const adjustedFreqMs = friend.frequencyDays * 1.2 * 24 * 60 * 60 * 1000;
+    const goalDate = new Date(lastDate.getTime() + adjustedFreqMs);
+    const totalDuration = goalDate.getTime() - lastDate.getTime();
+    const remaining = goalDate.getTime() - pastDate.getTime();
+    percentageRemaining = (remaining / totalDuration) * 100;
+    if (remaining < 0) {
+      daysOverdue = Math.ceil(Math.abs(remaining) / (24 * 60 * 60 * 1000));
+    }
+  }
+
+  const scoreDelta = calculateInteractionScore(channel, percentageRemaining, daysOverdue);
+
+  const newLog: ContactLog = {
+    id: generateId(),
+    date: pastDate.toISOString(),
+    channel,
+    daysWaitGoal: friend.frequencyDays,
+    percentageRemaining,
+    scoreDelta,
+  };
+
+  const newLogs = [...friend.logs, newLog].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const newScore = calculateIndividualFriendScore(newLogs);
+
+  return {
+    ...friend,
+    logs: newLogs,
+    lastContacted: newLogs[0].date, // Most recent log date
+    individualScore: newScore,
+  };
+};
+
+/**
  * Process a group contact by applying the specified channel to all members
  */
 export const processGroupContact = (
