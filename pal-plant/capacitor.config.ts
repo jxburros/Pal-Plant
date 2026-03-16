@@ -21,11 +21,9 @@ const config: CapacitorConfig = {
   appName: 'Pal Plant',
   webDir: 'dist',
   plugins: {
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert']
-    },
     LocalNotifications: {
-      iconColor: '#488AFF'
+      iconColor: '#488AFF',
+      sound: 'default'
     }
   }
 };

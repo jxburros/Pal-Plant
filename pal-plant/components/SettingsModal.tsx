@@ -21,7 +21,7 @@ import { THEMES } from '../utils/helpers';
 import { markBackupExportedNow } from '../hooks/useReminderEngine';
 import { exportAllData, importAllData } from '../utils/storage';
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications } from '@capacitor/push-notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -48,8 +48,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [nativePermission, setNativePermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
   useEffect(() => {
     if (isNativePlatform && isOpen) {
-      PushNotifications.checkPermissions().then(result => {
-        setNativePermission(result.receive as 'granted' | 'denied' | 'prompt');
+      LocalNotifications.checkPermissions().then(result => {
+        setNativePermission(result.display as 'granted' | 'denied' | 'prompt');
       }).catch(() => setNativePermission('prompt'));
     }
   }, [isNativePlatform, isOpen]);
@@ -132,12 +132,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!settings.reminders?.pushEnabled) {
       if (isNativePlatform) {
         try {
-          const result = await PushNotifications.requestPermissions();
-          if (result.receive === 'granted') {
+          const result = await LocalNotifications.requestPermissions();
+          if (result.display === 'granted') {
             updateReminders({ pushEnabled: true });
             setNativePermission('granted');
           } else {
-            setNativePermission(result.receive as 'denied' | 'prompt');
+            setNativePermission(result.display as 'denied' | 'prompt');
           }
         } catch {
           // Permission request failed

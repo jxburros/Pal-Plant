@@ -16,7 +16,6 @@
 
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Friend, MeetingRequest } from '../types';
 import { calculateTimeStatus } from '../utils/helpers';
@@ -102,56 +101,26 @@ const sendNotification = async (title: string, body: string) => {
 };
 
 export const useReminderEngine = ({ friends, meetingRequests, reminders, onBackupReminder, onQuickBackup }: ReminderEngineArgs) => {
-  // Request permissions for native push notifications on mount
+  // Request local notification permissions on mount
   useEffect(() => {
     if (!reminders.pushEnabled || !isNative()) return;
 
     const requestPermissions = async () => {
       try {
-        // Request native push notification permissions
-        const pushResult = await PushNotifications.checkPermissions();
-        const resolvedPushPermission = pushResult.receive === 'prompt'
-          ? (await PushNotifications.requestPermissions()).receive
-          : pushResult.receive;
-
-        if (resolvedPushPermission === 'granted') {
-          await PushNotifications.unregister().catch(() => undefined);
-          await PushNotifications.register();
-        }
+        // Ensure notification channel exists on Android
+        await createNotificationChannel();
 
         // Request local notification permissions
         const localResult = await LocalNotifications.checkPermissions();
         if (localResult.display === 'prompt') {
           await LocalNotifications.requestPermissions();
         }
-
-        // Set up listeners
-        PushNotifications.removeAllListeners();
-        PushNotifications.addListener('registration', async (token) => {
-          await saveMetadata('friendkeep_native_push_token', token.value);
-        });
-
-        PushNotifications.addListener('registrationError', (error) => {
-          console.warn('Native push registration error:', error);
-        });
-
-        PushNotifications.addListener('pushNotificationReceived', (notification) => {
-          const title = notification.title || 'Pal Plant';
-          const body = notification.body || 'You have a new notification';
-          sendNotification(title, body);
-        });
       } catch {
         // Silently fail if permission request fails
       }
     };
 
     requestPermissions();
-
-    return () => {
-      if (isNative()) {
-        PushNotifications.removeAllListeners();
-      }
-    };
   }, [reminders.pushEnabled]);
 
   // Check and send notifications periodically

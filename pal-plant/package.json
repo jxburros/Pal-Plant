@@ -18,7 +18,6 @@
     "@capacitor-community/contacts": "^7.1.0",
     "@capacitor/core": "^8.1.0",
     "@capacitor/local-notifications": "^8.0.1",
-    "@capacitor/push-notifications": "^8.0.1",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
