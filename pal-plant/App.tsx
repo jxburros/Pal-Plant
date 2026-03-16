@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download } from 'lucide-react';
-import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group } from './types';
+import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group, ContactChannel } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
@@ -396,10 +396,10 @@ const App: React.FC = () => {
 
   // Handle meeting follow-up confirmation
   const handleMeetingFollowUpConfirm = useCallback((meetingId: string, linkedIds: string[]) => {
-    // Mark all linked friends as contacted
+    // Mark all linked friends as contacted (in-person since they met)
     if (linkedIds.length > 0) {
       linkedIds.forEach(friendId => {
-        markContacted(friendId, 'REGULAR');
+        markContacted(friendId, 'in-person');
       });
       showToast(`Marked ${linkedIds.length} contact${linkedIds.length > 1 ? 's' : ''} as updated`, 'success');
     }
@@ -421,9 +421,9 @@ const App: React.FC = () => {
   }, []);
 
   // Handle group contact action
-  const handleGroupContact = useCallback((memberIds: string[], type: 'REGULAR' | 'QUICK') => {
+  const handleGroupContact = useCallback((memberIds: string[], channel: ContactChannel) => {
     memberIds.forEach(friendId => {
-      markContacted(friendId, type);
+      markContacted(friendId, channel);
     });
     showToast(`Contacted ${memberIds.length} friend${memberIds.length > 1 ? 's' : ''}!`, 'success');
     setIsGroupManagementOpen(false);

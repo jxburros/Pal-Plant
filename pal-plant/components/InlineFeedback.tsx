@@ -15,13 +15,20 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { ActionFeedback } from '../types';
-import { TrendingUp, TrendingDown, Clock, Zap, ArrowRight } from 'lucide-react';
+import { ActionFeedback, ContactChannel } from '../types';
+import { TrendingUp, TrendingDown, Clock, ArrowRight } from 'lucide-react';
 
 interface InlineFeedbackProps {
   feedback: ActionFeedback;
   onDismiss: () => void;
 }
+
+const CHANNEL_LABELS: Record<ContactChannel, string> = {
+  'text': 'Text',
+  'call': 'Phone Call',
+  'video': 'Video Call',
+  'in-person': 'In Person',
+};
 
 const InlineFeedback: React.FC<InlineFeedbackProps> = ({ feedback, onDismiss }) => {
   const [visible, setVisible] = useState(false);
@@ -41,10 +48,7 @@ const InlineFeedback: React.FC<InlineFeedbackProps> = ({ feedback, onDismiss }) 
   const isPositive = feedback.scoreDelta > 0;
   const isNegative = feedback.scoreDelta < 0;
 
-  const typeLabel =
-    feedback.type === 'DEEP' ? 'Deep Connection' :
-    feedback.type === 'QUICK' ? 'Quick Touch' :
-    'Regular Contact';
+  const channelLabel = CHANNEL_LABELS[feedback.channel] || feedback.channel;
 
   const scoreBgClass = isPositive
     ? 'bg-emerald-500 text-white'
@@ -56,7 +60,7 @@ const InlineFeedback: React.FC<InlineFeedbackProps> = ({ feedback, onDismiss }) 
     <div
       role="status"
       aria-live="polite"
-      aria-label={`${typeLabel}: ${isPositive ? '+' : ''}${feedback.scoreDelta} points. ${feedback.timerEffect}`}
+      aria-label={`${channelLabel}: ${isPositive ? '+' : ''}${feedback.scoreDelta} points. ${feedback.timerEffect}`}
       className={`mt-3 rounded-xl border overflow-hidden transition-all duration-300 ${
         visible ? 'opacity-100 max-h-40 translate-y-0' : 'opacity-0 max-h-0 -translate-y-2'
       } ${isPositive ? 'border-emerald-200 bg-emerald-50' : isNegative ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-slate-50'}`}
@@ -68,7 +72,7 @@ const InlineFeedback: React.FC<InlineFeedbackProps> = ({ feedback, onDismiss }) 
           {isPositive ? '+' : ''}{feedback.scoreDelta} pts
         </span>
 
-        <span className="text-slate-400 font-medium">{typeLabel}</span>
+        <span className="text-slate-400 font-medium">{channelLabel}</span>
 
         {/* Arrow separator */}
         <ArrowRight size={12} className="text-slate-300" />
@@ -85,19 +89,6 @@ const InlineFeedback: React.FC<InlineFeedbackProps> = ({ feedback, onDismiss }) 
             <ArrowRight size={12} className="text-slate-300" />
             <span className="inline-flex items-center gap-1 text-amber-700 font-semibold bg-amber-100 px-2 py-0.5 rounded-md">
               cadence {feedback.oldFrequencyDays}d <ArrowRight size={10} /> {feedback.newFrequencyDays}d
-            </span>
-          </>
-        )}
-
-        {/* Token change */}
-        {feedback.tokenChange !== 0 && (
-          <>
-            <ArrowRight size={12} className="text-slate-300" />
-            <span className={`inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md ${
-              feedback.tokenChange > 0 ? 'text-yellow-700 bg-yellow-100' : 'text-slate-500 bg-slate-100'
-            }`}>
-              <Zap size={12} />
-              {feedback.tokenChange > 0 ? '+1 token' : '-1 token'} ({feedback.tokensAvailable} left)
             </span>
           </>
         )}

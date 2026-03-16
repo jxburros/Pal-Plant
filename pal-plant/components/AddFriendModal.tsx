@@ -120,8 +120,6 @@ const FriendModal: React.FC<FriendModalProps> = ({
       lastContacted: new Date().toISOString(),
       logs: [],
       individualScore: 50,
-      quickTouchesAvailable: 0,
-      cyclesSinceLastQuickTouch: 0
     };
 
     const friendToSave: Friend = {

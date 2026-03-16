@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Friend, ThemeId, ThemeColors, MeetingRequest, ContactLog, MeetingTimeframe } from '../types';
+import { Friend, ThemeId, ThemeColors, MeetingRequest, ContactLog, MeetingTimeframe, ContactChannel, CHANNEL_SCORE_BONUS } from '../types';
 import { Sprout, Flower, Trees, Leaf, Skull } from 'lucide-react';
 import React from 'react';
 import { TIMER_BUFFER_MULTIPLIER } from './scoring';
@@ -471,34 +471,28 @@ export const getMeetingUrgency = (dateAdded: string) => {
 // ─── Scoring ──────────────────────────────────────────────────────
 
 /**
- * Calculates the score for a single interaction event
+ * Calculates the score for a single interaction event based on channel and timing.
  */
 export const calculateInteractionScore = (
-  type: 'REGULAR' | 'DEEP' | 'QUICK',
+  channel: ContactChannel,
   percentageRemaining: number,
   daysOverdue: number
 ): number => {
-  if (type === 'QUICK') return 2; // Small bonus for quick touches
-  if (type === 'DEEP') return 15; // Big bonus for deep connections
+  const baseBonus = CHANNEL_SCORE_BONUS[channel];
 
-  // Regular Logic
   if (daysOverdue > 0) {
-    // Penalty: -5 points per day overdue, max -30
-    return Math.max(-30, -5 * daysOverdue);
+    return Math.max(-20, -3 * daysOverdue);
   }
 
-  // Too Early Penalty (>80% left)
   if (percentageRemaining > 80) {
-    return -2;
+    return Math.round(-0.3 * baseBonus) || -1;
   }
 
-  // Sweet Spot (0% to 50% left) -> High points
   if (percentageRemaining <= 50) {
-    return 10;
+    return baseBonus;
   }
 
-  // Normal (50% to 80% left)
-  return 5;
+  return Math.round(0.7 * baseBonus);
 };
 
 /**

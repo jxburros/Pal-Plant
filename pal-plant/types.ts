@@ -14,27 +14,38 @@
  * limitations under the License.
  */
 
-export type ContactChannel = 'call' | 'text' | 'video' | 'in-person' | 'other';
+export type ContactChannel = 'call' | 'text' | 'video' | 'in-person';
 
-export enum InteractionType {
-  TEXT = 'TEXT',
-  PHONE_CALL = 'PHONE_CALL',
-  VIDEO_CALL = 'VIDEO_CALL',
-  IN_PERSON = 'IN_PERSON'
-}
+/**
+ * Interaction weights control how much of the timer is restored when
+ * you log an interaction via a given channel.
+ *
+ * weight 1.0  = resets the timer to 100% of frequency
+ * weight 0.5  = resets the timer to  50% of frequency
+ * weight 1.25 = resets the timer to 125% of frequency (bonus time)
+ */
+export const CHANNEL_WEIGHTS: Record<ContactChannel, number> = {
+  'text':      0.5,
+  'call':      1.0,
+  'video':     1.15,
+  'in-person': 1.25,
+};
 
-export const INTERACTION_WEIGHTS: Record<InteractionType, number> = {
-  [InteractionType.TEXT]: 0.65,
-  [InteractionType.PHONE_CALL]: 1.0,
-  [InteractionType.VIDEO_CALL]: 1.25,
-  [InteractionType.IN_PERSON]: 1.25,
+/**
+ * Score bonuses awarded per channel on a well-timed interaction (sweet spot).
+ * These are the *base* values; timing multipliers are applied on top.
+ */
+export const CHANNEL_SCORE_BONUS: Record<ContactChannel, number> = {
+  'text':      3,
+  'call':      7,
+  'video':     9,
+  'in-person': 12,
 };
 
 export interface ContactLog {
   id: string;
   date: string; // ISO string
-  type: 'REGULAR' | 'DEEP' | 'QUICK';
-  channel?: ContactChannel; // Communication method used
+  channel: ContactChannel; // Communication method used
   daysWaitGoal: number;
   percentageRemaining: number;
   scoreDelta?: number; // How much this interaction changed the score
@@ -54,9 +65,6 @@ export interface Friend {
 
   // Scoring & Mechanics
   individualScore: number; // 0 to 100
-  lastDeepConnection?: string; // ISO
-  quickTouchesAvailable: number; // 1 available per 2 full cycles
-  cyclesSinceLastQuickTouch: number;
 
   logs: ContactLog[];
   avatarSeed?: number;
@@ -118,15 +126,13 @@ export interface AppSettings {
 }
 
 export interface ActionFeedback {
-  type: 'REGULAR' | 'DEEP' | 'QUICK';
+  channel: ContactChannel;
   scoreDelta: number;
   newScore: number;
   cadenceShortened: boolean;
   oldFrequencyDays?: number;
   newFrequencyDays?: number;
-  timerEffect: string; // e.g. "reset to 14 days", "extended by 12 hours", "+30 min"
-  tokenChange: number; // -1 if consumed, 0 if unchanged, +1 if earned
-  tokensAvailable: number;
+  timerEffect: string; // e.g. "reset to 14 days", "timer at 50%"
   timestamp: number;
 }
 

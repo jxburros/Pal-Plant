@@ -19,7 +19,7 @@
  * @module scoring
  */
 
-import { Friend, MeetingRequest, ContactLog } from '../types';
+import { Friend, MeetingRequest, ContactLog, ContactChannel, CHANNEL_SCORE_BONUS } from '../types';
 import { Sprout, Flower, Trees, Leaf, Skull } from 'lucide-react';
 import React from 'react';
 
@@ -70,48 +70,43 @@ export const calculateTimeStatus = (lastContacted: string, frequencyDays: number
 };
 
 /**
- * Calculates the score for a single interaction event
- * 
- * Scoring rules:
- * - QUICK touch: +2 points (small bonus)
- * - DEEP connection: +15 points (big bonus)
- * - REGULAR interaction:
- *   - Overdue: -5 points per day (max -30)
- *   - Too early (>80% remaining): -2 points
- *   - Sweet spot (0-50% remaining): +10 points
- *   - Normal (50-80% remaining): +5 points
- * 
- * @param type - Type of interaction (REGULAR, DEEP, or QUICK)
+ * Calculates the score for a single interaction event based on channel and timing.
+ *
+ * Each channel has a base bonus (CHANNEL_SCORE_BONUS). Timing applies a multiplier:
+ *   - Sweet spot (0-50% remaining): 1.0x  (full bonus)
+ *   - On time (50-80% remaining):   0.7x
+ *   - Too early (>80% remaining):   -0.3x (small penalty)
+ *   - Overdue: -3 per day late (max -20), independent of channel
+ *
+ * @param channel - Communication channel used
  * @param percentageRemaining - Percentage of time remaining before deadline
  * @param daysOverdue - Number of days past the deadline (0 if not overdue)
  * @returns Score delta for this interaction
  */
 export const calculateInteractionScore = (
-  type: 'REGULAR' | 'DEEP' | 'QUICK',
+  channel: ContactChannel,
   percentageRemaining: number,
   daysOverdue: number
 ): number => {
-  if (type === 'QUICK') return 2; // Small bonus for quick touches
-  if (type === 'DEEP') return 15; // Big bonus for deep connections
+  const baseBonus = CHANNEL_SCORE_BONUS[channel];
 
-  // Regular Logic
   if (daysOverdue > 0) {
-    // Penalty: -5 points per day overdue, max -30
-    return Math.max(-30, -5 * daysOverdue);
+    // Penalty: -3 per day overdue, max -20
+    return Math.max(-20, -3 * daysOverdue);
   }
 
-  // Too Early Penalty (>80% left)
+  // Too Early (>80% left) — small penalty regardless of channel
   if (percentageRemaining > 80) {
-    return -2;
+    return Math.round(-0.3 * baseBonus) || -1;
   }
 
-  // Sweet Spot (0% to 50% left) -> High points
+  // Sweet Spot (0-50% left) — full bonus
   if (percentageRemaining <= 50) {
-    return 10;
+    return baseBonus;
   }
 
-  // Normal (50% to 80% left)
-  return 5;
+  // On time (50-80% left) — 70% of bonus
+  return Math.round(0.7 * baseBonus);
 };
 
 /**

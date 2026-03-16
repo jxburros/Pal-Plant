@@ -168,7 +168,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
       if (duplicate && resolution === 'overwrite') {
         // Overwrite: Replace contact info but preserve history and scoring
-        // Preserves: logs, individualScore, quickTouchesAvailable, cyclesSinceLastQuickTouch, avatarSeed
+        // Preserves: logs, individualScore, avatarSeed
         const updatedFriend: Friend = {
           ...duplicate.existingFriend,
           name: contact.name,
@@ -203,8 +203,6 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
         frequencyDays: defaultFrequency,
         lastContacted: new Date().toISOString(),
         individualScore: 50,
-        quickTouchesAvailable: 0,
-        cyclesSinceLastQuickTouch: 0,
         logs: [],
         avatarSeed: Math.floor(Math.random() * 10000)
       });

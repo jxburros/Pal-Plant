@@ -23,8 +23,8 @@ interface UseFriendsEngineReturn {
   friends: Friend[];
   setFriends: React.Dispatch<React.SetStateAction<Friend[]>>;
   feedbackMap: Record<string, ActionFeedback>;
-  markContacted: (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK', channel?: ContactChannel) => void;
-  markContactedBatch: (ids: string[], type: 'REGULAR' | 'DEEP' | 'QUICK', channel?: ContactChannel) => void;
+  markContacted: (id: string, channel: ContactChannel) => void;
+  markContactedBatch: (ids: string[], channel: ContactChannel) => void;
   clearFeedback: (friendId: string) => void;
   deleteFriend: (id: string) => void;
   deleteLog: (friendId: string, logId: string) => void;
@@ -44,18 +44,18 @@ export const useFriendsEngine = (initialFriends: Friend[] | (() => Friend[])): U
     });
   }, []);
 
-  const markContacted = useCallback((id: string, type: 'REGULAR' | 'DEEP' | 'QUICK', channel?: ContactChannel) => {
+  const markContacted = useCallback((id: string, channel: ContactChannel) => {
     setFriends(prev => prev.map(f => {
       if (f.id !== id) return f;
 
-      const result = processContactAction(f, type, new Date(), channel);
+      const result = processContactAction(f, channel, new Date());
       if (result.friend === f) return f;
 
       // Show inline feedback
       setFeedbackMap(prevMap => ({ ...prevMap, [id]: result.feedback }));
       setTimeout(() => clearFeedback(id), 5500);
 
-      const metadata: Record<string, string | number | boolean | undefined> = { friendId: f.id, type };
+      const metadata: Record<string, string | number | boolean | undefined> = { friendId: f.id, channel };
       const latestLog = result.friend.logs[0];
       if (latestLog?.scoreDelta !== undefined) metadata.scoreChange = latestLog.scoreDelta;
       trackEvent('CONTACT_LOGGED', metadata);
@@ -64,18 +64,9 @@ export const useFriendsEngine = (initialFriends: Friend[] | (() => Friend[])): U
     }));
   }, [clearFeedback]);
 
-  /**
-   * Batch version of markContacted - processes multiple friends in a single state update.
-   * Use this when logging interactions with multiple friends simultaneously (e.g., group meetings)
-   * to avoid triggering multiple re-renders.
-   * 
-   * @param ids - Array of friend IDs to mark as contacted
-   * @param type - Type of interaction ('REGULAR', 'DEEP', or 'QUICK')
-   * @param channel - Optional contact channel
-   */
-  const markContactedBatch = useCallback((ids: string[], type: 'REGULAR' | 'DEEP' | 'QUICK', channel?: ContactChannel) => {
+  const markContactedBatch = useCallback((ids: string[], channel: ContactChannel) => {
     if (ids.length === 0) return;
-    
+
     const idsSet = new Set(ids);
     const now = new Date();
     const newFeedback: Record<string, ActionFeedback> = {};
@@ -83,13 +74,12 @@ export const useFriendsEngine = (initialFriends: Friend[] | (() => Friend[])): U
     setFriends(prev => prev.map(f => {
       if (!idsSet.has(f.id)) return f;
 
-      const result = processContactAction(f, type, now, channel);
+      const result = processContactAction(f, channel, now);
       if (result.friend === f) return f;
 
-      // Collect feedback for all processed friends
       newFeedback[f.id] = result.feedback;
 
-      const metadata: Record<string, string | number | boolean | undefined> = { friendId: f.id, type };
+      const metadata: Record<string, string | number | boolean | undefined> = { friendId: f.id, channel };
       const latestLog = result.friend.logs[0];
       if (latestLog?.scoreDelta !== undefined) metadata.scoreChange = latestLog.scoreDelta;
       trackEvent('CONTACT_LOGGED', metadata);
@@ -97,7 +87,6 @@ export const useFriendsEngine = (initialFriends: Friend[] | (() => Friend[])): U
       return result.friend;
     }));
 
-    // Show inline feedback for all processed friends
     setFeedbackMap(prevMap => ({ ...prevMap, ...newFeedback }));
     ids.forEach(id => setTimeout(() => clearFeedback(id), 5500));
   }, [clearFeedback]);

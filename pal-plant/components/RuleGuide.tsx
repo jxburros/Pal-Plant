@@ -15,7 +15,7 @@
  */
 
 import React, { useState } from 'react';
-import { X, ChevronDown, ChevronUp, Droplets, Heart, Zap, Clock, TrendingUp, TrendingDown, AlertTriangle, HelpCircle, Target } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Droplets, Clock, TrendingUp, TrendingDown, AlertTriangle, HelpCircle, Target, MessageCircle, PhoneCall, Video, Users } from 'lucide-react';
 
 interface RuleGuideProps {
   isOpen: boolean;
@@ -67,52 +67,62 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
         </div>
 
         <div className="space-y-3">
-          {/* Scoring Rules */}
+          {/* Interaction Channels */}
           <Section
-            title="Scoring Rules"
+            title="Interaction Channels & Scoring"
             icon={<TrendingUp size={18} className="text-emerald-600" />}
             defaultOpen={true}
           >
-            <p>Every friend starts at <strong>50 points</strong>. Your score changes with each interaction based on timing.</p>
+            <p>Every friend starts at <strong>50 points</strong>. When you log an interaction, both the <strong>channel</strong> and your <strong>timing</strong> affect the score and timer.</p>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="font-bold text-blue-800 flex items-center gap-2">
+                <MessageCircle size={14} /> Text Message
+              </p>
+              <ul className="mt-2 space-y-1 text-blue-700 text-xs">
+                <li><strong>Timer:</strong> Restores 50% of your frequency</li>
+                <li><strong>Sweet-spot bonus:</strong> +3 points</li>
+                <li>Light check-ins — keeps the connection alive</li>
+              </ul>
+            </div>
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
               <p className="font-bold text-emerald-800 flex items-center gap-2">
-                <Droplets size={14} /> Regular Contact (Water)
+                <PhoneCall size={14} /> Phone Call
               </p>
               <ul className="mt-2 space-y-1 text-emerald-700 text-xs">
-                <li><strong>Sweet spot (0-50% timer left):</strong> +10 points</li>
-                <li><strong>On time (50-80% left):</strong> +5 points</li>
-                <li><strong>Too early (&gt;80% left):</strong> -2 points</li>
-                <li><strong>Overdue:</strong> -5 per day late (max -30)</li>
+                <li><strong>Timer:</strong> Restores 100% of your frequency</li>
+                <li><strong>Sweet-spot bonus:</strong> +7 points</li>
+                <li>The baseline — a full timer reset</li>
               </ul>
             </div>
 
-            <div className="bg-pink-50 border border-pink-200 rounded-lg p-3">
-              <p className="font-bold text-pink-800 flex items-center gap-2">
-                <Heart size={14} /> Deep Connection
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+              <p className="font-bold text-purple-800 flex items-center gap-2">
+                <Video size={14} /> Video Call
               </p>
-              <ul className="mt-2 space-y-1 text-pink-700 text-xs">
-                <li><strong>Always:</strong> +15 points</li>
-                <li>Extends your timer by an extra 12 hours</li>
-                <li>24-hour cooldown (28.8 hours with grace buffer)</li>
+              <ul className="mt-2 space-y-1 text-purple-700 text-xs">
+                <li><strong>Timer:</strong> Restores 115% of your frequency</li>
+                <li><strong>Sweet-spot bonus:</strong> +9 points</li>
+                <li>Face-to-face quality over distance</li>
               </ul>
             </div>
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="font-bold text-yellow-800 flex items-center gap-2">
-                <Zap size={14} /> Quick Touch
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <p className="font-bold text-orange-800 flex items-center gap-2">
+                <Users size={14} /> In Person
               </p>
-              <ul className="mt-2 space-y-1 text-yellow-700 text-xs">
-                <li><strong>Always:</strong> +2 points</li>
-                <li>Shifts timer forward by 8% of full timer length</li>
-                <li>Costs 1 token (see tokens section below)</li>
+              <ul className="mt-2 space-y-1 text-orange-700 text-xs">
+                <li><strong>Timer:</strong> Restores 125% of your frequency (bonus time!)</li>
+                <li><strong>Sweet-spot bonus:</strong> +12 points</li>
+                <li>The gold standard — nothing beats real face time</li>
               </ul>
             </div>
 
             <p className="text-xs text-slate-500">Score is always clamped between 0 and 100.</p>
           </Section>
 
-          {/* Timing & Cadence */}
+          {/* Timing */}
           <Section
             title="Timing & Cadence Changes"
             icon={<Clock size={18} className="text-blue-500" />}
@@ -120,22 +130,20 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
             <p>Each friend has a <strong>frequency timer</strong> (in days) that you set. This is how often you aim to contact them.</p>
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+              <p className="font-bold text-emerald-800">Timing Multipliers</p>
+              <ul className="mt-2 space-y-1 text-xs text-emerald-700">
+                <li><strong>Sweet spot (0-50% timer left):</strong> Full channel bonus</li>
+                <li><strong>On time (50-80% left):</strong> 70% of channel bonus</li>
+                <li><strong>Too early (&gt;80% left):</strong> Small penalty</li>
+                <li><strong>Overdue:</strong> -3 per day late (max -20)</li>
+              </ul>
+            </div>
+
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
               <p className="font-bold text-emerald-800">Built-in Grace Period (20% Buffer)</p>
               <p className="text-xs text-emerald-700 mt-1">
                 All timers include a <strong>20% buffer</strong> to reduce stress. A 10-day timer actually gives you 12 days.
                 The UI shows the goal (10 days), but the system won't mark you overdue until the full buffered time passes.
-              </p>
-              <p className="text-xs text-emerald-700 mt-1">
-                This grace period applies to all timers: contact timers, deep connection cooldowns, and meeting request deadlines.
-                This hidden buffer means you're never as close to "overdue" as you think!
-              </p>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="font-bold text-blue-800">Timer Battery</p>
-              <p className="text-xs text-blue-700 mt-1">
-                The progress bar shows how much time is left before your next check-in is due.
-                As time passes, the bar drains. When it hits 0%, the friend is overdue (after grace period).
               </p>
             </div>
 
@@ -144,45 +152,7 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
               <p className="text-xs text-amber-700 mt-1">
                 If you contact someone twice in a row with more than 80% timer remaining,
                 the system detects frequent contact and <strong>halves the frequency</strong>.
-                For example, a 14-day cadence becomes 7 days.
-              </p>
-              <p className="text-xs text-amber-700 mt-1">
-                This helps the timer match your actual habits. You'll see an inline notification when this happens.
-              </p>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-              <p className="font-bold text-slate-700">Why did my timer change?</p>
-              <ul className="mt-2 space-y-1 text-xs text-slate-600">
-                <li><strong>After Regular/Deep contact:</strong> Timer resets to your full frequency days</li>
-                <li><strong>After Deep contact:</strong> Timer also gets an extra 12 hours</li>
-                <li><strong>After Quick Touch:</strong> Timer shifts forward by 8% of full timer length</li>
-                <li><strong>Cadence shortened:</strong> Two consecutive early contacts trigger halving</li>
-              </ul>
-            </div>
-          </Section>
-
-          {/* Quick Touch Tokens */}
-          <Section
-            title="Quick-Touch Tokens"
-            icon={<Zap size={18} className="text-yellow-500" />}
-          >
-            <p>Quick touches are limited by a token system to prevent overuse.</p>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="font-bold text-yellow-800">How tokens work</p>
-              <ul className="mt-2 space-y-1 text-xs text-yellow-700">
-                <li>Each quick touch costs <strong>1 token</strong></li>
-                <li>You earn <strong>1 token per 2 full contact cycles</strong> (Regular or Deep contacts)</li>
-                <li>When the cycle counter reaches 2, you get a token and the counter resets</li>
-              </ul>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-              <p className="font-bold text-slate-700">Why is Quick Touch unavailable?</p>
-              <p className="text-xs text-slate-600 mt-1">
-                You have no tokens left. Complete 2 Regular or Deep contact cycles with this friend
-                to earn a new token. The card shows how many cycles remain until your next token.
+                This helps the timer match your actual habits.
               </p>
             </div>
           </Section>
@@ -210,10 +180,6 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
                 <li>Schedule it with a date and location (Scheduled)</li>
                 <li>After the date passes, confirm: attended or close without meeting</li>
               </ol>
-              <p className="text-xs text-slate-500 mt-2">
-                Stale requests (over 14 days old) will incur a score penalty.
-                Overdue scheduled meetings are highlighted for quick resolution.
-              </p>
             </div>
           </Section>
 
@@ -272,7 +238,7 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
               <p className="font-bold text-orange-800">Contacting Too Early</p>
               <ul className="mt-2 space-y-1 text-xs text-orange-700">
-                <li>Small score penalty (-2 points)</li>
+                <li>Small score penalty (proportional to channel)</li>
                 <li>If done twice in a row (both with &gt;80% left), cadence is halved</li>
                 <li>This is designed to match your natural rhythm</li>
               </ul>
@@ -281,8 +247,8 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
               <p className="font-bold text-red-800">Contacting Too Late</p>
               <ul className="mt-2 space-y-1 text-xs text-red-700">
-                <li>Score penalty: -5 per day overdue</li>
-                <li>Maximum penalty: -30 points in one interaction</li>
+                <li>Score penalty: -3 per day overdue</li>
+                <li>Maximum penalty: -20 points in one interaction</li>
                 <li>The plant icon reflects the withered state</li>
                 <li>Overdue friends appear in the "Withering Plants" dashboard alert</li>
               </ul>
@@ -291,8 +257,8 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
               <p className="font-bold text-emerald-800">The Sweet Spot</p>
               <p className="text-xs text-emerald-700 mt-1">
-                Contact friends when their timer is between 0% and 50% remaining for the maximum +10 point bonus.
-                This is the ideal window where your effort is most rewarded.
+                Contact friends when their timer is between 0% and 50% remaining for the maximum bonus.
+                Higher-quality channels (in-person, video) earn significantly more points.
               </p>
             </div>
           </Section>

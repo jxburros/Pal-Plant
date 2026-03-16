@@ -24,7 +24,7 @@ import { calculateStreaks } from '../utils/streaks';
 import { getSmartNudges } from '../utils/nudges';
 import { getCohortStats } from '../utils/stats';
 import { generateId, fileToBase64 } from '../utils/core';
-import { Friend, MeetingRequest, InteractionType, INTERACTION_WEIGHTS } from '../types';
+import { Friend, MeetingRequest, ContactChannel, CHANNEL_WEIGHTS, CHANNEL_SCORE_BONUS } from '../types';
 
 // ─── Test Helpers ────────────────────────────────────────────────
 
@@ -161,7 +161,7 @@ test('detectDuplicates: exact name match', () => {
   const existingFriends: Friend[] = [{
     id: 'f1', name: 'John Doe', category: 'Friends', frequencyDays: 10,
     lastContacted: new Date().toISOString(), individualScore: 50,
-    quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0, logs: []
+    logs: []
   }];
   const duplicates = detectDuplicates(newContacts, existingFriends);
   assert.equal(duplicates.length, 1);
@@ -173,7 +173,7 @@ test('detectDuplicates: email match', () => {
   const existingFriends: Friend[] = [{
     id: 'f1', name: 'John Doe', category: 'Friends', frequencyDays: 10,
     lastContacted: new Date().toISOString(), individualScore: 50,
-    quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0, logs: [],
+    logs: [],
     email: 'john@example.com'
   }];
   const duplicates = detectDuplicates(newContacts, existingFriends);
@@ -186,7 +186,7 @@ test('detectDuplicates: phone match', () => {
   const existingFriends: Friend[] = [{
     id: 'f1', name: 'John Doe', category: 'Friends', frequencyDays: 10,
     lastContacted: new Date().toISOString(), individualScore: 50,
-    quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0, logs: [],
+    logs: [],
     phone: '(555) 123-4567'
   }];
   const duplicates = detectDuplicates(newContacts, existingFriends);
@@ -199,7 +199,7 @@ test('detectDuplicates: partial name match', () => {
   const existingFriends: Friend[] = [{
     id: 'f1', name: 'John Doe', category: 'Friends', frequencyDays: 10,
     lastContacted: new Date().toISOString(), individualScore: 50,
-    quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0, logs: []
+    logs: []
   }];
   const duplicates = detectDuplicates(newContacts, existingFriends);
   assert.equal(duplicates.length, 1);
@@ -239,7 +239,7 @@ test('calculateStreaks: no logs returns zero streaks', () => {
   const friends: Friend[] = [{
     id: 'f1', name: 'Test', category: 'Friends', frequencyDays: 10,
     lastContacted: new Date().toISOString(), individualScore: 50,
-    quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0, logs: []
+    logs: []
   }];
   const streaks = calculateStreaks(friends);
   assert.equal(streaks.currentStreak, 0);
@@ -254,11 +254,10 @@ test('calculateStreaks: consecutive days create streak', () => {
   const friends: Friend[] = [{
     id: 'f1', name: 'Test', category: 'Friends', frequencyDays: 10,
     lastContacted: new Date().toISOString(), individualScore: 50,
-    quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0,
     logs: [
-      { id: '1', date: today.toISOString(), type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 10 },
-      { id: '2', date: yesterday.toISOString(), type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 10 },
-      { id: '3', date: twoDaysAgo.toISOString(), type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 10 }
+      { id: '1', date: today.toISOString(), channel: 'call', daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 10 },
+      { id: '2', date: yesterday.toISOString(), channel: 'call', daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 10 },
+      { id: '3', date: twoDaysAgo.toISOString(), channel: 'call', daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 10 }
     ]
   }];
   const streaks = calculateStreaks(friends);
@@ -271,12 +270,11 @@ test('getSmartNudges: suggests shorter cadence for early contacts', () => {
   const friend: Friend = {
     id: 'f1', name: 'Early Bird', category: 'Friends', frequencyDays: 10,
     lastContacted: new Date().toISOString(), individualScore: 50,
-    quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0,
     logs: [
-      { id: '1', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 85, scoreDelta: -2 },
-      { id: '2', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 90, scoreDelta: -2 },
-      { id: '3', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 88, scoreDelta: -2 },
-      { id: '4', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 82, scoreDelta: -2 }
+      { id: '1', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 85, scoreDelta: -2 },
+      { id: '2', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 90, scoreDelta: -2 },
+      { id: '3', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 88, scoreDelta: -2 },
+      { id: '4', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 82, scoreDelta: -2 }
     ]
   };
   const nudges = getSmartNudges([friend]);
@@ -289,12 +287,11 @@ test('getSmartNudges: suggests longer cadence for overdue contacts', () => {
   const friend: Friend = {
     id: 'f1', name: 'Late Larry', category: 'Friends', frequencyDays: 10,
     lastContacted: new Date().toISOString(), individualScore: 50,
-    quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0,
     logs: [
-      { id: '1', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: -5, scoreDelta: -10 },
-      { id: '2', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: -10, scoreDelta: -15 },
-      { id: '3', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: -8, scoreDelta: -12 },
-      { id: '4', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: -3, scoreDelta: -8 }
+      { id: '1', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: -5, scoreDelta: -10 },
+      { id: '2', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: -10, scoreDelta: -15 },
+      { id: '3', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: -8, scoreDelta: -12 },
+      { id: '4', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: -3, scoreDelta: -8 }
     ]
   };
   const nudges = getSmartNudges([friend]);
@@ -307,9 +304,8 @@ test('getSmartNudges: no nudges for friends with few logs', () => {
   const friend: Friend = {
     id: 'f1', name: 'New Friend', category: 'Friends', frequencyDays: 10,
     lastContacted: new Date().toISOString(), individualScore: 50,
-    quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0,
     logs: [
-      { id: '1', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 10 }
+      { id: '1', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 10 }
     ]
   };
   const nudges = getSmartNudges([friend]);
@@ -323,19 +319,19 @@ test('getCohortStats: groups friends by category', () => {
     {
       id: 'f1', name: 'Friend 1', category: 'Friends', frequencyDays: 10,
       lastContacted: new Date().toISOString(), individualScore: 70,
-      quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0, logs: [
-        { id: '1', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 10 }
+      logs: [
+        { id: '1', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 7 }
       ]
     },
     {
       id: 'f2', name: 'Friend 2', category: 'Friends', frequencyDays: 10,
       lastContacted: new Date().toISOString(), individualScore: 80,
-      quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0, logs: []
+      logs: []
     },
     {
       id: 'f3', name: 'Business 1', category: 'Business', frequencyDays: 20,
       lastContacted: new Date().toISOString(), individualScore: 60,
-      quickTouchesAvailable: 1, cyclesSinceLastQuickTouch: 0, logs: []
+      logs: []
     }
   ];
   const stats = getCohortStats(friends);
@@ -360,38 +356,45 @@ test('generateId: creates alphanumeric IDs', () => {
   assert.ok(/^[a-z0-9]{7}$/.test(id));
 });
 
-// ─── InteractionType & INTERACTION_WEIGHTS Tests ──────────────────
+// ─── CHANNEL_WEIGHTS & CHANNEL_SCORE_BONUS Tests ──────────────────
 
-test('InteractionType: enum has all four required values', () => {
-  assert.equal(InteractionType.TEXT, 'TEXT');
-  assert.equal(InteractionType.PHONE_CALL, 'PHONE_CALL');
-  assert.equal(InteractionType.VIDEO_CALL, 'VIDEO_CALL');
-  assert.equal(InteractionType.IN_PERSON, 'IN_PERSON');
+test('CHANNEL_WEIGHTS: text has weight 0.5', () => {
+  assert.equal(CHANNEL_WEIGHTS['text'], 0.5);
 });
 
-test('INTERACTION_WEIGHTS: TEXT has weight 0.65', () => {
-  assert.equal(INTERACTION_WEIGHTS[InteractionType.TEXT], 0.65);
+test('CHANNEL_WEIGHTS: call has weight 1.0', () => {
+  assert.equal(CHANNEL_WEIGHTS['call'], 1.0);
 });
 
-test('INTERACTION_WEIGHTS: PHONE_CALL has weight 1.0', () => {
-  assert.equal(INTERACTION_WEIGHTS[InteractionType.PHONE_CALL], 1.0);
+test('CHANNEL_WEIGHTS: video has weight 1.15', () => {
+  assert.equal(CHANNEL_WEIGHTS['video'], 1.15);
 });
 
-test('INTERACTION_WEIGHTS: VIDEO_CALL has weight 1.25', () => {
-  assert.equal(INTERACTION_WEIGHTS[InteractionType.VIDEO_CALL], 1.25);
+test('CHANNEL_WEIGHTS: in-person has weight 1.25', () => {
+  assert.equal(CHANNEL_WEIGHTS['in-person'], 1.25);
 });
 
-test('INTERACTION_WEIGHTS: IN_PERSON has weight 1.25', () => {
-  assert.equal(INTERACTION_WEIGHTS[InteractionType.IN_PERSON], 1.25);
-});
-
-test('INTERACTION_WEIGHTS: covers all InteractionType values', () => {
-  const types = Object.values(InteractionType);
-  types.forEach(t => {
-    assert.ok(INTERACTION_WEIGHTS[t] !== undefined, `Missing weight for ${t}`);
-    assert.ok(typeof INTERACTION_WEIGHTS[t] === 'number', `Weight for ${t} must be a number`);
-    assert.ok(INTERACTION_WEIGHTS[t] > 0, `Weight for ${t} must be positive`);
+test('CHANNEL_WEIGHTS: covers all channels', () => {
+  const channels: ContactChannel[] = ['text', 'call', 'video', 'in-person'];
+  channels.forEach(ch => {
+    assert.ok(CHANNEL_WEIGHTS[ch] !== undefined, `Missing weight for ${ch}`);
+    assert.ok(typeof CHANNEL_WEIGHTS[ch] === 'number', `Weight for ${ch} must be a number`);
+    assert.ok(CHANNEL_WEIGHTS[ch] > 0, `Weight for ${ch} must be positive`);
   });
+});
+
+test('CHANNEL_SCORE_BONUS: covers all channels with positive values', () => {
+  const channels: ContactChannel[] = ['text', 'call', 'video', 'in-person'];
+  channels.forEach(ch => {
+    assert.ok(CHANNEL_SCORE_BONUS[ch] !== undefined, `Missing bonus for ${ch}`);
+    assert.ok(CHANNEL_SCORE_BONUS[ch] > 0, `Bonus for ${ch} must be positive`);
+  });
+});
+
+test('CHANNEL_SCORE_BONUS: in-person > video > call > text', () => {
+  assert.ok(CHANNEL_SCORE_BONUS['in-person'] > CHANNEL_SCORE_BONUS['video']);
+  assert.ok(CHANNEL_SCORE_BONUS['video'] > CHANNEL_SCORE_BONUS['call']);
+  assert.ok(CHANNEL_SCORE_BONUS['call'] > CHANNEL_SCORE_BONUS['text']);
 });
 
 // ─── Results ──────────────────────────────────────────────────────
