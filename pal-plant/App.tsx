@@ -559,7 +559,7 @@ const App: React.FC = () => {
         )}
       </header>
 
-      <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 pb-32 max-w-2xl mx-auto w-full">
+      <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 pb-40 max-w-2xl mx-auto w-full">
         {activeTab === Tab.HOME ? (
           <HomeView
             friends={friends}
@@ -604,7 +604,7 @@ const App: React.FC = () => {
 
             <button
               onClick={openAddModal}
-              className={`fixed bottom-24 right-6 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
+              className={`fixed bottom-28 right-6 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
             >
               <Plus size={28} strokeWidth={3} />
             </button>
