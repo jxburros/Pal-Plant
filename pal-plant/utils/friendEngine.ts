@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ActionFeedback, ContactChannel, ContactLog, Friend } from '../types';
+import { ActionFeedback, ContactChannel, ContactLog, Friend, CHANNEL_WEIGHTS } from '../types';
 import { calculateInteractionScore, calculateIndividualFriendScore, calculateTimeStatus, generateId } from './helpers';
 
 export interface ContactActionResult {
@@ -23,80 +23,23 @@ export interface ContactActionResult {
   feedback: ActionFeedback;
 }
 
+/**
+ * Process a contact action. The channel determines how much timer is restored
+ * and the base score bonus. Timing (sweet-spot vs early vs overdue) still
+ * matters for the final score delta.
+ */
 export const processContactAction = (
   friend: Friend,
-  type: 'REGULAR' | 'DEEP' | 'QUICK',
-  now: Date = new Date(),
-  channel?: ContactChannel
+  channel: ContactChannel,
+  now: Date = new Date()
 ): ContactActionResult => {
   const { percentageLeft, daysLeft } = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
+  const weight = CHANNEL_WEIGHTS[channel];
 
-  if (type === 'QUICK') {
-    if ((friend.quickTouchesAvailable || 0) <= 0) {
-      return {
-        friend,
-        cadenceShortened: false,
-        feedback: {
-          type: 'QUICK',
-          scoreDelta: 0,
-          newScore: friend.individualScore,
-          cadenceShortened: false,
-          timerEffect: 'No tokens available',
-          tokenChange: 0,
-          tokensAvailable: 0,
-          timestamp: now.getTime()
-        }
-      };
-    }
-
-    // Calculate 8% of the timer's full length
-    const extensionMs = friend.frequencyDays * 0.08 * 24 * 60 * 60 * 1000;
-    const newLastContacted = new Date(new Date(friend.lastContacted).getTime() + extensionMs).toISOString();
-    const newTokens = friend.quickTouchesAvailable - 1;
-    const newScore = Math.min(100, (friend.individualScore || 50) + 2);
-    const updated: Friend = {
-      ...friend,
-      lastContacted: newLastContacted,
-      quickTouchesAvailable: newTokens,
-      logs: [{
-        id: generateId(),
-        date: now.toISOString(),
-        type: 'QUICK',
-        channel,
-        daysWaitGoal: friend.frequencyDays,
-        percentageRemaining: percentageLeft,
-        scoreDelta: 2
-      }, ...friend.logs],
-      individualScore: newScore
-    };
-
-    // Format the extension time for display
-    const extensionHours = Math.round((extensionMs / (60 * 60 * 1000)) * 10) / 10;
-    const timerEffectText = extensionHours >= 24 
-      ? `+${Math.round(extensionHours / 24 * 10) / 10}d`
-      : extensionHours >= 1
-        ? `+${extensionHours}h`
-        : `+${Math.round(extensionMs / (60 * 1000))}min`;
-
-    return {
-      friend: updated,
-      cadenceShortened: false,
-      feedback: {
-        type: 'QUICK',
-        scoreDelta: 2,
-        newScore,
-        cadenceShortened: false,
-        timerEffect: timerEffectText,
-        tokenChange: -1,
-        tokensAvailable: newTokens,
-        timestamp: now.getTime()
-      }
-    };
-  }
-
+  // --- Cadence shortening: 2 consecutive contacts with >80% remaining ---
   let updatedFrequencyDays = friend.frequencyDays;
   let cadenceShortened = false;
-  if (type === 'REGULAR' && percentageLeft > 80) {
+  if (percentageLeft > 80) {
     const lastLog = friend.logs[0];
     if (lastLog && lastLog.percentageRemaining > 80) {
       updatedFrequencyDays = Math.max(1, Math.floor(friend.frequencyDays / 2));
@@ -104,13 +47,13 @@ export const processContactAction = (
     }
   }
 
+  // --- Score ---
   const daysOverdue = daysLeft < 0 ? Math.abs(daysLeft) : 0;
-  const scoreChange = calculateInteractionScore(type, percentageLeft, daysOverdue);
+  const scoreChange = calculateInteractionScore(channel, percentageLeft, daysOverdue);
 
   const newLogs: ContactLog[] = [{
     id: generateId(),
     date: now.toISOString(),
-    type,
     channel,
     daysWaitGoal: updatedFrequencyDays,
     percentageRemaining: percentageLeft,
@@ -119,54 +62,40 @@ export const processContactAction = (
 
   const newScore = calculateIndividualFriendScore(newLogs);
 
-  let newLastDeep = friend.lastDeepConnection;
-  let extraWaitTime = 0;
+  // --- Timer reset: weight * frequency ---
+  const resetMs = weight * updatedFrequencyDays * 24 * 60 * 60 * 1000;
+  const newLastContacted = new Date(now.getTime() - (updatedFrequencyDays * 24 * 60 * 60 * 1000 * 1.2 - resetMs)).toISOString();
+  // Simplified: just set lastContacted so that the *effective* timer left = weight * frequency
+  // calculateTimeStatus uses (lastContacted + freq*1.2) as the goal.
+  // We want timeRemaining = weight * freq * 24h
+  // goalDate = lastContacted + freq*1.2*24h
+  // timeRemaining = goalDate - now = lastContacted + freq*1.2*24h - now = weight*freq*24h
+  // => lastContacted = now - freq*1.2*24h + weight*freq*24h = now - freq*24h*(1.2 - weight)
+  const effectiveLastContacted = new Date(now.getTime() - updatedFrequencyDays * 24 * 60 * 60 * 1000 * (1.2 - weight)).toISOString();
 
-  if (type === 'DEEP') {
-    newLastDeep = now.toISOString();
-    extraWaitTime = 12 * 60 * 60 * 1000;
-  }
-
-  let newCycles = (friend.cyclesSinceLastQuickTouch || 0) + 1;
-  let newTokens = (friend.quickTouchesAvailable || 0);
-  const oldTokens = newTokens;
-  if (newCycles >= 2) {
-    newTokens = 1;
-    newCycles = 0;
-  }
-  const tokenChange = newTokens - oldTokens;
-
-  // Build timer effect description
-  let timerEffect: string;
-  if (type === 'DEEP') {
-    timerEffect = `reset to ${updatedFrequencyDays}d + 12h`;
-  } else {
-    timerEffect = `reset to ${updatedFrequencyDays}d`;
-  }
+  // Timer effect description
+  const timerPercent = Math.round(weight * 100 / 1.2); // percentage of the buffered timer
+  const effectiveDays = Math.round(weight * updatedFrequencyDays * 10) / 10;
+  const timerEffect = `${effectiveDays}d timer (${Math.min(100, Math.round(weight * 100))}% of ${updatedFrequencyDays}d)`;
 
   return {
     cadenceShortened,
     feedback: {
-      type,
+      channel,
       scoreDelta: scoreChange,
       newScore,
       cadenceShortened,
       oldFrequencyDays: cadenceShortened ? friend.frequencyDays : undefined,
       newFrequencyDays: cadenceShortened ? updatedFrequencyDays : undefined,
       timerEffect,
-      tokenChange,
-      tokensAvailable: newTokens,
       timestamp: now.getTime()
     },
     friend: {
       ...friend,
       frequencyDays: updatedFrequencyDays,
-      lastContacted: new Date(now.getTime() + extraWaitTime).toISOString(),
+      lastContacted: effectiveLastContacted,
       logs: newLogs,
       individualScore: newScore,
-      lastDeepConnection: newLastDeep,
-      cyclesSinceLastQuickTouch: newCycles,
-      quickTouchesAvailable: newTokens
     }
   };
 };
@@ -185,24 +114,17 @@ export const removeFriendLog = (friend: Friend, logId: string): Friend => {
 };
 
 /**
- * Process a group contact by applying the specified interaction type to all members
- * @param friends - All friends in the system
- * @param memberIds - Array of friend IDs that are in the group
- * @param type - Type of interaction to apply ('REGULAR' or 'QUICK')
- * @param now - Current timestamp
- * @param channel - Optional communication channel
- * @returns Updated friends array with all group members contacted
+ * Process a group contact by applying the specified channel to all members
  */
 export const processGroupContact = (
   friends: Friend[],
   memberIds: string[],
-  type: 'REGULAR' | 'QUICK',
-  now: Date = new Date(),
-  channel?: ContactChannel
+  channel: ContactChannel,
+  now: Date = new Date()
 ): Friend[] => {
   return friends.map(friend => {
     if (memberIds.includes(friend.id)) {
-      const result = processContactAction(friend, type, now, channel);
+      const result = processContactAction(friend, channel, now);
       return result.friend;
     }
     return friend;

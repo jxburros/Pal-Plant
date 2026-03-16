@@ -15,7 +15,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Friend, MeetingRequest, AppSettings, ActionFeedback } from '../types';
+import { Friend, MeetingRequest, AppSettings, ActionFeedback, ContactChannel } from '../types';
 import { generateId } from '../utils/helpers';
 import { trackEvent } from '../utils/analytics';
 import { useFriendsEngine } from './useFriendsEngine';
@@ -30,8 +30,8 @@ interface AppState {
 
 interface AppActions {
   setFriends: React.Dispatch<React.SetStateAction<Friend[]>>;
-  markContacted: (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK') => void;
-  markContactedBatch: (ids: string[], type: 'REGULAR' | 'DEEP' | 'QUICK') => void;
+  markContacted: (id: string, channel: ContactChannel) => void;
+  markContactedBatch: (ids: string[], channel: ContactChannel) => void;
   clearFeedback: (friendId: string) => void;
   deleteFriend: (id: string) => void;
   deleteLog: (friendId: string, logId: string) => void;

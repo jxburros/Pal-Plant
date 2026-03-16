@@ -15,8 +15,8 @@
  */
 
 import React, { useState } from 'react';
-import { X, Users, Plus, Trash2, MessageCircle, Zap, Edit2, Check } from 'lucide-react';
-import { Group, Friend } from '../types';
+import { X, Users, Plus, Trash2, MessageCircle, Edit2, Check, PhoneCall, Video } from 'lucide-react';
+import { Group, Friend, ContactChannel } from '../types';
 import { generateId, getInitials, getAvatarColor } from '../utils/helpers';
 
 interface GroupManagementModalProps {
@@ -25,7 +25,7 @@ interface GroupManagementModalProps {
   groups: Group[];
   friends: Friend[];
   onSaveGroups: (groups: Group[]) => void;
-  onContactGroup: (memberIds: string[], type: 'REGULAR' | 'QUICK') => void;
+  onContactGroup: (memberIds: string[], channel: ContactChannel) => void;
 }
 
 const GroupManagementModal: React.FC<GroupManagementModalProps> = ({
@@ -258,20 +258,34 @@ const GroupManagementModal: React.FC<GroupManagementModalProps> = ({
                     )}
 
                     {/* Contact Actions */}
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={() => onContactGroup(group.memberIds, 'REGULAR')}
-                        className="flex-1 px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                        onClick={() => onContactGroup(group.memberIds, 'text')}
+                        className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
                       >
                         <MessageCircle size={14} />
-                        Regular Contact
+                        Text
                       </button>
                       <button
-                        onClick={() => onContactGroup(group.memberIds, 'QUICK')}
-                        className="flex-1 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                        onClick={() => onContactGroup(group.memberIds, 'call')}
+                        className="px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm flex items-center justify-center gap-2"
                       >
-                        <Zap size={14} />
-                        Quick Touch
+                        <PhoneCall size={14} />
+                        Call
+                      </button>
+                      <button
+                        onClick={() => onContactGroup(group.memberIds, 'video')}
+                        className="px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                      >
+                        <Video size={14} />
+                        Video
+                      </button>
+                      <button
+                        onClick={() => onContactGroup(group.memberIds, 'in-person')}
+                        className="px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                      >
+                        <Users size={14} />
+                        In Person
                       </button>
                     </div>
                   </div>

@@ -15,14 +15,14 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Phone, CheckCircle2, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, Heart, Zap, ChevronDown, ChevronUp, PhoneCall, Video, Users } from 'lucide-react';
-import { ActionFeedback, ContactChannel, Friend } from '../types';
+import { Phone, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, ChevronDown, ChevronUp, PhoneCall, Video, Users } from 'lucide-react';
+import { ActionFeedback, ContactChannel, Friend, CHANNEL_WEIGHTS, CHANNEL_SCORE_BONUS } from '../types';
 import { calculateTimeStatus, getProgressBarColor, getStatusColor, getPlantStage, getInitials, getAvatarColor } from '../utils/helpers';
 import InlineFeedback from './InlineFeedback';
 
 interface FriendCardProps {
   friend: Friend;
-  onContact: (id: string, type: 'REGULAR' | 'DEEP' | 'QUICK', channel?: ContactChannel) => void;
+  onContact: (id: string, channel: ContactChannel) => void;
   onDelete: (id: string) => void;
   onEdit: (friend: Friend) => void;
   onRequestMeeting: (friend: Friend) => void;
@@ -30,18 +30,24 @@ interface FriendCardProps {
   onDismissFeedback?: (friendId: string) => void;
 }
 
-const CHANNEL_OPTIONS: { value: ContactChannel; label: string; icon: typeof Phone }[] = [
-  { value: 'call', label: 'Call', icon: PhoneCall },
-  { value: 'text', label: 'Text', icon: MessageCircle },
-  { value: 'video', label: 'Video', icon: Video },
-  { value: 'in-person', label: 'In Person', icon: Users },
+const CHANNEL_OPTIONS: { value: ContactChannel; label: string; icon: typeof Phone; color: string; activeColor: string }[] = [
+  { value: 'text', label: 'Text', icon: MessageCircle, color: 'text-blue-500 border-blue-200 hover:bg-blue-50', activeColor: 'bg-blue-500 text-white border-blue-500' },
+  { value: 'call', label: 'Call', icon: PhoneCall, color: 'text-emerald-600 border-emerald-200 hover:bg-emerald-50', activeColor: 'bg-emerald-600 text-white border-emerald-600' },
+  { value: 'video', label: 'Video', icon: Video, color: 'text-purple-500 border-purple-200 hover:bg-purple-50', activeColor: 'bg-purple-500 text-white border-purple-500' },
+  { value: 'in-person', label: 'In Person', icon: Users, color: 'text-orange-500 border-orange-200 hover:bg-orange-50', activeColor: 'bg-orange-500 text-white border-orange-500' },
 ];
+
+const CHANNEL_LABELS: Record<ContactChannel, string> = {
+  'text': 'Text',
+  'call': 'Phone Call',
+  'video': 'Video Call',
+  'in-person': 'In Person',
+};
 
 const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, onEdit, onRequestMeeting, feedback, onDismissFeedback }) => {
   const { percentageLeft, daysLeft, isOverdue } = calculateTimeStatus(friend.lastContacted, friend.frequencyDays);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showMechanics, setShowMechanics] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState<ContactChannel>('call');
   const handleDismissFeedback = useCallback(() => {
     onDismissFeedback?.(friend.id);
   }, [onDismissFeedback, friend.id]);
@@ -53,29 +59,23 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
   const plantStage = getPlantStage(percentageLeft);
   const PlantIcon = plantStage.icon;
 
-  const canQuickTouch = (friend.quickTouchesAvailable || 0) > 0;
   const lastLog = friend.logs[0];
-
   const previousLog = friend.logs[1];
   const cadenceChanged = !!(lastLog && previousLog && lastLog.daysWaitGoal !== previousLog.daysWaitGoal);
-  const cyclesToNextToken = Math.max(0, 2 - (friend.cyclesSinceLastQuickTouch || 0));
-
-  // Deep connection cooldown: 24 hours with 20% buffer = 28.8 hours actual
-  const isDeepCooldown = friend.lastDeepConnection
-    ? (new Date().getTime() - new Date(friend.lastDeepConnection).getTime()) < (24 * 60 * 60 * 1000 * 1.2)
-    : false;
 
   const scoreReason = !lastLog
     ? 'No interactions logged yet. Score starts at 50 and shifts with your contact timing.'
-    : lastLog.type === 'DEEP'
-      ? `Deep connection logged (${lastLog.scoreDelta ?? 15} points). Deep interactions add a strong score boost.`
-      : lastLog.type === 'QUICK'
-        ? `Quick touch logged (+2 points). Quick touches are limited to 1 every 2 full contact cycles.`
-        : (lastLog.percentageRemaining > 80
-          ? `Regular contact happened very early (${lastLog.scoreDelta ?? -2} points). Repeating early check-ins can shorten this timer.`
-          : lastLog.percentageRemaining <= 50
-            ? `Regular contact landed in the sweet spot (${lastLog.scoreDelta ?? 10} points).`
-            : `Regular contact logged on time (${lastLog.scoreDelta ?? 5} points).`);
+    : (() => {
+        const ch = lastLog.channel;
+        const label = CHANNEL_LABELS[ch] || ch;
+        if (lastLog.percentageRemaining > 80) {
+          return `${label} logged very early (${lastLog.scoreDelta ?? 0} points). Contacting in the sweet spot (0-50% timer) earns more.`;
+        }
+        if (lastLog.percentageRemaining <= 50) {
+          return `${label} landed in the sweet spot (${lastLog.scoreDelta ?? 0} points). Great timing!`;
+        }
+        return `${label} logged on time (${lastLog.scoreDelta ?? 0} points).`;
+      })();
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-200 hover:shadow-md mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
@@ -164,10 +164,14 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
             Last score delta: <span className="font-semibold">{lastLog?.scoreDelta ?? 0}</span>
             {lastLog ? ` (${new Date(lastLog.date).toLocaleString()})` : ''}
           </p>
-          <p>
-            Quick touch tokens: <span className="font-semibold">{friend.quickTouchesAvailable || 0}</span>
-            {friend.quickTouchesAvailable > 0 ? ' available now.' : ` (next token in ${cyclesToNextToken} regular/deep cycle(s)).`}
-          </p>
+          <div className="mt-2 space-y-1">
+            <p className="font-semibold text-slate-700">Channel impact on timer:</p>
+            {CHANNEL_OPTIONS.map(ch => (
+              <p key={ch.value} className="text-[10px]">
+                {ch.label}: <span className="font-semibold">{Math.round(CHANNEL_WEIGHTS[ch.value] * 100)}%</span> timer reset, up to <span className="font-semibold">+{CHANNEL_SCORE_BONUS[ch.value]}</span> pts
+              </p>
+            ))}
+          </div>
           {cadenceChanged && (
             <p>
               Cadence update: <span className="font-semibold">{previousLog?.daysWaitGoal}d → {lastLog?.daysWaitGoal}d</span> from recent timing behavior.
@@ -176,61 +180,34 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         </div>
       )}
 
-      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Actions</p>
-      {/* Channel Selector */}
-      <div className="flex items-center gap-1.5 mt-4 mb-2">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Via:</span>
+      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Log Interaction</p>
+      {/* Channel-based interaction buttons */}
+      <div className="grid grid-cols-2 gap-2 mt-2">
         {CHANNEL_OPTIONS.map(ch => {
           const Icon = ch.icon;
           return (
             <button
               key={ch.value}
-              onClick={() => setSelectedChannel(ch.value)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all border ${
-                selectedChannel === ch.value
-                  ? 'bg-slate-800 text-white border-slate-800'
-                  : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'
-              }`}
+              onClick={() => onContact(friend.id, ch.value)}
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border active:scale-95 ${ch.color}`}
+              aria-label={`Log ${ch.label} interaction with ${friend.name}`}
             >
-              <Icon size={10} />
+              <Icon size={16} />
               {ch.label}
             </button>
           );
         })}
       </div>
 
-      <div className="flex gap-2">
-        <button onClick={() => onContact(friend.id, 'REGULAR', selectedChannel)} className="flex-1 bg-slate-900 text-white py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-slate-900/10 hover:bg-slate-800" aria-label={`Water ${friend.name} — log regular contact`}>
-          <CheckCircle2 size={16} aria-hidden="true" />
-          Water
-        </button>
-
-        <button
-          onClick={() => { if (!isDeepCooldown) onContact(friend.id, 'DEEP', selectedChannel); }}
-          className={`px-3 py-2 rounded-xl transition-colors border ${isDeepCooldown ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'text-pink-400 hover:bg-pink-50 hover:text-pink-600 border-slate-100 hover:border-pink-200'}`}
-          title={isDeepCooldown ? 'Used recently' : 'Deep Connection (+15 points, extends timer by 12 hours)'}
-          aria-label={isDeepCooldown ? `Deep connection unavailable for ${friend.name} — used recently` : `Deep connection with ${friend.name}`}
-          aria-disabled={isDeepCooldown}
-        >
-          <Heart size={20} fill={isDeepCooldown ? 'currentColor' : 'none'} />
-        </button>
-
-        <button
-          onClick={() => { if (canQuickTouch) onContact(friend.id, 'QUICK', selectedChannel); }}
-          className={`px-3 py-2 rounded-xl transition-colors border ${!canQuickTouch ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'text-yellow-500 hover:bg-yellow-50 hover:text-yellow-600 border-slate-100 hover:border-yellow-200'}`}
-          title={!canQuickTouch ? 'Not available yet (1 token every 2 cycles)' : 'Quick Touch (+2 points, extends timer by 8% of full length)'}
-          aria-label={!canQuickTouch ? `Quick touch unavailable for ${friend.name} — no tokens` : `Quick touch ${friend.name}`}
-          aria-disabled={!canQuickTouch}
-        >
-          <Zap size={20} fill={!canQuickTouch ? 'none' : 'currentColor'} />
-        </button>
-
-        <button onClick={() => onRequestMeeting(friend)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-orange-50 hover:text-orange-600 transition-colors border border-slate-100 hover:border-orange-100" title="Create meeting request" aria-label={`Schedule meeting with ${friend.name}`}>
-          <CalendarPlus size={20} />
+      {/* Utility actions */}
+      <div className="flex gap-2 mt-2">
+        <button onClick={() => onRequestMeeting(friend)} className="flex-1 px-3 py-2 rounded-xl text-slate-400 hover:bg-orange-50 hover:text-orange-600 transition-colors border border-slate-100 hover:border-orange-100 text-sm flex items-center justify-center gap-1" title="Create meeting request" aria-label={`Schedule meeting with ${friend.name}`}>
+          <CalendarPlus size={16} />
+          Meet
         </button>
 
         <button onClick={() => onEdit(friend)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors border border-slate-100 hover:border-blue-100" title="Edit" aria-label={`Edit ${friend.name}`}>
-          <Edit2 size={20} />
+          <Edit2 size={18} />
         </button>
 
         {confirmDelete ? (
@@ -240,7 +217,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
           </div>
         ) : (
           <button onClick={() => setConfirmDelete(true)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors border border-slate-100 hover:border-red-100" title="Delete">
-            <Trash2 size={20} />
+            <Trash2 size={18} />
           </button>
         )}
       </div>

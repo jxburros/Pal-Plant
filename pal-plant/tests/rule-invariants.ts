@@ -16,7 +16,7 @@
 
 import assert from 'node:assert/strict';
 import { calculateInteractionScore, calculateIndividualFriendScore, calculateSocialGardenScore, calculateTimeStatus, getPlantStage, calculateStreaks, parseCSVContacts, detectDuplicates, getUpcomingBirthdays, getSmartNudges } from '../utils/helpers';
-import { Friend, MeetingRequest, ContactLog } from '../types';
+import { Friend, MeetingRequest, ContactLog, CHANNEL_SCORE_BONUS, CHANNEL_WEIGHTS } from '../types';
 import { processContactAction } from '../utils/friendEngine';
 
 // ─── Test Helpers ────────────────────────────────────────────────
@@ -40,41 +40,47 @@ const baseFriend: Friend = {
   frequencyDays: 10,
   lastContacted: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
   individualScore: 50,
-  quickTouchesAvailable: 1,
-  cyclesSinceLastQuickTouch: 0,
   logs: []
 };
 
-// ─── Interaction Score Tests ─────────────────────────────────────
+// ─── Channel-Based Interaction Score Tests ───────────────────────
 
-test('sweet spot regular should be +10', () => {
-  assert.equal(calculateInteractionScore('REGULAR', 40, 0), 10);
+test('sweet spot call should give full bonus (+7)', () => {
+  assert.equal(calculateInteractionScore('call', 40, 0), CHANNEL_SCORE_BONUS['call']);
 });
 
-test('on-time regular (50-80%) should be +5', () => {
-  assert.equal(calculateInteractionScore('REGULAR', 65, 0), 5);
+test('on-time call (50-80%) should give 70% of bonus', () => {
+  assert.equal(calculateInteractionScore('call', 65, 0), Math.round(0.7 * CHANNEL_SCORE_BONUS['call']));
 });
 
-test('too early regular should be -2', () => {
-  assert.equal(calculateInteractionScore('REGULAR', 90, 0), -2);
+test('too early call should give negative score', () => {
+  const result = calculateInteractionScore('call', 90, 0);
+  assert.ok(result < 0, `Expected negative, got ${result}`);
 });
 
-test('overdue regular should penalize by -5/day', () => {
-  assert.equal(calculateInteractionScore('REGULAR', -10, 3), -15);
+test('overdue interaction should penalize by -3/day', () => {
+  assert.equal(calculateInteractionScore('call', -10, 3), -9);
 });
 
-test('overdue penalty should clamp at -30', () => {
-  assert.equal(calculateInteractionScore('REGULAR', -10, 10), -30);
+test('overdue penalty should clamp at -20', () => {
+  assert.equal(calculateInteractionScore('call', -10, 10), -20);
 });
 
-test('DEEP always gives +15', () => {
-  assert.equal(calculateInteractionScore('DEEP', 90, 0), 15);
-  assert.equal(calculateInteractionScore('DEEP', 10, 5), 15);
+test('text sweet spot gives +3', () => {
+  assert.equal(calculateInteractionScore('text', 40, 0), CHANNEL_SCORE_BONUS['text']);
 });
 
-test('QUICK always gives +2', () => {
-  assert.equal(calculateInteractionScore('QUICK', 50, 0), 2);
-  assert.equal(calculateInteractionScore('QUICK', 0, 3), 2);
+test('in-person sweet spot gives +12', () => {
+  assert.equal(calculateInteractionScore('in-person', 40, 0), CHANNEL_SCORE_BONUS['in-person']);
+});
+
+test('video sweet spot gives +9', () => {
+  assert.equal(calculateInteractionScore('video', 40, 0), CHANNEL_SCORE_BONUS['video']);
+});
+
+test('text too early gives small penalty', () => {
+  const result = calculateInteractionScore('text', 90, 0);
+  assert.ok(result < 0);
 });
 
 // ─── Individual Friend Score Tests ───────────────────────────────
@@ -85,104 +91,69 @@ test('friend score starts at 50 with no logs', () => {
 
 test('friend score accumulates deltas', () => {
   const logs: ContactLog[] = [
-    { id: '1', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 40, scoreDelta: 10 },
-    { id: '2', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 40, scoreDelta: 10 },
+    { id: '1', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 40, scoreDelta: 7 },
+    { id: '2', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 40, scoreDelta: 7 },
   ];
-  assert.equal(calculateIndividualFriendScore(logs), 70);
+  assert.equal(calculateIndividualFriendScore(logs), 64);
 });
 
 test('friend score is clamped to 0-100', () => {
   const highLogs: ContactLog[] = Array.from({ length: 10 }, (_, i) => ({
-    id: String(i), date: '', type: 'DEEP' as const, daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 15
+    id: String(i), date: '', channel: 'in-person' as const, daysWaitGoal: 10, percentageRemaining: 50, scoreDelta: 12
   }));
   assert.equal(calculateIndividualFriendScore(highLogs), 100);
 
   const lowLogs: ContactLog[] = Array.from({ length: 20 }, (_, i) => ({
-    id: String(i), date: '', type: 'REGULAR' as const, daysWaitGoal: 10, percentageRemaining: -10, scoreDelta: -30
+    id: String(i), date: '', channel: 'call' as const, daysWaitGoal: 10, percentageRemaining: -10, scoreDelta: -20
   }));
   assert.equal(calculateIndividualFriendScore(lowLogs), 0);
 });
 
-// ─── Quick Touch Token Tests ─────────────────────────────────────
+// ─── Channel Timer Weight Tests ─────────────────────────────────
 
-test('quick touch should consume token', () => {
-  const result = processContactAction(baseFriend, 'QUICK', new Date());
-  assert.equal(result.friend.quickTouchesAvailable, 0);
-  assert.equal(result.friend.logs[0].type, 'QUICK');
+test('text channel restores 50% of timer', () => {
+  assert.equal(CHANNEL_WEIGHTS['text'], 0.5);
 });
 
-test('quick touch with no tokens returns unchanged friend', () => {
-  const noTokenFriend = { ...baseFriend, quickTouchesAvailable: 0 };
-  const result = processContactAction(noTokenFriend, 'QUICK', new Date());
-  assert.equal(result.friend, noTokenFriend);
+test('call channel restores 100% of timer', () => {
+  assert.equal(CHANNEL_WEIGHTS['call'], 1.0);
 });
 
-test('quick touch feedback shows -1 token', () => {
-  const result = processContactAction(baseFriend, 'QUICK', new Date());
-  assert.equal(result.feedback.tokenChange, -1);
-  assert.equal(result.feedback.tokensAvailable, 0);
-  assert.equal(result.feedback.scoreDelta, 2);
-  assert.equal(result.feedback.timerEffect, '+19.2h'); // 8% of 10 days = 0.8 days = 19.2 hours
+test('video channel restores 115% of timer', () => {
+  assert.equal(CHANNEL_WEIGHTS['video'], 1.15);
 });
 
-test('tokens regenerate after 2 full cycles', () => {
-  let friend: Friend = { ...baseFriend, quickTouchesAvailable: 0, cyclesSinceLastQuickTouch: 0 };
-
-  // First regular contact: cycle count goes to 1, no token yet
-  const r1 = processContactAction(friend, 'REGULAR', new Date());
-  assert.equal(r1.friend.cyclesSinceLastQuickTouch, 1);
-  assert.equal(r1.friend.quickTouchesAvailable, 0);
-
-  // Second regular contact: cycle count goes to 2, token granted
-  friend = { ...r1.friend, lastContacted: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() };
-  const r2 = processContactAction(friend, 'REGULAR', new Date());
-  assert.equal(r2.friend.cyclesSinceLastQuickTouch, 0);
-  assert.equal(r2.friend.quickTouchesAvailable, 1);
-  assert.equal(r2.feedback.tokenChange, 1);
+test('in-person channel restores 125% of timer', () => {
+  assert.equal(CHANNEL_WEIGHTS['in-person'], 1.25);
 });
 
-test('quick touch extends timer by 8% of frequency length', () => {
-  // Test with 10-day frequency (already covered above, 8% = 19.2h)
-  const friend10 = { ...baseFriend, frequencyDays: 10 };
-  const result10 = processContactAction(friend10, 'QUICK', new Date());
-  assert.equal(result10.feedback.timerEffect, '+19.2h');
+// ─── processContactAction Tests ─────────────────────────────────
 
-  // Test with 7-day frequency: 8% = 0.56 days = 13.44h
-  const friend7 = { ...baseFriend, frequencyDays: 7 };
-  const result7 = processContactAction(friend7, 'QUICK', new Date());
-  assert.equal(result7.feedback.timerEffect, '+13.4h');
-
-  // Test with 30-day frequency: 8% = 2.4 days
-  const friend30 = { ...baseFriend, frequencyDays: 30 };
-  const result30 = processContactAction(friend30, 'QUICK', new Date());
-  assert.equal(result30.feedback.timerEffect, '+2.4d');
-
-  // Test with 2-day frequency: 8% = 0.16 days = 3.84h
-  const friend2 = { ...baseFriend, frequencyDays: 2 };
-  const result2 = processContactAction(friend2, 'QUICK', new Date());
-  assert.equal(result2.feedback.timerEffect, '+3.8h');
+test('call contact produces valid feedback', () => {
+  const result = processContactAction(baseFriend, 'call', new Date());
+  const fb = result.feedback;
+  assert.equal(fb.channel, 'call');
+  assert.equal(typeof fb.scoreDelta, 'number');
+  assert.equal(typeof fb.newScore, 'number');
+  assert.equal(typeof fb.timerEffect, 'string');
+  assert.equal(typeof fb.timestamp, 'number');
 });
 
-test('quick touch correctly updates lastContacted by 8%', () => {
-  const now = new Date('2025-01-01T12:00:00.000Z');
-  const friend = {
-    ...baseFriend,
-    frequencyDays: 10,
-    lastContacted: now.toISOString()
-  };
+test('in-person contact gives higher score than text', () => {
+  const inPersonResult = processContactAction(baseFriend, 'in-person', new Date());
+  const textResult = processContactAction(baseFriend, 'text', new Date());
+  assert.ok(inPersonResult.feedback.scoreDelta >= textResult.feedback.scoreDelta,
+    `in-person (${inPersonResult.feedback.scoreDelta}) should be >= text (${textResult.feedback.scoreDelta})`);
+});
 
-  const result = processContactAction(friend, 'QUICK', now);
-  
-  // 8% of 10 days = 0.8 days = 19.2 hours = 69120000 ms
-  const expectedTime = now.getTime() + (0.8 * 24 * 60 * 60 * 1000);
-  const actualTime = new Date(result.friend.lastContacted).getTime();
-  
-  assert.equal(actualTime, expectedTime);
+test('contact logs channel correctly', () => {
+  const result = processContactAction(baseFriend, 'video', new Date());
+  assert.equal(result.friend.logs[0].channel, 'video');
 });
 
 // ─── Cadence Shortening Tests ────────────────────────────────────
 
-test('repeated early regular should shorten cadence', () => {
+test('repeated early contact should shorten cadence', () => {
   const earlyNow = new Date();
   const frequentFriend: Friend = {
     ...baseFriend,
@@ -190,13 +161,13 @@ test('repeated early regular should shorten cadence', () => {
     logs: [{
       id: 'l1',
       date: new Date(earlyNow.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      type: 'REGULAR',
+      channel: 'call',
       daysWaitGoal: 10,
       percentageRemaining: 90,
       scoreDelta: -2
     }]
   };
-  const result = processContactAction(frequentFriend, 'REGULAR', earlyNow);
+  const result = processContactAction(frequentFriend, 'call', earlyNow);
   assert.equal(result.cadenceShortened, true);
   assert.equal(result.friend.frequencyDays, 5);
   assert.equal(result.feedback.cadenceShortened, true);
@@ -211,41 +182,9 @@ test('single early contact does not shorten cadence', () => {
     lastContacted: new Date(earlyNow.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     logs: []
   };
-  const result = processContactAction(earlyFriend, 'REGULAR', earlyNow);
+  const result = processContactAction(earlyFriend, 'call', earlyNow);
   assert.equal(result.cadenceShortened, false);
   assert.equal(result.friend.frequencyDays, 10);
-});
-
-// ─── Deep Connection Tests ───────────────────────────────────────
-
-test('deep contact should set lastDeepConnection', () => {
-  const result = processContactAction(baseFriend, 'DEEP', new Date('2025-01-01T00:00:00.000Z'));
-  assert.ok(result.friend.lastDeepConnection);
-  assert.equal(result.feedback.type, 'DEEP');
-  assert.equal(result.feedback.scoreDelta, 15);
-});
-
-test('deep contact adds 12h extra to timer', () => {
-  const now = new Date('2025-01-01T12:00:00.000Z');
-  const result = processContactAction(baseFriend, 'DEEP', now);
-  const lastContacted = new Date(result.friend.lastContacted);
-  const expected = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-  assert.equal(lastContacted.getTime(), expected.getTime());
-  assert.ok(result.feedback.timerEffect.includes('12h'));
-});
-
-// ─── Feedback Structure Tests ────────────────────────────────────
-
-test('regular contact feedback has correct structure', () => {
-  const result = processContactAction(baseFriend, 'REGULAR', new Date());
-  const fb = result.feedback;
-  assert.equal(fb.type, 'REGULAR');
-  assert.equal(typeof fb.scoreDelta, 'number');
-  assert.equal(typeof fb.newScore, 'number');
-  assert.equal(typeof fb.timerEffect, 'string');
-  assert.equal(typeof fb.tokenChange, 'number');
-  assert.equal(typeof fb.tokensAvailable, 'number');
-  assert.equal(typeof fb.timestamp, 'number');
 });
 
 // ─── Time Status Tests ───────────────────────────────────────────
@@ -357,9 +296,9 @@ test('smart nudges recommends shorter cadence for consistently early contacts', 
     ...baseFriend,
     frequencyDays: 10,
     logs: [
-      { id: '1', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 90, scoreDelta: -2 },
-      { id: '2', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 85, scoreDelta: -2 },
-      { id: '3', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 92, scoreDelta: -2 },
+      { id: '1', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 90, scoreDelta: -2 },
+      { id: '2', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 85, scoreDelta: -2 },
+      { id: '3', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 92, scoreDelta: -2 },
     ]
   };
   const nudges = getSmartNudges([earlyFriend]);
@@ -373,9 +312,9 @@ test('smart nudges recommends longer cadence for consistently overdue contacts',
     ...baseFriend,
     frequencyDays: 5,
     logs: [
-      { id: '1', date: '', type: 'REGULAR', daysWaitGoal: 5, percentageRemaining: -20, scoreDelta: -10 },
-      { id: '2', date: '', type: 'REGULAR', daysWaitGoal: 5, percentageRemaining: -10, scoreDelta: -5 },
-      { id: '3', date: '', type: 'REGULAR', daysWaitGoal: 5, percentageRemaining: -30, scoreDelta: -15 },
+      { id: '1', date: '', channel: 'call', daysWaitGoal: 5, percentageRemaining: -20, scoreDelta: -10 },
+      { id: '2', date: '', channel: 'call', daysWaitGoal: 5, percentageRemaining: -10, scoreDelta: -5 },
+      { id: '3', date: '', channel: 'call', daysWaitGoal: 5, percentageRemaining: -30, scoreDelta: -15 },
     ]
   };
   const nudges = getSmartNudges([overdueFriend]);
@@ -388,7 +327,7 @@ test('smart nudges returns nothing for friends with too few logs', () => {
   const newFriend: Friend = {
     ...baseFriend,
     logs: [
-      { id: '1', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 90, scoreDelta: -2 },
+      { id: '1', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 90, scoreDelta: -2 },
     ]
   };
   const nudges = getSmartNudges([newFriend]);
@@ -399,9 +338,9 @@ test('smart nudges returns nothing for well-timed contacts', () => {
   const goodFriend: Friend = {
     ...baseFriend,
     logs: [
-      { id: '1', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 40, scoreDelta: 10 },
-      { id: '2', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 35, scoreDelta: 10 },
-      { id: '3', date: '', type: 'REGULAR', daysWaitGoal: 10, percentageRemaining: 45, scoreDelta: 10 },
+      { id: '1', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 40, scoreDelta: 7 },
+      { id: '2', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 35, scoreDelta: 7 },
+      { id: '3', date: '', channel: 'call', daysWaitGoal: 10, percentageRemaining: 45, scoreDelta: 7 },
     ]
   };
   const nudges = getSmartNudges([goodFriend]);
