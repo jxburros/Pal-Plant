@@ -45,7 +45,7 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 
 ### 🔔 Reminders
 - **Push Notifications** – Browser notifications for web app (via Firebase Cloud Messaging), native push notifications for Android/iOS apps (via Capacitor) for overdue contacts and upcoming scheduled meetings
-- **Note:** Web push notifications require Firebase configuration (see [FIREBASE_SETUP.md](pal-plant/FIREBASE_SETUP.md))
+- **Note:** Web push notifications require Firebase configuration (see [docs/FIREBASE.md](docs/FIREBASE.md))
 
 ### ⌨️ Keyboard Shortcuts
 - `H` Home, `G` Garden, `M` Meetings, `N` New Friend, `S` Settings, `?` Shortcuts, `Esc` Close dialog
@@ -56,7 +56,7 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **TypeScript** – Type-safe JavaScript
 - **Vite** – Fast build tool and dev server
 - **Capacitor** – Native Android/iOS app packaging
-- **Firebase Analytics** – Event tracking and usage analytics
+- **Local Analytics** – Event tracking stored locally (no external services)
 - **Firebase Cloud Messaging** – Push notification infrastructure (requires backend for delivery)
 - **Tailwind CSS** – Utility-first styling (via CDN)
 - **Lucide React** – Beautiful icons
@@ -184,24 +184,45 @@ pal-plant/
 │   ├── AddFriendModal.tsx
 │   ├── BulkImportModal.tsx
 │   ├── FriendCard.tsx
+│   ├── GroupManagementModal.tsx
 │   ├── HomeView.tsx
+│   ├── InlineFeedback.tsx
 │   ├── KeyboardShortcuts.tsx
+│   ├── MeetingFollowUpModal.tsx
 │   ├── MeetingRequestsView.tsx
 │   ├── OnboardingTooltips.tsx
+│   ├── RuleGuide.tsx
 │   ├── SettingsModal.tsx
-│   └── StatsView.tsx
+│   ├── StatsView.tsx
+│   └── WeeklyPlanView.tsx
 ├── hooks/
-│   └── useReminderEngine.ts  # Notification system
+│   ├── useFriendsEngine.ts     # Contact scoring and management
+│   └── useReminderEngine.ts    # Notification system
 ├── utils/
-│   ├── helpers.ts           # Utility functions
-│   ├── analytics.ts         # Event tracking with Firebase integration
-│   ├── firebase.ts          # Firebase initialization
-│   ├── firebaseMessaging.ts # FCM token & message handling
-│   └── friendEngine.ts      # Contact scoring logic
+│   ├── analytics.ts            # Local-only event tracking
+│   ├── avatar.ts               # Avatar generation
+│   ├── calendar.ts             # ICS and Google Calendar integration
+│   ├── core.ts                 # Core utility functions
+│   ├── csv.ts                  # CSV parsing
+│   ├── debouncedStorage.ts     # Debounced storage operations
+│   ├── duplicates.ts           # Duplicate contact detection
+│   ├── firebase.ts             # Firebase initialization (FCM only)
+│   ├── firebaseMessaging.ts    # FCM token & message handling
+│   ├── friendEngine.ts         # Contact scoring logic
+│   ├── helpers.ts              # Utility functions (re-exports)
+│   ├── imageCompression.ts     # Image compression for storage
+│   ├── nudges.ts               # Smart nudge recommendations
+│   ├── scoring.ts              # Scoring system
+│   ├── stats.ts                # Statistics calculations
+│   ├── storage.ts              # IndexedDB with localStorage fallback
+│   ├── streaks.ts              # Streak calculations
+│   ├── themes.ts               # Theme definitions
+│   └── validation.ts           # Input validation
 ├── public/
 │   └── firebase-messaging-sw.js  # Service worker for FCM
 ├── tests/
-│   └── rule-invariants.ts   # Scoring system tests
+│   ├── rule-invariants.ts   # Scoring system tests
+│   └── module-tests.ts      # Module unit tests
 ├── App.tsx               # Main application component
 ├── types.ts              # TypeScript type definitions
 ├── index.tsx             # Application entry point
@@ -211,8 +232,7 @@ pal-plant/
 ├── capacitor.config.ts   # Capacitor configuration
 ├── package.json          # Dependencies and scripts
 ├── tsconfig.json         # TypeScript configuration
-├── vite.config.ts        # Vite configuration
-└── FIREBASE_SETUP.md     # Firebase configuration guide
+└── vite.config.ts        # Vite configuration
 ```
 
 ## 🤝 Contributing
