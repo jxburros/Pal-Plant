@@ -42,6 +42,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [importMessage, setImportMessage] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
 
+  const isNativePlatform = Capacitor.isNativePlatform();
+  const notificationsSupported = isNativePlatform || typeof Notification !== 'undefined';
+
+  const [nativePermission, setNativePermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
+  useEffect(() => {
+    if (isNativePlatform && isOpen) {
+      PushNotifications.checkPermissions().then(result => {
+        setNativePermission(result.receive as 'granted' | 'denied' | 'prompt');
+      }).catch(() => setNativePermission('prompt'));
+    }
+  }, [isNativePlatform, isOpen]);
+
+  const notificationPermission = isNativePlatform
+    ? nativePermission
+    : (typeof Notification !== 'undefined' ? Notification.permission : 'denied');
+
   if (!isOpen) return null;
 
   const handleExport = async () => {
@@ -109,22 +125,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       }
     });
   };
-
-  const isNativePlatform = Capacitor.isNativePlatform();
-  const notificationsSupported = isNativePlatform || typeof Notification !== 'undefined';
-
-  const [nativePermission, setNativePermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
-  useEffect(() => {
-    if (isNativePlatform && isOpen) {
-      PushNotifications.checkPermissions().then(result => {
-        setNativePermission(result.receive as 'granted' | 'denied' | 'prompt');
-      }).catch(() => setNativePermission('prompt'));
-    }
-  }, [isNativePlatform, isOpen]);
-
-  const notificationPermission = isNativePlatform
-    ? nativePermission
-    : (typeof Notification !== 'undefined' ? Notification.permission : 'denied');
 
   const handleTogglePush = async () => {
     if (!notificationsSupported) return;
