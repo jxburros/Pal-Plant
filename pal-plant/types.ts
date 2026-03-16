@@ -16,6 +16,20 @@
 
 export type ContactChannel = 'call' | 'text' | 'video' | 'in-person' | 'other';
 
+export enum InteractionType {
+  TEXT = 'TEXT',
+  PHONE_CALL = 'PHONE_CALL',
+  VIDEO_CALL = 'VIDEO_CALL',
+  IN_PERSON = 'IN_PERSON'
+}
+
+export const INTERACTION_WEIGHTS: Record<InteractionType, number> = {
+  [InteractionType.TEXT]: 0.65,
+  [InteractionType.PHONE_CALL]: 1.0,
+  [InteractionType.VIDEO_CALL]: 1.25,
+  [InteractionType.IN_PERSON]: 1.25,
+};
+
 export interface ContactLog {
   id: string;
   date: string; // ISO string

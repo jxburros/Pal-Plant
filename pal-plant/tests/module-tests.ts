@@ -24,7 +24,7 @@ import { calculateStreaks } from '../utils/streaks';
 import { getSmartNudges } from '../utils/nudges';
 import { getCohortStats } from '../utils/stats';
 import { generateId, fileToBase64 } from '../utils/core';
-import { Friend, MeetingRequest } from '../types';
+import { Friend, MeetingRequest, InteractionType, INTERACTION_WEIGHTS } from '../types';
 
 // ─── Test Helpers ────────────────────────────────────────────────
 
@@ -358,6 +358,40 @@ test('generateId: creates unique IDs', () => {
 test('generateId: creates alphanumeric IDs', () => {
   const id = generateId();
   assert.ok(/^[a-z0-9]{7}$/.test(id));
+});
+
+// ─── InteractionType & INTERACTION_WEIGHTS Tests ──────────────────
+
+test('InteractionType: enum has all four required values', () => {
+  assert.equal(InteractionType.TEXT, 'TEXT');
+  assert.equal(InteractionType.PHONE_CALL, 'PHONE_CALL');
+  assert.equal(InteractionType.VIDEO_CALL, 'VIDEO_CALL');
+  assert.equal(InteractionType.IN_PERSON, 'IN_PERSON');
+});
+
+test('INTERACTION_WEIGHTS: TEXT has weight 0.65', () => {
+  assert.equal(INTERACTION_WEIGHTS[InteractionType.TEXT], 0.65);
+});
+
+test('INTERACTION_WEIGHTS: PHONE_CALL has weight 1.0', () => {
+  assert.equal(INTERACTION_WEIGHTS[InteractionType.PHONE_CALL], 1.0);
+});
+
+test('INTERACTION_WEIGHTS: VIDEO_CALL has weight 1.25', () => {
+  assert.equal(INTERACTION_WEIGHTS[InteractionType.VIDEO_CALL], 1.25);
+});
+
+test('INTERACTION_WEIGHTS: IN_PERSON has weight 1.25', () => {
+  assert.equal(INTERACTION_WEIGHTS[InteractionType.IN_PERSON], 1.25);
+});
+
+test('INTERACTION_WEIGHTS: covers all InteractionType values', () => {
+  const types = Object.values(InteractionType);
+  types.forEach(t => {
+    assert.ok(INTERACTION_WEIGHTS[t] !== undefined, `Missing weight for ${t}`);
+    assert.ok(typeof INTERACTION_WEIGHTS[t] === 'number', `Weight for ${t} must be a number`);
+    assert.ok(INTERACTION_WEIGHTS[t] > 0, `Weight for ${t} must be positive`);
+  });
 });
 
 // ─── Results ──────────────────────────────────────────────────────
