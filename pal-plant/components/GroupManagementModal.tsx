@@ -15,7 +15,7 @@
  */
 
 import React, { useState } from 'react';
-import { X, Users, Plus, Trash2, MessageCircle, Edit2, Check, PhoneCall, Video } from 'lucide-react';
+import { X, Users, Plus, Trash2, MessageCircle, Edit2, Check, PhoneCall, Video, Gamepad2 } from 'lucide-react';
 import { Group, Friend, ContactChannel } from '../types';
 import { generateId, getInitials, getAvatarColor } from '../utils/helpers';
 
@@ -258,7 +258,7 @@ const GroupManagementModal: React.FC<GroupManagementModalProps> = ({
                     )}
 
                     {/* Contact Actions */}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         onClick={() => onContactGroup(group.memberIds, 'text')}
                         className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
@@ -272,6 +272,13 @@ const GroupManagementModal: React.FC<GroupManagementModalProps> = ({
                       >
                         <PhoneCall size={14} />
                         Call
+                      </button>
+                      <button
+                        onClick={() => onContactGroup(group.memberIds, 'gaming')}
+                        className="px-3 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                      >
+                        <Gamepad2 size={14} />
+                        Gaming
                       </button>
                       <button
                         onClick={() => onContactGroup(group.memberIds, 'video')}

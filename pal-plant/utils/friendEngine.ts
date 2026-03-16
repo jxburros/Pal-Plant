@@ -16,6 +16,7 @@
 
 import { ActionFeedback, ContactChannel, ContactLog, Friend, CHANNEL_WEIGHTS } from '../types';
 import { calculateInteractionScore, calculateIndividualFriendScore, calculateTimeStatus, generateId } from './helpers';
+import { isWitheredForResurrection, hasTextingDiminishingReturns } from './scoring';
 
 export interface ContactActionResult {
   friend: Friend;
@@ -49,7 +50,19 @@ export const processContactAction = (
 
   // --- Score ---
   const daysOverdue = daysLeft < 0 ? Math.abs(daysLeft) : 0;
-  const scoreChange = calculateInteractionScore(channel, percentageLeft, daysOverdue);
+  let scoreChange = calculateInteractionScore(channel, percentageLeft, daysOverdue);
+
+  // Resurrection Penalty: if plant is "Withered" (score < 10), first interaction
+  // provides 50% fewer points
+  if (isWitheredForResurrection(friend.individualScore) && scoreChange > 0) {
+    scoreChange = Math.round(scoreChange * 0.5);
+  }
+
+  // Texting Diminishing Returns: if last 5 interactions were all text and this
+  // is also a text, grant 50% fewer points
+  if (channel === 'text' && hasTextingDiminishingReturns(friend.logs) && scoreChange > 0) {
+    scoreChange = Math.round(scoreChange * 0.5);
+  }
 
   const newLogs: ContactLog[] = [{
     id: generateId(),

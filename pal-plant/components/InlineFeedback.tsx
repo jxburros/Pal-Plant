@@ -26,6 +26,7 @@ interface InlineFeedbackProps {
 const CHANNEL_LABELS: Record<ContactChannel, string> = {
   'text': 'Text',
   'call': 'Phone Call',
+  'gaming': 'Gaming',
   'video': 'Video Call',
   'in-person': 'In Person',
 };
