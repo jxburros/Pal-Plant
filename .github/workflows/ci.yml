@@ -27,5 +27,13 @@ jobs:
       - name: TypeScript check (build)
         run: npx vite build
 
+      - name: Verify Capacitor sync is up to date
+        run: |
+          npx cap sync android
+          if ! git diff --exit-code android/capacitor.settings.gradle android/app/capacitor.build.gradle; then
+            echo "::error::Android Capacitor files are out of sync. Run 'npx cap sync android' and commit the changes."
+            exit 1
+          fi
+
       - name: Run tests
         run: npm run test:rules
