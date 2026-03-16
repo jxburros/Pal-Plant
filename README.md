@@ -44,8 +44,8 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **Reduced Motion** – Disable animations
 
 ### 🔔 Reminders
-- **Push Notifications** – Browser notifications for web app (via Firebase Cloud Messaging), native push notifications for Android/iOS apps (via Capacitor) for overdue contacts and upcoming scheduled meetings
-- **Note:** Web push notifications require Firebase configuration (see [docs/FIREBASE.md](docs/FIREBASE.md))
+- **Push Notifications** – Native push notifications for Android/iOS apps (via Capacitor) for overdue contacts and upcoming scheduled meetings
+- **Note:** Web push notifications are not available in this build; push reminders require an Android or iOS device
 
 ### ⌨️ Keyboard Shortcuts
 - `H` Home, `G` Garden, `M` Meetings, `N` New Friend, `S` Settings, `?` Shortcuts, `Esc` Close dialog
@@ -55,13 +55,13 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **React 19** – UI framework
 - **TypeScript** – Type-safe JavaScript
 - **Vite** – Fast build tool and dev server
-- **Capacitor** – Native Android/iOS app packaging
+- **Capacitor** – Native Android/iOS app packaging with push notifications and contacts access
 - **Local Analytics** – Event tracking stored locally (no external services)
-- **Firebase Cloud Messaging** – Push notification infrastructure (requires backend for delivery)
-- **Tailwind CSS** – Utility-first styling (via CDN)
+- **Tailwind CSS** – Utility-first styling
 - **Lucide React** – Beautiful icons
 - **Recharts** – Data visualization
 - **IndexedDB Storage** – Persistent data storage with automatic localStorage fallback (local-first, no cloud sync)
+- **PWA** – Progressive Web App support via Vite plugin
 
 ## 🚀 Getting Started
 
@@ -87,7 +87,7 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
    npm run dev
    ```
 
-4. Open your browser and navigate to `http://localhost:5173`
+4. Open your browser and navigate to `http://localhost:3000`
 
 ### Build for Production
 
@@ -196,18 +196,18 @@ pal-plant/
 │   ├── StatsView.tsx
 │   └── WeeklyPlanView.tsx
 ├── hooks/
+│   ├── AppContext.tsx           # Application context and state management
 │   ├── useFriendsEngine.ts     # Contact scoring and management
 │   └── useReminderEngine.ts    # Notification system
 ├── utils/
 │   ├── analytics.ts            # Local-only event tracking
 │   ├── avatar.ts               # Avatar generation
 │   ├── calendar.ts             # ICS and Google Calendar integration
+│   ├── contacts.ts             # Device contact access via Capacitor
 │   ├── core.ts                 # Core utility functions
 │   ├── csv.ts                  # CSV parsing
 │   ├── debouncedStorage.ts     # Debounced storage operations
 │   ├── duplicates.ts           # Duplicate contact detection
-│   ├── firebase.ts             # Firebase initialization (FCM only)
-│   ├── firebaseMessaging.ts    # FCM token & message handling
 │   ├── friendEngine.ts         # Contact scoring logic
 │   ├── helpers.ts              # Utility functions (re-exports)
 │   ├── imageCompression.ts     # Image compression for storage
@@ -219,7 +219,11 @@ pal-plant/
 │   ├── themes.ts               # Theme definitions
 │   └── validation.ts           # Input validation
 ├── public/
-│   └── firebase-messaging-sw.js  # Service worker for FCM
+│   ├── icon.svg
+│   ├── icon-192x192.png
+│   ├── icon-512x512.png
+│   ├── badge.svg
+│   └── badge-72x72.png
 ├── tests/
 │   ├── rule-invariants.ts   # Scoring system tests
 │   └── module-tests.ts      # Module unit tests

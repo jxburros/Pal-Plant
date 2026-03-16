@@ -4,23 +4,21 @@ Welcome to the Pal-Plant documentation directory. This folder contains comprehen
 
 ## 📚 Current Documentation
 
-### [Firebase Configuration Guide](FIREBASE.md)
-Complete guide for setting up Firebase Cloud Messaging for push notifications.
+### [Push Notifications Guide](FIREBASE.md)
+Complete guide for setting up push notifications on Android and iOS.
 
 **Topics covered:**
-- Quick start guide for web, Android, and iOS
-- Firebase usage policy (FCM only, local-first architecture)
-- Step-by-step configuration instructions
-- How push notifications work
+- Architecture overview (Capacitor-only, no Firebase)
+- Android and iOS setup steps
+- How local and remote push notifications work
 - Testing procedures
 - Troubleshooting common issues
-- Security and privacy details
+- Privacy details
 
 **When to read:**
-- Setting up the app for the first time
-- Configuring push notifications
-- Understanding Firebase usage scope
-- Troubleshooting notification issues
+- Setting up the app on a native device for the first time
+- Configuring or debugging push notifications
+- Understanding the notification architecture
 
 ## 📦 Archived Documentation
 
@@ -38,7 +36,7 @@ See [`archive/README.md`](archive/README.md) for more details.
 
 ### Getting Started
 - [Main README](../README.md) - Project overview and getting started
-- [Firebase Setup](FIREBASE.md) - Push notification configuration
+- [Push Notifications](FIREBASE.md) - Push notification configuration
 
 ### Development
 - [Contributing Guide](../CONTRIBUTING.md) - How to contribute
@@ -65,7 +63,7 @@ docs/
 ## 🔍 Finding What You Need
 
 ### "How do I set up push notifications?"
-→ [Firebase Configuration Guide](FIREBASE.md)
+→ [Push Notifications Guide](FIREBASE.md)
 
 ### "How do I contribute to the project?"
 → [Contributing Guide](../CONTRIBUTING.md)
@@ -105,5 +103,5 @@ See [Contributing Guide](../CONTRIBUTING.md) for more details.
 
 ---
 
-**Last Updated:** 2026-02-17  
+**Last Updated:** 2026-03-16  
 **Maintained by:** Pal-Plant contributors
