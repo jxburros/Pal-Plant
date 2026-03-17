@@ -43,23 +43,25 @@ const tooltipSteps: TooltipStep[] = [
   {
     id: 'scoring',
     title: 'How Scoring Works',
-    description: 'Your Garden Score reflects how consistently you show up for people. It\'s based on timing and follow-through.',
+    description: 'Each friend starts at 50. Every interaction changes that friend score based on timing, then your Garden Score combines everyone.',
     icon: <TrendingUp size={32} className="text-blue-500" />,
     bullets: [
-      'Contact at the right time: +10 points',
-      'Contact too early repeatedly: May shorten your cadence',
-      'Wait too long: Points decrease the longer you wait'
+      'Sweet spot (0-50% left): full channel points',
+      'On time (50-80% left): 70% of channel points',
+      'Too early (>80%): small penalty; 2 early logs in a row can halve cadence',
+      'Overdue: -3/day (max -20 for the interaction)'
     ]
   },
   {
     id: 'interactions',
     title: 'Interaction Types',
-    description: 'Different types of contact have different effects on your relationships.',
+    description: 'Channels reset different amounts of timer and have different sweet-spot point values.',
     icon: <Award size={32} className="text-purple-500" />,
     bullets: [
-      'Regular Contact: Resets timer, builds score',
-      'Deep Connection: +15 points + 12 hour bonus',
-      'Quick Touch: +2 points, extends timer by 8% of full length'
+      'Text: 50% timer reset, +3 points in sweet spot',
+      'Call: 100% reset, +7 points',
+      'Gaming: 105% reset, +8 points',
+      'Video: 115% reset, +9 points; In Person: 125% reset, +12 points'
     ]
   },
   {
