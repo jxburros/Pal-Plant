@@ -35,6 +35,7 @@ interface ParsedContact {
   phone?: string;
   email?: string;
   category?: string;
+  birthday?: string;
 }
 
 const BulkImportModal: React.FC<BulkImportModalProps> = ({
@@ -174,6 +175,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
           name: contact.name,
           phone: contact.phone || duplicate.existingFriend.phone,
           email: contact.email || duplicate.existingFriend.email,
+          birthday: contact.birthday || duplicate.existingFriend.birthday,
           category: contact.category || defaultCategory,
           frequencyDays: defaultFrequency,
         };
@@ -188,6 +190,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
           ...duplicate.existingFriend,
           phone: contact.phone || duplicate.existingFriend.phone,
           email: contact.email || duplicate.existingFriend.email,
+          birthday: contact.birthday || duplicate.existingFriend.birthday,
         };
         friendsToUpdate.push(mergedFriend);
         return;
@@ -199,6 +202,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
         name: contact.name,
         phone: contact.phone,
         email: contact.email,
+        birthday: contact.birthday,
         category: contact.category || defaultCategory,
         frequencyDays: defaultFrequency,
         lastContacted: new Date().toISOString(),

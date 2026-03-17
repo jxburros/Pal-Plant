@@ -21,7 +21,7 @@ import { THEMES } from '../utils/helpers';
 import { markBackupExportedNow } from '../hooks/useReminderEngine';
 import { exportAllData, importAllData } from '../utils/storage';
 import { Capacitor } from '@capacitor/core';
-import { LocalNotifications } from '@capacitor/local-notifications';
+import { checkPermission, requestPermission, PermissionStatus } from '../utils/permissions';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -45,18 +45,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const isNativePlatform = Capacitor.isNativePlatform();
   const notificationsSupported = isNativePlatform || typeof Notification !== 'undefined';
 
-  const [nativePermission, setNativePermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
+  const [notifPermission, setNotifPermission] = useState<PermissionStatus>('prompt');
   useEffect(() => {
-    if (isNativePlatform && isOpen) {
-      LocalNotifications.checkPermissions().then(result => {
-        setNativePermission(result.display as 'granted' | 'denied' | 'prompt');
-      }).catch(() => setNativePermission('prompt'));
+    if (isOpen) {
+      checkPermission('notifications').then(setNotifPermission).catch(() => setNotifPermission('prompt'));
     }
-  }, [isNativePlatform, isOpen]);
-
-  const notificationPermission = isNativePlatform
-    ? nativePermission
-    : (typeof Notification !== 'undefined' ? Notification.permission : 'denied');
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -130,24 +124,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!notificationsSupported) return;
 
     if (!settings.reminders?.pushEnabled) {
-      if (isNativePlatform) {
-        try {
-          const result = await LocalNotifications.requestPermissions();
-          if (result.display === 'granted') {
-            updateReminders({ pushEnabled: true });
-            setNativePermission('granted');
-          } else {
-            setNativePermission(result.display as 'denied' | 'prompt');
-          }
-        } catch {
-          // Permission request failed
-        }
-      } else {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          updateReminders({ pushEnabled: true });
-        }
+      const status = await requestPermission('notifications');
+      setNotifPermission(status);
+      if (status === 'granted') {
+        updateReminders({ pushEnabled: true });
       }
+      // If 'blocked', the UI will show guidance to open device settings.
+      // If 'prompt' or 'denied', do nothing — the user can try again.
     } else {
       updateReminders({ pushEnabled: false });
     }
@@ -199,7 +182,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <button
                   onClick={handleTogglePush}
-                  disabled={!notificationsSupported || notificationPermission === 'denied'}
+                  disabled={!notificationsSupported}
                   className={`w-12 h-6 rounded-full transition-colors relative ${settings.reminders?.pushEnabled ? 'bg-emerald-500' : 'bg-slate-200'} disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.reminders?.pushEnabled ? 'left-7' : 'left-1'}`} />
@@ -208,14 +191,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
               <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
                 {!notificationsSupported
-                  ? 'Push notifications are not supported on this device/browser.'
-                  : notificationPermission === 'denied'
+                  ? 'Notifications are not supported on this device/browser.'
+                  : notifPermission === 'blocked'
                   ? isNativePlatform
-                    ? 'Push notifications are blocked. Go to your device Settings > Apps > Pal Plant > Notifications to re-enable.'
-                    : 'Push notifications are blocked. Re-enable notification permission in your browser settings.'
+                    ? 'Notifications are blocked. Go to your device Settings > Apps > Pal Plant > Notifications to re-enable, then tap the toggle again.'
+                    : 'Notifications are blocked. Re-enable notification permission in your browser settings.'
                   : settings.reminders?.pushEnabled
-                  ? 'Push reminders are enabled. You will receive notifications for overdue contacts and upcoming meetings.'
-                  : 'Enable push notifications to get reminders for overdue contacts and upcoming meetings.'}
+                  ? 'Reminders are enabled. You will receive notifications for overdue contacts and upcoming meetings.'
+                  : 'Enable notifications to get reminders for overdue contacts and upcoming meetings.'}
               </p>
               {settings.reminders?.pushEnabled && (
                 <div className="bg-slate-50 p-3 rounded-xl">
