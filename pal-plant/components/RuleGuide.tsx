@@ -15,7 +15,7 @@
  */
 
 import React, { useState } from 'react';
-import { X, ChevronDown, ChevronUp, Droplets, Clock, TrendingUp, TrendingDown, AlertTriangle, HelpCircle, Target, MessageCircle, PhoneCall, Video, Users } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Droplets, Clock, TrendingUp, AlertTriangle, HelpCircle, Target, MessageCircle, PhoneCall, Video, Users, Gamepad2 } from 'lucide-react';
 
 interface RuleGuideProps {
   isOpen: boolean;
@@ -97,6 +97,17 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
               </ul>
             </div>
 
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+              <p className="font-bold text-indigo-800 flex items-center gap-2">
+                <Gamepad2 size={14} /> Gaming
+              </p>
+              <ul className="mt-2 space-y-1 text-indigo-700 text-xs">
+                <li><strong>Timer:</strong> Restores 105% of your frequency</li>
+                <li><strong>Sweet-spot bonus:</strong> +8 points</li>
+                <li>A bit more depth than quick text check-ins</li>
+              </ul>
+            </div>
+
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
               <p className="font-bold text-purple-800 flex items-center gap-2">
                 <Video size={14} /> Video Call
@@ -151,7 +162,7 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
               <p className="font-bold text-amber-800">Automatic Cadence Shortening</p>
               <p className="text-xs text-amber-700 mt-1">
                 If you contact someone twice in a row with more than 80% timer remaining,
-                the system detects frequent contact and <strong>halves the frequency</strong>.
+                the system detects frequent contact and <strong>halves the frequency (minimum 1 day)</strong>.
                 This helps the timer match your actual habits.
               </p>
             </div>
@@ -169,7 +180,7 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
               <ul className="mt-2 space-y-1 text-xs text-purple-700">
                 <li><strong>Attended meeting (verified):</strong> +5 to garden score</li>
                 <li><strong>Closed without meeting:</strong> No score change</li>
-                <li><strong>Request pending &gt;14 days:</strong> -2 penalty to garden score</li>
+                <li><strong>Request pending past ~16.8 days:</strong> -2 penalty to garden score</li>
               </ul>
             </div>
 
@@ -193,9 +204,10 @@ const RuleGuide: React.FC<RuleGuideProps> = ({ isOpen, onClose }) => {
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
               <p className="font-bold text-emerald-800">Calculation</p>
               <ul className="mt-2 space-y-1 text-xs text-emerald-700">
-                <li><strong>Base:</strong> Average of all individual friend scores</li>
-                <li><strong>Bonus:</strong> +5 for each completed, verified meeting</li>
-                <li><strong>Penalty:</strong> -2 for each meeting request sitting &gt;14 days</li>
+                <li><strong>Base:</strong> Frequency-weighted friend scores (higher-frequency friends count more)</li>
+                <li><strong>Daily wilt:</strong> Overdue friends lose -2 per overdue day in garden-score math</li>
+                <li><strong>Meetings:</strong> Verified completed meetings add +5 with time decay and group scaling</li>
+                <li><strong>Stale requests:</strong> Requested meetings past ~16.8 days add a -2 penalty each</li>
               </ul>
             </div>
           </Section>
