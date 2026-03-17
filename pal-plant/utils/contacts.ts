@@ -26,12 +26,20 @@ export interface DeviceContact {
 
 const isNative = () => Capacitor.isNativePlatform();
 
-/** Shared projection — every call site uses the same fields. */
+/**
+ * Shared projection for web/native contact reads.
+ *
+ * NOTE: Birthday is intentionally excluded on native. The upstream
+ * `@capacitor-community/contacts` Android bridge can crash while
+ * serializing some OEM/provider birthday payloads (observed as
+ * intermittent hard app exits right after tapping import). Name/phone/
+ * email are enough for import flows, so we keep this projection to the
+ * stable fields.
+ */
 const CONTACT_PROJECTION = {
   name: true,
   phones: true,
   emails: true,
-  birthday: true,
 } as const;
 
 /**
