@@ -35,6 +35,14 @@ const CONTACT_PROJECTION = {
 } as const;
 
 /**
+ * Module-level lock to prevent concurrent native contact calls.
+ * The plugin creates a new ExecutorService per call and resolves on the
+ * UI thread — overlapping calls can crash if the bridge Activity is
+ * mid-transition (e.g. permission dialog dismissing).
+ */
+let nativeCallInProgress = false;
+
+/**
  * Pick multiple contacts from the device for bulk import.
  * On native: gets all contacts (user selects in-app via BulkImportModal).
  * On web: falls back to the Contact Picker API (Chrome only).
@@ -72,38 +80,70 @@ export const isContactPickerAvailable = (): boolean => {
 // ─── Native Implementation ──────────────────────────────────────
 
 /**
- * Get all contacts. The native plugin handles the permission request
- * internally — if READ_CONTACTS hasn't been granted yet, it shows the
- * system dialog and then proceeds to fetch contacts via its own
- * @PermissionCallback.  We must NOT call requestPermissions() separately
- * because doing so creates two competing permission flows that race and
- * can crash the app or return stale results.
+ * Ensure contacts permission is granted BEFORE calling any plugin data
+ * method.  This is critical because the plugin's internal permission
+ * flow launches a system Activity; if the host Activity is recreated
+ * during that flow the plugin's stale Activity reference can crash the
+ * app.  By handling permission entirely through the Capacitor bridge
+ * (which survives Activity recreation), then waiting a tick for the
+ * native permission cache to settle, we keep the plugin on its safe
+ * "permission already granted" code path.
+ */
+async function ensureContactsPermission(): Promise<void> {
+  const check = await Contacts.checkPermissions();
+  if (check.contacts === 'granted') return;
+
+  const req = await Contacts.requestPermissions();
+  if (req.contacts === 'granted') {
+    // Brief pause — lets the native plugin's getPermissionState() cache
+    // and the Android ContentProvider sync with the freshly-granted perm.
+    await delay(150);
+    return;
+  }
+
+  // Re-check: on some Android/plugin combos the request result is stale.
+  await delay(150);
+  const recheck = await Contacts.checkPermissions();
+  if (recheck.contacts === 'granted') return;
+
+  throw new Error('PERMISSION_DENIED');
+}
+
+/**
+ * Get all contacts from the device.
  */
 async function getAllContactsNative(): Promise<DeviceContact[]> {
-  let result;
+  if (nativeCallInProgress) {
+    throw new Error('A contact operation is already in progress.');
+  }
+  nativeCallInProgress = true;
+
   try {
-    result = await Contacts.getContacts({ projection: CONTACT_PROJECTION });
+    await ensureContactsPermission();
+
+    const result = await Contacts.getContacts({ projection: CONTACT_PROJECTION });
+
+    if (!result.contacts || result.contacts.length === 0) {
+      return [];
+    }
+
+    return result.contacts
+      .map((contact) => ({
+        name: contact.name?.display || contact.name?.given || '',
+        phone: contact.phones?.[0]?.number || undefined,
+        email: contact.emails?.[0]?.address || undefined,
+        birthday: formatBirthday(contact.birthday),
+      }))
+      .filter((c) => c.name.trim() !== '');
   } catch (err: any) {
-    // The native plugin rejects with this message when the user denies
-    // the permission dialog that it shows internally.
+    if (err?.message === 'PERMISSION_DENIED') throw err;
     if (typeof err?.message === 'string' && err.message.toLowerCase().includes('permission')) {
       throw new Error('PERMISSION_DENIED');
     }
     throw err;
+  } finally {
+    nativeCallInProgress = false;
   }
-
-  if (!result.contacts || result.contacts.length === 0) {
-    return [];
-  }
-
-  return result.contacts
-    .map((contact) => ({
-      name: contact.name?.display || contact.name?.given || '',
-      phone: contact.phones?.[0]?.number || undefined,
-      email: contact.emails?.[0]?.address || undefined,
-      birthday: formatBirthday(contact.birthday),
-    }))
-    .filter((c) => c.name.trim() !== '');
 }
 
 /**
@@ -114,39 +154,43 @@ async function getAllContactsNative(): Promise<DeviceContact[]> {
  * We work around this with a timeout so the UI doesn't hang forever.
  */
 async function pickSingleContactNative(): Promise<DeviceContact | null> {
+  if (nativeCallInProgress) {
+    throw new Error('A contact operation is already in progress.');
+  }
+  nativeCallInProgress = true;
+
   const PICKER_TIMEOUT_MS = 120_000; // 2 minutes — generous for slow devices
 
-  let result;
   try {
-    result = await withTimeout(
+    await ensureContactsPermission();
+
+    const result = await withTimeout(
       Contacts.pickContact({ projection: CONTACT_PROJECTION }),
       PICKER_TIMEOUT_MS,
     );
+
+    if (!result.contact) return null;
+
+    const contact = result.contact;
+    const name = contact.name?.display || contact.name?.given || '';
+    if (!name.trim()) return null;
+
+    return {
+      name,
+      phone: contact.phones?.[0]?.number || undefined,
+      email: contact.emails?.[0]?.address || undefined,
+      birthday: formatBirthday(contact.birthday),
+    };
   } catch (err: any) {
-    if (err?.message === 'TIMEOUT') {
-      // User likely cancelled the picker
-      return null;
-    }
+    if (err?.message === 'TIMEOUT') return null;
+    if (err?.message === 'PERMISSION_DENIED') throw err;
     if (typeof err?.message === 'string' && err.message.toLowerCase().includes('permission')) {
       throw new Error('PERMISSION_DENIED');
     }
     throw err;
+  } finally {
+    nativeCallInProgress = false;
   }
-
-  if (!result.contact) {
-    return null;
-  }
-
-  const contact = result.contact;
-  const name = contact.name?.display || contact.name?.given || '';
-  if (!name.trim()) return null;
-
-  return {
-    name,
-    phone: contact.phones?.[0]?.number || undefined,
-    email: contact.emails?.[0]?.address || undefined,
-    birthday: formatBirthday(contact.birthday),
-  };
 }
 
 // ─── Web Implementation ──────────────────────────────────────────
@@ -220,4 +264,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       (err) => { clearTimeout(timer); reject(err); },
     );
   });
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
