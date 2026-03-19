@@ -18,10 +18,12 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **Plant Health Visualization** – See at a glance which relationships need nurturing
 - **Contact History** – Full log of all interactions
 
-### 💬 Interaction Types
-- **Regular Contact** – Standard check-ins that reset the timer
-- **Deep Connection** – Meaningful conversations that earn bonus time
-- **Quick Touch** – Brief interactions that extend the timer slightly (limited availability)
+### 💬 Interaction Channels
+- **Text Message** – Light check-in that restores 50% of your contact timer (+3 points at sweet spot)
+- **Phone Call** – Standard connection that fully resets your timer (100%, +7 points)
+- **Gaming** – Shared session that restores 105% of your timer (+8 points)
+- **Video Call** – High-fidelity connection that restores 115% of your timer (+9 points)
+- **In Person** – Gold-standard contact that restores 125% of your timer with bonus time (+12 points)
 
 ### 📅 Meeting Requests
 - **Track Pending Requests** – Monitor outreach attempts
@@ -159,22 +161,51 @@ Each contact in Pal-Plant is represented as a plant:
 
 ### Scoring System
 
-Your **Social Garden Score** is calculated based on:
-- Individual friend scores (based on interaction timing and consistency)
-- Verified completed meetings (+5 points each)
-- Stale meeting requests (−2 points if pending > 14 days)
-- Clamped to a final score between 0 and 100
+Your **Social Garden Score** (0–100) is a frequency-weighted average of all individual friend scores, updated in real time.
+
+#### Individual Friend Score (Three-Tier Model)
+
+Each friend's score is a weighted average of three chronological tiers, each starting at a neutral baseline of 50:
+
+| Tier | Time Range | Weight | Description |
+|------|-----------|--------|-------------|
+| Momentum | 0–30 days | 25% | Immediate responsiveness and current effort |
+| Consistency | 31–89 days | 40% | Mid-term maintenance ("sweet spot") |
+| Foundation | 90–730 days | 35% | Long-term relationship history |
+
+Interactions older than 2 years fall off entirely.
+
+#### Global Garden Score
+
+- **Base**: Frequency-weighted average of all friend scores — higher-frequency (more often contacted) friends count more
+- **Daily Wilt**: Overdue friends lose −2 points per overdue day in the global calculation
+- **Meeting Boosts**: Verified completed meetings add +5 points (scaled by group size via `√friends`; full influence 0–30 days, moderate 31–90 days, none after)
+- **Stale Requests**: Pending meeting requests over ~16.8 days (14 days × 1.2 buffer) add a −2 penalty each
 
 ### Interaction Scoring
 
-| Action | Points | Notes |
-|--------|--------|-------|
-| Regular contact (sweet spot) | +10 | When 0-50% time remaining |
-| Regular contact (normal) | +5 | When 50-80% time remaining |
-| Regular contact (too early) | −2 | When >80% time remaining |
-| Deep connection | +15 | Also grants +12 hours to timer |
-| Quick touch | +2 | Adds a small timer extension and is limited to 1 per 2 cycles |
-| Overdue contact | −5/day | Up to −30 maximum |
+The **channel** determines how much of the contact timer is restored and the base sweet-spot bonus. **Timing** then applies a multiplier to that bonus:
+
+| Channel | Timer Restored | Sweet-Spot Bonus |
+|---------|---------------|-----------------|
+| Text | 50% | +3 |
+| Call | 100% | +7 |
+| Gaming | 105% | +8 |
+| Video | 115% | +9 |
+| In Person | 125% (bonus time!) | +12 |
+
+| Timing Window | Multiplier |
+|--------------|-----------|
+| Sweet spot (0–50% remaining) | Full channel bonus (1.0×) |
+| On time (50–80% remaining) | 70% of channel bonus (0.7×) |
+| Too early (>80% remaining) | Small penalty (−0.3× base) |
+| Overdue | −3 per day late (max −20 per interaction) |
+
+**Special Rules:**
+- **Grace Period**: All timers include a 20% buffer — a 10-day timer actually gives you 12 days before you're overdue
+- **Resurrection Penalty**: If a friend is withered (score < 10), the first interaction gives 50% fewer points
+- **Texting Diminishing Returns**: If the last 5 interactions were all texts, the next text gives 50% fewer points
+- **Cadence Shortening**: Two consecutive "too early" contacts (>80% remaining) automatically halve the contact frequency (minimum 1 day)
 
 ## 📁 Project Structure
 
@@ -212,6 +243,7 @@ pal-plant/
 │   ├── helpers.ts              # Utility functions (re-exports)
 │   ├── imageCompression.ts     # Image compression for storage
 │   ├── nudges.ts               # Smart nudge recommendations
+│   ├── permissions.ts          # Permission checks and requests (Capacitor/web)
 │   ├── scoring.ts              # Scoring system
 │   ├── stats.ts                # Statistics calculations
 │   ├── storage.ts              # IndexedDB with localStorage fallback
@@ -226,7 +258,8 @@ pal-plant/
 │   └── badge-72x72.png
 ├── tests/
 │   ├── rule-invariants.ts   # Scoring system tests
-│   └── module-tests.ts      # Module unit tests
+│   ├── module-tests.ts      # Module unit tests
+│   └── type-shims.d.ts      # TypeScript type shims for tests
 ├── App.tsx               # Main application component
 ├── types.ts              # TypeScript type definitions
 ├── index.tsx             # Application entry point

@@ -1,5 +1,18 @@
 # Pal-Plant - Changelog
 
+## [Unreleased] - 2026-03-17
+
+### 📖 Documentation
+- **Scoring & Timer Documentation Update**: Updated all documentation to reflect the current channel-based scoring and timer systems
+  - Replaced outdated "Regular Contact / Deep Connection / Quick Touch" interaction terminology with the actual channel-based system (Text, Call, Gaming, Video, In Person)
+  - Rewrote the **Interaction Types** feature section to list each channel with its timer restore percentage and sweet-spot point value
+  - Rewrote the **Scoring System** section to document the Three-Tier time-weighted model (Momentum 25%, Consistency 40%, Foundation 35%)
+  - Rewrote the **Interaction Scoring** table to show channel bonuses and timing multipliers, replacing incorrect legacy values
+  - Documented special rules: Grace Period (20% buffer), Resurrection Penalty, Texting Diminishing Returns, and Cadence Shortening
+  - Updated Global Garden Score description to reflect frequency-weighted average, daily wilt, meeting boosts with time decay and group scaling, and the correct stale-request threshold (~16.8 days)
+  - Added `permissions.ts` to the Project Structure (was missing)
+  - Added `tests/type-shims.d.ts` to the Project Structure (was missing)
+
 ## [Unreleased] - 2026-03-16
 
 ### 📖 Documentation
