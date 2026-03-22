@@ -64,6 +64,26 @@ export const processContactAction = (
     scoreChange = Math.round(scoreChange * 0.5);
   }
 
+  // Small tenure bonus: long-standing contacts get a slight score bump.
+  // Uses oldest known interaction date when available, otherwise falls back
+  // to lastContacted (best available proxy for when the relationship was added).
+  const oldestKnownDate = friend.logs.length > 0
+    ? friend.logs.reduce((oldest, log) => {
+        const oldestTime = new Date(oldest).getTime();
+        const logTime = new Date(log.date).getTime();
+        return logTime < oldestTime ? log.date : oldest;
+      }, friend.logs[0].date)
+    : friend.lastContacted;
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const tenureDays = Math.max(0, Math.floor((now.getTime() - new Date(oldestKnownDate).getTime()) / MS_PER_DAY));
+  const tenureBonus = Math.min(2, Math.floor(tenureDays / 30));
+  scoreChange += tenureBonus;
+
+  // First interaction should never feel like a punishment.
+  if (friend.logs.length === 0 && scoreChange < 0) {
+    scoreChange = 1;
+  }
+
   const newLogs: ContactLog[] = [{
     id: generateId(),
     date: now.toISOString(),
