@@ -1,0 +1,19 @@
+<svg width="1600" height="700" viewBox="0 0 1600 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dcfce7"/>
+      <stop offset="100%" stop-color="#bbf7d0"/>
+    </linearGradient>
+    <linearGradient id="hillA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#15803d" stop-opacity="0.7"/>
+    </linearGradient>
+    <linearGradient id="hillB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#16a34a" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="700" fill="url(#sky)"/>
+  <path d="M0 520C145 460 256 470 382 520C542 584 688 552 810 492C964 414 1134 432 1266 500C1388 562 1492 582 1600 548V700H0V520Z" fill="url(#hillA)"/>
+  <path d="M0 574C174 504 292 512 456 576C604 632 754 618 918 560C1084 500 1246 502 1392 550C1498 584 1568 594 1600 596V700H0V574Z" fill="url(#hillB)"/>
+</svg>
