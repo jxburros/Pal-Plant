@@ -51,44 +51,54 @@ export const detectDuplicates = (
     similarity: number 
   }> = [];
 
-  /**
-   * Normalizes a string for comparison by removing non-alphanumeric characters
-   * and converting to lowercase
-   */
-  const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalizeName = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalizeEmail = (value?: string): string | null => value?.toLowerCase() ?? null;
+  const normalizePhone = (value?: string): string => value?.replace(/\D/g, '') ?? '';
+  const isPhoneDuplicate = (a: string, b: string): boolean => {
+    if (a.length < 7 || b.length < 7) return false;
+    return a.includes(b) || b.includes(a);
+  };
+
+  const normalizedExistingFriends = existingFriends.map(existing => ({
+    existing,
+    normalizedName: normalizeName(existing.name),
+    normalizedEmail: normalizeEmail(existing.email),
+    normalizedPhone: normalizePhone(existing.phone),
+  }));
 
   newContacts.forEach(newContact => {
-    const normalizedNew = normalize(newContact.name);
+    const normalizedNewName = normalizeName(newContact.name);
+    const normalizedNewEmail = normalizeEmail(newContact.email);
+    const normalizedNewPhone = normalizePhone(newContact.phone);
 
-    existingFriends.forEach(existing => {
-      const normalizedExisting = normalize(existing.name);
+    normalizedExistingFriends.forEach(({
+      existing,
+      normalizedName: normalizedExistingName,
+      normalizedEmail: normalizedExistingEmail,
+      normalizedPhone: normalizedExistingPhone,
+    }) => {
 
       // Check for exact match
-      if (normalizedNew === normalizedExisting) {
+      if (normalizedNewName === normalizedExistingName) {
         duplicates.push({ newContact, existingFriend: existing, similarity: 100 });
         return;
       }
 
       // Check for partial match (one contains the other)
-      if (normalizedNew.includes(normalizedExisting) || normalizedExisting.includes(normalizedNew)) {
+      if (normalizedNewName.includes(normalizedExistingName) || normalizedExistingName.includes(normalizedNewName)) {
         duplicates.push({ newContact, existingFriend: existing, similarity: 80 });
         return;
       }
 
       // Check by email match
-      if (newContact.email && existing.email && newContact.email.toLowerCase() === existing.email.toLowerCase()) {
+      if (normalizedNewEmail && normalizedExistingEmail && normalizedNewEmail === normalizedExistingEmail) {
         duplicates.push({ newContact, existingFriend: existing, similarity: 95 });
         return;
       }
 
       // Check by phone match
-      if (newContact.phone && existing.phone) {
-        const normalizedNewPhone = newContact.phone.replace(/\D/g, '');
-        const normalizedExistingPhone = existing.phone.replace(/\D/g, '');
-        if (normalizedNewPhone.length >= 7 && normalizedExistingPhone.length >= 7 &&
-            (normalizedNewPhone.includes(normalizedExistingPhone) || normalizedExistingPhone.includes(normalizedNewPhone))) {
-          duplicates.push({ newContact, existingFriend: existing, similarity: 90 });
-        }
+      if (isPhoneDuplicate(normalizedNewPhone, normalizedExistingPhone)) {
+        duplicates.push({ newContact, existingFriend: existing, similarity: 90 });
       }
     });
   });
