@@ -116,7 +116,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
     <div className="space-y-6 pb-24 animate-in fade-in duration-500" role="main" aria-label="Dashboard">
 
       {/* Hero Section */}
-      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${hero.gradient} p-6 border ${hero.border} shadow-sm`} role="region" aria-label="Garden score summary">
+      <div className={`app-hero-card relative overflow-hidden rounded-3xl bg-gradient-to-br ${hero.gradient} p-6 border ${hero.border} shadow-sm`} role="region" aria-label="Garden score summary">
         <div className="absolute inset-0 pointer-events-none">
           <img
             src="/assets/hero-hills.svg"
@@ -147,7 +147,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
       </div>
 
       {/* Animated Garden Scene */}
-      <div className={`relative overflow-hidden rounded-3xl ${theme.cardBg} border ${theme.border} p-4 shadow-sm`} role="region" aria-label="Animated garden scene">
+      <div className={`app-section-card app-garden-scene-shell relative overflow-hidden rounded-3xl ${theme.cardBg} border ${theme.border} p-4 shadow-sm`} role="region" aria-label="Animated garden scene">
         <div className={`garden-stage ${settings.theme === 'midnight' ? 'garden-stage-night' : ''}`}>
           <div className="garden-layer garden-sky" />
           <div className="garden-layer garden-hills" />
@@ -192,8 +192,8 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
       </div>
 
       {/* Discovery Shelf */}
-      <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`} role="region" aria-label="Garden discoveries">
-        <div className={`flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
+      <div className={`app-section-card ${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`} role="region" aria-label="Garden discoveries">
+        <div className={`app-section-titlebar flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
           <Sparkles size={16} /> Discovery Shelf
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -211,8 +211,8 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
 
 
       {/* Suggested Outreach Queue */}
-      <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`} role="region" aria-label="Today's suggested outreach">
-        <div className={`flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
+      <div className={`app-section-card ${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`} role="region" aria-label="Today's suggested outreach">
+        <div className={`app-section-titlebar flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
           <Sprout size={16} /> Today's Suggested Outreach
         </div>
         {suggestedOutreach.length === 0 ? (
@@ -220,7 +220,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
         ) : (
           <div className="space-y-2">
             {suggestedOutreach.map(item => (
-              <button key={item.id} onClick={item.action} className={`w-full text-left p-3 ${theme.cardBg} rounded-xl border ${theme.border} hover:opacity-80 transition-colors`}>
+              <button key={item.id} onClick={item.action} className={`app-list-item w-full text-left p-3 ${theme.cardBg} rounded-xl border ${theme.border} hover:opacity-80 transition-colors`}>
                 <p className={`text-sm font-bold ${theme.textMain}`}>{item.label}</p>
                 <p className={`text-xs ${theme.textSub} mt-1`}>{item.detail}</p>
               </button>
@@ -231,13 +231,13 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
 
       {/* Smart Nudges */}
       {activeNudges.length > 0 && (
-        <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`} role="region" aria-label="Smart cadence suggestions">
-          <div className={`flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
+        <div className={`app-section-card ${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`} role="region" aria-label="Smart cadence suggestions">
+          <div className={`app-section-titlebar flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
             <Lightbulb size={16} /> Cadence Suggestions
           </div>
           <div className="space-y-2">
             {activeNudges.map(nudge => (
-              <div key={nudge.friendId} className={`p-3 rounded-xl border ${nudge.type === 'shorten' ? 'bg-blue-50 border-blue-100' : 'bg-amber-50 border-amber-100'}`}>
+              <div key={nudge.friendId} className={`app-list-item p-3 rounded-xl border ${nudge.type === 'shorten' ? 'bg-blue-50 border-blue-100' : 'bg-amber-50 border-amber-100'}`}>
                 <div className="flex items-center gap-2 mb-1">
                   {nudge.type === 'shorten' ? (
                     <TrendingDown size={14} className="text-blue-500" />
@@ -277,7 +277,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
         <div>
           <button
             onClick={() => setShowWeeklyPlan(prev => !prev)}
-            className={`w-full flex items-center justify-between p-4 ${theme.cardBg} border ${theme.border} rounded-2xl shadow-sm hover:shadow-md transition-shadow`}
+            className={`app-section-card w-full flex items-center justify-between p-4 ${theme.cardBg} border ${theme.border} rounded-2xl shadow-sm hover:shadow-md transition-shadow`}
             aria-expanded={showWeeklyPlan}
             aria-controls="weekly-plan-section"
           >
