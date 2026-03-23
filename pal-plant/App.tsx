@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
-import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Search, BarChart3, X, Download, LayoutGrid, ListChecks, Activity, Skull } from 'lucide-react';
+import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Search, BarChart3, X, Download, LayoutGrid, Skull } from 'lucide-react';
 import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group, ContactChannel } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
@@ -43,29 +43,6 @@ interface Toast {
   message: string;
   type: 'success' | 'info' | 'warning';
 }
-
-const TAB_SCENES: Record<Tab, { icon: React.ReactNode; title: string; subtitle: string }> = {
-  [Tab.HOME]: {
-    icon: <LayoutGrid size={16} className="text-slate-500" />,
-    title: 'Overview',
-    subtitle: 'A clear summary of who needs your attention next.'
-  },
-  [Tab.LIST]: {
-    icon: <ListChecks size={16} className="text-slate-500" />,
-    title: 'Contacts',
-    subtitle: 'Track cadence and log interactions in one place.'
-  },
-  [Tab.STATS]: {
-    icon: <Activity size={16} className="text-slate-500" />,
-    title: 'Insights',
-    subtitle: 'Review trends, streaks, and relationship momentum.'
-  },
-  [Tab.MEETINGS]: {
-    icon: <Calendar size={16} className="text-sky-500" />,
-    title: 'Meetings',
-    subtitle: 'Manage requests and scheduled time together.'
-  }
-};
 
 const ToastContainer: React.FC<{ toasts: Toast[]; onDismiss: (id: string) => void }> = ({ toasts, onDismiss }) => {
   if (toasts.length === 0) return null;
@@ -507,7 +484,7 @@ const App: React.FC = () => {
               Pal Plant
             </h1>
             <p className="text-xs font-bold uppercase tracking-widest mt-0.5 opacity-60" aria-live="polite">
-              {activeTab === Tab.HOME ? 'Dashboard' : activeTab === Tab.LIST ? 'Your Garden' : activeTab === Tab.STATS ? 'Statistics' : 'Meeting Requests'}
+              {activeTab === Tab.HOME ? 'Overview' : activeTab === Tab.LIST ? 'Contacts' : activeTab === Tab.STATS ? 'Stats' : 'Meetings'}
             </p>
           </button>
           <button
@@ -583,15 +560,6 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:px-6 sm:pt-6 pb-40 max-w-2xl mx-auto w-full relative z-[1]">
-        <section className={`scene-banner ${settings.theme === 'midnight' ? 'scene-banner-night' : ''}`} aria-label="Current section style banner">
-          <div className="flex items-center gap-2">
-            {TAB_SCENES[activeTab].icon}
-            <p className="text-[10px] uppercase tracking-[0.18em] font-black opacity-60">Scene Mode</p>
-          </div>
-          <h2 className="text-base font-black mt-1">{TAB_SCENES[activeTab].title}</h2>
-          <p className="text-xs opacity-70 mt-1">{TAB_SCENES[activeTab].subtitle}</p>
-        </section>
-
         {activeTab === Tab.HOME ? (
           <HomeView
             friends={friends}
@@ -660,7 +628,7 @@ const App: React.FC = () => {
 
       <nav className={`fixed bottom-0 w-full ${themeColors.cardBg} border-t ${themeColors.border} px-6 py-4 pb-6 z-40 flex justify-between items-center sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300`} role="navigation" aria-label="Main navigation">
         <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} aria-label="Home" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Home size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Home</span></button>
-        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Garden" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Garden</span></button>
+        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Contacts" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Contacts</span></button>
         <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} aria-label="Statistics" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.STATS ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><BarChart3 size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Stats</span></button>
         <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} aria-label="Meeting requests" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Calendar size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Requests</span></button>
       </nav>

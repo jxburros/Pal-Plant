@@ -80,9 +80,8 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
       })();
 
   return (
-    <div className="friend-card-shell bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-200 hover:shadow-md mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
+    <div className="friend-card-shell bg-white rounded-2xl p-4 border border-slate-100 relative overflow-hidden mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
       <div className="friend-card-glow" aria-hidden="true" />
-      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Identity</p>
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
         <div className="flex items-center gap-1">
           <span className={`text-[10px] font-black px-2 py-1 rounded-md border ${friend.individualScore > 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : friend.individualScore < 40 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
@@ -111,7 +110,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
                 </div>
               )}
             </div>
-            <div className={`absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-gradient-to-br ${plantStage.gradient} border-2 border-white shadow-md ring-2 ${plantStage.ring} flex items-center justify-center z-10`} title={plantStage.label}>
+            <div className={`absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center z-10`} title={plantStage.label}>
               <PlantIcon size={17} className={plantStage.color} />
             </div>
           </div>
@@ -142,7 +141,6 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         </div>
       </div>
 
-      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Status</p>
       <div className="mt-3 relative">
         <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1 px-1">
           <span>Needs Water</span>
@@ -150,9 +148,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         </div>
         <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner" role="progressbar" aria-valuenow={Math.round(visualPercentage)} aria-valuemin={0} aria-valuemax={100} aria-label={`Contact timer: ${isOverdue ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days remaining`}`}>
           <div className={`h-full transition-all duration-700 ease-out relative rounded-full ${progressColorClass}`} style={{ width: `${visualPercentage}%` }}>
-            <div className="absolute top-0 left-0 w-full h-1/2 bg-white/25 rounded-full"></div>
-            <div className="absolute top-0 right-0 w-2 h-full bg-white/30 rounded-full"></div>
-          </div>
+                      </div>
         </div>
       </div>
 
@@ -187,7 +183,6 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         </div>
       )}
 
-      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Log Interaction</p>
       {/* Channel-based interaction buttons */}
       <div className="grid grid-cols-2 gap-2 mt-2">
         {CHANNEL_OPTIONS.map(ch => {
