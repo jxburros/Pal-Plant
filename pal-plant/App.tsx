@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
-import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download, Flower2, Sparkles, Leaf, Skull } from 'lucide-react';
+import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Search, BarChart3, X, Download, LayoutGrid, ListChecks, Activity, Skull } from 'lucide-react';
 import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group, ContactChannel } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
@@ -46,24 +46,24 @@ interface Toast {
 
 const TAB_SCENES: Record<Tab, { icon: React.ReactNode; title: string; subtitle: string }> = {
   [Tab.HOME]: {
-    icon: <Sparkles size={16} className="text-amber-500" />,
-    title: 'Welcome to your garden realm',
-    subtitle: 'Watch the world react to every caring touch.'
+    icon: <LayoutGrid size={16} className="text-slate-500" />,
+    title: 'Overview',
+    subtitle: 'A clear summary of who needs your attention next.'
   },
   [Tab.LIST]: {
-    icon: <Flower2 size={16} className="text-fuchsia-500" />,
-    title: 'Caretaker mode',
-    subtitle: 'Every card is a living plant with moods and momentum.'
+    icon: <ListChecks size={16} className="text-slate-500" />,
+    title: 'Contacts',
+    subtitle: 'Track cadence and log interactions in one place.'
   },
   [Tab.STATS]: {
-    icon: <Leaf size={16} className="text-emerald-600" />,
-    title: 'Growth observatory',
-    subtitle: 'Track patterns, streaks, and bloom quality over time.'
+    icon: <Activity size={16} className="text-slate-500" />,
+    title: 'Insights',
+    subtitle: 'Review trends, streaks, and relationship momentum.'
   },
   [Tab.MEETINGS]: {
     icon: <Calendar size={16} className="text-sky-500" />,
-    title: 'Gathering grove',
-    subtitle: 'Shape plans into in-person moments and new memories.'
+    title: 'Meetings',
+    subtitle: 'Manage requests and scheduled time together.'
   }
 };
 
@@ -476,12 +476,6 @@ const App: React.FC = () => {
 
   return (
     <div data-theme={settings.theme} className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
-      <div className="app-garden-backdrop" aria-hidden="true">
-        <span className="bg-orb orb-a" />
-        <span className="bg-orb orb-b" />
-        <span className="bg-orb orb-c" />
-        <span className="bg-orb orb-d" />
-      </div>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {showBackupBanner && (
@@ -509,7 +503,7 @@ const App: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <button onClick={() => setActiveTab(Tab.HOME)} className="text-left">
             <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-              <Sprout className="text-emerald-600 fill-emerald-100" />
+              <LayoutGrid className="text-slate-700" />
               Pal Plant
             </h1>
             <p className="text-xs font-bold uppercase tracking-widest mt-0.5 opacity-60" aria-live="polite">
@@ -530,7 +524,7 @@ const App: React.FC = () => {
               <Search className={`absolute left-3 top-2.5 ${themeColors.textSub}`} size={16} />
               <input
                 type="text"
-                placeholder="Search your garden..."
+                placeholder="Search contacts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={`w-full ${themeColors.cardBg} pl-10 pr-4 py-2 rounded-xl text-sm border ${themeColors.border} focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all`}
@@ -556,13 +550,13 @@ const App: React.FC = () => {
                 onClick={() => setHealthFilter('Healthy')} 
                 className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Healthy' ? 'bg-emerald-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
               >
-                <Sprout size={12} className="inline -mt-0.5" /> Healthy
+                Healthy
               </button>
               <button
                 onClick={() => setHealthFilter('Wilting')}
                 className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Wilting' ? 'bg-yellow-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
               >
-                <Leaf size={12} className="inline -mt-0.5" /> Wilting
+                Needs follow-up
               </button>
               <button
                 onClick={() => setHealthFilter('Withering')}
@@ -582,7 +576,7 @@ const App: React.FC = () => {
                   Manage Groups ({groups.length})
                 </button>
               </div>
-              <button onClick={openAddModal} className="text-emerald-700">New plant</button>
+              <button onClick={openAddModal} className="text-emerald-700">Add contact</button>
             </div>
           </div>
         )}
@@ -614,9 +608,9 @@ const App: React.FC = () => {
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 opacity-70 ${themeColors.cardBg}`}>
                   <Users size={32} className="text-emerald-500" />
                 </div>
-                <h3 className="text-lg font-bold">Your garden is empty</h3>
-                <p className="text-xs opacity-60 mt-1">Start with one seed friend and your world will begin to bloom.</p>
-                <button onClick={openAddModal} className="mt-6 font-bold text-sm underline opacity-80">Plant your first seed</button>
+                <h3 className="text-lg font-bold">No contacts yet</h3>
+                <p className="text-xs opacity-60 mt-1">Add your first contact to start building your relationship dashboard.</p>
+                <button onClick={openAddModal} className="mt-6 font-bold text-sm underline opacity-80">Add your first contact</button>
               </div>
             ) : (
               <div className="space-y-4">
