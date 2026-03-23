@@ -17,7 +17,7 @@
 import React, { useState } from 'react';
 import { Friend, MeetingRequest, AppSettings } from '../types';
 import { calculateSocialGardenScore, calculateTimeStatus, getUpcomingBirthdays, getSmartNudges, getInitials, getAvatarColor, THEMES } from '../utils/helpers';
-import { Trophy, Calendar, AlertTriangle, Gift, Sprout, Leaf, TrendingDown, TrendingUp, Lightbulb, CalendarDays, ChevronRight } from 'lucide-react';
+import { Trophy, Calendar, AlertTriangle, Gift, Sprout, Leaf, TrendingDown, TrendingUp, Lightbulb, CalendarDays, ChevronRight, Bug, Flower2, Sparkles, Star } from 'lucide-react';
 import { ThemeId } from '../types';
 import WeeklyPlanView from './WeeklyPlanView';
 
@@ -63,6 +63,26 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
   const staleRequests = meetingRequests.filter(m => m.status === 'REQUESTED').sort((a, b) =>
     new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime()
   );
+  const discoveries = [
+    {
+      id: 'ladybug',
+      icon: <Bug size={14} className="text-rose-500" />,
+      title: 'Ladybug lookout',
+      detail: withering.length > 0 ? 'A helper appears when plants start to wilt.' : 'A tiny guardian is patrolling healthy leaves.'
+    },
+    {
+      id: 'blossom',
+      icon: <Flower2 size={14} className="text-fuchsia-500" />,
+      title: 'Blossom patch',
+      detail: birthdays.length > 0 ? `${birthdays.length} celebration bloom${birthdays.length > 1 ? 's are' : ' is'} active.` : 'No birthday blossoms yet—watch this space.'
+    },
+    {
+      id: 'starlight',
+      icon: <Star size={14} className="text-amber-500" />,
+      title: 'Starlight stones',
+      detail: meetings.length > 0 ? 'Meeting paths are lit and ready.' : 'Stones glow brighter as events are planned.'
+    }
+  ];
 
   const suggestedOutreach = [
     ...withering.slice(0, 2).map(f => ({
@@ -128,23 +148,62 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
 
       {/* Animated Garden Scene */}
       <div className={`relative overflow-hidden rounded-3xl ${theme.cardBg} border ${theme.border} p-4 shadow-sm`} role="region" aria-label="Animated garden scene">
-        <div className="flex items-center justify-between gap-4">
+        <div className={`garden-stage ${settings.theme === 'midnight' ? 'garden-stage-night' : ''}`}>
+          <div className="garden-layer garden-sky" />
+          <div className="garden-layer garden-hills" />
+          <div className="garden-layer garden-path" />
+          <div className="garden-layer garden-pond" />
+
+          <img
+            src="/assets/plant-mascot.svg"
+            alt=""
+            aria-hidden="true"
+            className={`garden-character garden-mascot ${hasMotion ? 'mascot-bounce' : ''}`}
+          />
+          <span className={`garden-character garden-snail ${hasMotion ? 'critter-crawl' : ''}`} aria-hidden="true">🐌</span>
+          <span className={`garden-character garden-butterfly ${hasMotion ? 'butterfly-loop' : ''}`} aria-hidden="true">🦋</span>
+          <span className={`garden-character garden-gnome ${hasMotion ? 'gnome-wiggle' : ''}`} aria-hidden="true">🧙‍♂️</span>
+          <span className={`garden-character garden-bee ${hasMotion ? 'bee-zigzag' : ''}`} aria-hidden="true">🐝</span>
+
+          <span className={`firefly firefly-a ${hasMotion ? 'firefly-glow' : ''}`} />
+          <span className={`firefly firefly-b ${hasMotion ? 'firefly-glow' : ''}`} />
+          <span className={`firefly firefly-c ${hasMotion ? 'firefly-glow' : ''}`} />
+          <span className={`firefly firefly-d ${hasMotion ? 'firefly-glow' : ''}`} />
+
+          <div className="garden-clue clue-leaf" aria-hidden="true">🍃</div>
+          <div className="garden-clue clue-heart" aria-hidden="true">💚</div>
+          <div className="garden-clue clue-seed" aria-hidden="true">🌱</div>
+          {score >= 70 && <div className="garden-clue clue-crown" aria-hidden="true">👑</div>}
+        </div>
+
+        <div className="mt-4 flex items-start justify-between gap-4">
           <div>
             <p className={`text-xs uppercase tracking-[0.2em] font-black ${theme.textSub}`}>Garden Vibes</p>
-            <h3 className={`text-lg font-black mt-1 ${theme.textMain}`}>Your social world is alive</h3>
-            <p className={`text-xs mt-2 ${theme.textSub}`}>Watch this grow as you stay in touch.</p>
+            <h3 className={`text-lg font-black mt-1 ${theme.textMain}`}>Tiny friends are moving in</h3>
+            <p className={`text-xs mt-2 ${theme.textSub}`}>Look closely for secret items and little visitors.</p>
           </div>
-          <div className="relative w-28 h-28 shrink-0">
-            <img
-              src="/assets/plant-mascot.svg"
-              alt=""
-              aria-hidden="true"
-              className={`w-full h-full object-contain drop-shadow-md ${hasMotion ? 'mascot-bounce' : ''}`}
-            />
-            <span className={`firefly firefly-a ${hasMotion ? 'firefly-glow' : ''}`} />
-            <span className={`firefly firefly-b ${hasMotion ? 'firefly-glow' : ''}`} />
-            <span className={`firefly firefly-c ${hasMotion ? 'firefly-glow' : ''}`} />
+          <div className={`shrink-0 rounded-2xl px-3 py-2 border ${theme.border} ${theme.cardBg} text-right`}>
+            <p className={`text-[10px] uppercase tracking-wider font-black ${theme.textSub}`}>Discoveries</p>
+            <p className={`text-xl font-black ${theme.textMain}`}>{Math.min(4, Math.max(1, Math.floor(score / 25) + 1))}/4</p>
           </div>
+        </div>
+      </div>
+
+      {/* Discovery Shelf */}
+      <div className={`${theme.cardBg} border ${theme.border} p-4 rounded-2xl shadow-sm`} role="region" aria-label="Garden discoveries">
+        <div className={`flex items-center gap-2 mb-3 ${theme.textSub} font-bold uppercase tracking-wider text-xs`}>
+          <Sparkles size={16} /> Discovery Shelf
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {discoveries.map(item => (
+            <div key={item.id} className={`rounded-xl border ${theme.border} ${theme.cardBg} p-3`}>
+              <div className="flex items-center gap-2">
+                {item.icon}
+                <p className={`text-xs font-black ${theme.textMain}`}>{item.title}</p>
+              </div>
+              <p className={`text-[11px] mt-2 ${theme.textSub}`}>{item.detail}</p>
+            </div>
+          ))}
         </div>
       </div>
 
