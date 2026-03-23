@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Phone, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, ChevronDown, ChevronUp, PhoneCall, Video, Users, Gamepad2 } from 'lucide-react';
+import { Phone, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, ChevronDown, ChevronUp, PhoneCall, Video, Users, Gamepad2, Sparkles } from 'lucide-react';
 import { ActionFeedback, ContactChannel, Friend, CHANNEL_WEIGHTS, CHANNEL_SCORE_BONUS } from '../types';
 import { calculateTimeStatus, getProgressBarColor, getStatusColor, getPlantStage, getInitials, getAvatarColor } from '../utils/helpers';
 import InlineFeedback from './InlineFeedback';
@@ -80,7 +80,8 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
       })();
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-200 hover:shadow-md mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
+    <div className="friend-card-shell bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-200 hover:shadow-md mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
+      <div className="friend-card-glow" aria-hidden="true" />
       <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Identity</p>
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
         <div className="flex items-center gap-1">
@@ -116,7 +117,10 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
           </div>
 
           <div>
-            <h3 className="font-bold text-slate-800 text-lg leading-tight truncate max-w-[150px]">{friend.name}</h3>
+            <h3 className="font-bold text-slate-800 text-lg leading-tight truncate max-w-[150px] flex items-center gap-1">
+              {friend.name}
+              {friend.individualScore >= 80 && <Sparkles size={14} className="text-amber-500" aria-hidden="true" />}
+            </h3>
             <p className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${plantStage.color}`}>{plantStage.label}</p>
 
             <div className="flex items-center gap-3 mt-2">
@@ -153,7 +157,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
 
       <button
         onClick={() => setShowMechanics(prev => !prev)}
-        className="w-full mt-3 p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-xs text-slate-600 flex items-center justify-between"
+        className="w-full mt-3 p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-xs text-slate-600 flex items-center justify-between border border-slate-100"
       >
         <span className="font-semibold">Why score changed?</span>
         {showMechanics ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
