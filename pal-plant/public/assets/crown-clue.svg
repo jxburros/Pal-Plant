@@ -1,0 +1,18 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="crownGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <path d="M3 18L5 8L9 13L12 5L15 13L19 8L21 18H3Z" fill="url(#crownGold)"/>
+  <path d="M3 18H21V20C21 20.5 20.5 21 20 21H4C3.5 21 3 20.5 3 20V18Z" fill="#d97706"/>
+  <!-- Jewels -->
+  <circle cx="12" cy="17" r="1.5" fill="#ef4444"/>
+  <circle cx="7" cy="17" r="1" fill="#3b82f6"/>
+  <circle cx="17" cy="17" r="1" fill="#3b82f6"/>
+  <!-- Tips -->
+  <circle cx="5" cy="8" r="1.5" fill="#fcd34d"/>
+  <circle cx="12" cy="5" r="1.5" fill="#fcd34d"/>
+  <circle cx="19" cy="8" r="1.5" fill="#fcd34d"/>
+</svg>

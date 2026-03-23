@@ -1,4 +1,11 @@
 <svg width="1600" height="700" viewBox="0 0 1600 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="sparkGlow">
+      <stop offset="0%" stop-color="#fde68a" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#fde68a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Floating dots -->
   <g opacity="0.8">
     <circle cx="148" cy="106" r="3" fill="#ffffff"/>
     <circle cx="412" cy="154" r="2" fill="#ffffff"/>
@@ -8,10 +15,27 @@
     <circle cx="1326" cy="156" r="3" fill="#ffffff"/>
     <circle cx="1498" cy="104" r="3" fill="#ffffff"/>
   </g>
-  <g stroke="#ffffff" stroke-opacity="0.75">
+  <!-- Four-point star sparkles -->
+  <g stroke="#ffffff" stroke-opacity="0.75" fill="none">
     <path d="M256 232L264 250L282 258L264 266L256 284L248 266L230 258L248 250L256 232Z"/>
     <path d="M640 206L648 226L668 234L648 242L640 262L632 242L612 234L632 226L640 206Z"/>
     <path d="M998 220L1004 236L1020 242L1004 248L998 264L992 248L976 242L992 236L998 220Z"/>
     <path d="M1362 228L1370 246L1388 254L1370 262L1362 280L1354 262L1336 254L1354 246L1362 228Z"/>
+  </g>
+  <!-- Warm glow sparkles -->
+  <g>
+    <circle cx="200" cy="300" r="12" fill="url(#sparkGlow)"/>
+    <circle cx="700" cy="250" r="10" fill="url(#sparkGlow)"/>
+    <circle cx="1200" cy="280" r="14" fill="url(#sparkGlow)"/>
+    <circle cx="450" cy="350" r="8" fill="url(#sparkGlow)"/>
+    <circle cx="1050" cy="320" r="10" fill="url(#sparkGlow)"/>
+  </g>
+  <!-- Small diamond sparkles -->
+  <g fill="#ffffff" fill-opacity="0.5">
+    <path d="M100 350L103 356L100 362L97 356Z"/>
+    <path d="M500 180L503 186L500 192L497 186Z"/>
+    <path d="M800 320L803 326L800 332L797 326Z"/>
+    <path d="M1150 170L1153 176L1150 182L1147 176Z"/>
+    <path d="M1450 300L1453 306L1450 312L1447 306Z"/>
   </g>
 </svg>

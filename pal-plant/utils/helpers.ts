@@ -441,11 +441,11 @@ export const getProgressBarColor = (percentage: number): string => {
 
 // Returns a component and label based on percentage
 export const getPlantStage = (percentage: number) => {
-  if (percentage >= 80) return { icon: Flower, label: 'Thriving', color: 'text-pink-500', bg: 'bg-pink-100' };
-  if (percentage >= 50) return { icon: Trees, label: 'Growing', color: 'text-emerald-600', bg: 'bg-emerald-100' };
-  if (percentage >= 25) return { icon: Sprout, label: 'Sprouting', color: 'text-lime-600', bg: 'bg-lime-100' };
-  if (percentage > 0) return { icon: Leaf, label: 'Wilting', color: 'text-yellow-600', bg: 'bg-yellow-100' };
-  return { icon: Skull, label: 'Withered', color: 'text-stone-500', bg: 'bg-stone-100' };
+  if (percentage >= 80) return { icon: Flower, label: 'Thriving', color: 'text-pink-500', bg: 'bg-pink-100', ring: 'ring-pink-200', gradient: 'from-pink-50 to-pink-100' };
+  if (percentage >= 50) return { icon: Trees, label: 'Growing', color: 'text-emerald-600', bg: 'bg-emerald-100', ring: 'ring-emerald-200', gradient: 'from-emerald-50 to-emerald-100' };
+  if (percentage >= 25) return { icon: Sprout, label: 'Sprouting', color: 'text-lime-600', bg: 'bg-lime-100', ring: 'ring-lime-200', gradient: 'from-lime-50 to-lime-100' };
+  if (percentage > 0) return { icon: Leaf, label: 'Wilting', color: 'text-yellow-600', bg: 'bg-yellow-100', ring: 'ring-yellow-200', gradient: 'from-yellow-50 to-yellow-100' };
+  return { icon: Skull, label: 'Withered', color: 'text-stone-500', bg: 'bg-stone-100', ring: 'ring-stone-200', gradient: 'from-stone-50 to-stone-100' };
 };
 
 // Meeting Urgency Logic: Green -> Red over 14 days (with 20% buffer = 16.8 days actual)
