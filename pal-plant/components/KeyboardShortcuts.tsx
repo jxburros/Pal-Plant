@@ -34,6 +34,7 @@ const shortcuts: ShortcutInfo[] = [
   { key: 'H', description: 'Go to Home' },
   { key: 'G', description: 'Go to Garden (Friends List)' },
   { key: 'M', description: 'Go to Meeting Requests' },
+  { key: 'B', description: 'Go to Board Game' },
   { key: 'N', description: 'Add New Friend' },
   { key: 'S', description: 'Open Settings' },
   { key: '?', description: 'Show Keyboard Shortcuts' },
@@ -117,6 +118,10 @@ export const useKeyboardShortcuts = (
         case 'm':
           e.preventDefault();
           onNavigate(Tab.MEETINGS);
+          break;
+        case 'b':
+          e.preventDefault();
+          onNavigate(Tab.GAME);
           break;
         case 'n':
           e.preventDefault();
