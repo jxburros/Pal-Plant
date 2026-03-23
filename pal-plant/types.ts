@@ -106,7 +106,8 @@ export enum Tab {
   HOME = 'HOME',
   LIST = 'LIST',
   STATS = 'STATS',
-  MEETINGS = 'MEETINGS'
+  MEETINGS = 'MEETINGS',
+  GAME = 'GAME'
 }
 
 export type ThemeId = 'plant' | 'midnight' | 'forest' | 'ocean' | 'sunset' | 'berry';

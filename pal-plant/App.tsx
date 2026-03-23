@@ -15,13 +15,14 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
-import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download } from 'lucide-react';
+import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download, Gamepad2 } from 'lucide-react';
 import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group, ContactChannel } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
 import SettingsModal from './components/SettingsModal';
 import HomeView from './components/HomeView';
+import BoardGameView from './components/BoardGameView';
 import { useKeyboardShortcuts } from './components/KeyboardShortcuts';
 import { generateId, calculateTimeStatus, THEMES } from './utils/helpers';
 import { trackEvent } from './utils/analytics';
@@ -484,7 +485,15 @@ const App: React.FC = () => {
               Pal Plant
             </h1>
             <p className="text-xs font-bold uppercase tracking-widest mt-0.5 opacity-60" aria-live="polite">
-              {activeTab === Tab.HOME ? 'Dashboard' : activeTab === Tab.LIST ? 'Your Garden' : activeTab === Tab.STATS ? 'Statistics' : 'Meeting Requests'}
+              {activeTab === Tab.HOME
+                ? 'Dashboard'
+                : activeTab === Tab.LIST
+                  ? 'Your Garden'
+                  : activeTab === Tab.STATS
+                    ? 'Statistics'
+                    : activeTab === Tab.GAME
+                      ? 'Board Game'
+                      : 'Meeting Requests'}
             </p>
           </button>
           <button
@@ -613,6 +622,8 @@ const App: React.FC = () => {
           <Suspense fallback={<div className="text-center py-10 opacity-60">Loading statistics…</div>}>
             <StatsView friends={friends} />
           </Suspense>
+        ) : activeTab === Tab.GAME ? (
+          <BoardGameView friends={friends} />
         ) : (
           <MeetingRequestsView
             requests={meetingRequests}
@@ -626,16 +637,18 @@ const App: React.FC = () => {
       </main>
 
       <nav className={`fixed bottom-0 w-full ${themeColors.cardBg} border-t ${themeColors.border} px-6 py-4 pb-6 z-40 flex justify-between items-center sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300`} role="navigation" aria-label="Main navigation">
-        <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} aria-label="Home" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110' : 'opacity-40'}`}><Home size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Home</span></button>
-        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Garden" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Garden</span></button>
-        <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} aria-label="Statistics" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.STATS ? 'opacity-100 scale-110' : 'opacity-40'}`}><BarChart3 size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Stats</span></button>
-        <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} aria-label="Meeting requests" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110' : 'opacity-40'}`}><Calendar size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Requests</span></button>
+        <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} aria-label="Home" className={`flex flex-col items-center gap-1 w-1/5 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110' : 'opacity-40'}`}><Home size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Home</span></button>
+        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Garden" className={`flex flex-col items-center gap-1 w-1/5 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Garden</span></button>
+        <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} aria-label="Statistics" className={`flex flex-col items-center gap-1 w-1/5 transition-opacity ${activeTab === Tab.STATS ? 'opacity-100 scale-110' : 'opacity-40'}`}><BarChart3 size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Stats</span></button>
+        <button onClick={() => setActiveTab(Tab.GAME)} aria-current={activeTab === Tab.GAME ? 'page' : undefined} aria-label="Board game" className={`flex flex-col items-center gap-1 w-1/5 transition-opacity ${activeTab === Tab.GAME ? 'opacity-100 scale-110' : 'opacity-40'}`}><Gamepad2 size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Game</span></button>
+        <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} aria-label="Meeting requests" className={`flex flex-col items-center gap-1 w-1/5 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110' : 'opacity-40'}`}><Calendar size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Requests</span></button>
       </nav>
 
       <div className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${themeColors.cardBg}/90 backdrop-blur-md border ${themeColors.border} shadow-xl rounded-full px-2 py-2 gap-2 z-40`} role="navigation" aria-label="Main navigation">
         <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.HOME ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Home</button>
         <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.LIST ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Garden</button>
         <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.STATS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Stats</button>
+        <button onClick={() => setActiveTab(Tab.GAME)} aria-current={activeTab === Tab.GAME ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.GAME ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Game</button>
         <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.MEETINGS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Requests</button>
       </div>
 
