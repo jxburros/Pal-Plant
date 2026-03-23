@@ -8,9 +8,16 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 
 ### 🏠 Dashboard
 - **Social Garden Score** – An overall health score (0-100) for your relationship network
-- **Withering Plants** – Alerts for contacts who are overdue for attention
+- **Suggested Outreach Queue** – Prioritized actions for who to contact next
+- **Withering Alerts** – Highlights friends who are close to (or past) their timer
 - **Upcoming Birthdays** – Never miss an important date
-- **Scheduled Meetings** – Quick view of upcoming meetups
+- **Discovery Shelf** – Theme-driven, playful status cards tied to your garden state
+
+### 📈 Insights & Planning
+- **Stats Dashboard** – Overview, streaks, and cohort views
+- **7-Day Activity Summary** – Local analytics for recent actions (contacts, meetings, adds)
+- **Weekly Plan** – Built-in outreach planner to spread effort across the week
+- **Smart Cadence Nudges** – Suggestions to lengthen or shorten contact frequency
 
 ### 🌿 Contact Management
 - **Timer-Based Tracking** – Set custom contact frequency for each person
@@ -29,11 +36,17 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 - **Track Pending Requests** – Monitor outreach attempts
 - **Schedule Meetings** – Set dates and locations
 - **Calendar Support** – Add scheduled meetings to Google Calendar or download `.ics` files
+- **Follow-Up Prompts** – Close the loop by marking scheduled meetings as completed or no-show
 - **Verification** – Confirm attendance to boost your score
 
 ### 📥 Bulk Import
 - **CSV Import** – Import contacts from spreadsheets or other apps
+- **Device Contacts Import** – Import from native contacts (with permissions on supported platforms)
 - **Duplicate Detection** – Automatically identifies potential duplicates
+
+### 👥 Group Actions
+- **Custom Groups** – Create groups of friends for recurring circles
+- **Group Contact Logging** – Log one interaction for multiple friends at once
 
 ### 💾 Data Management
 - **Backup Data** – Export a full JSON backup of friends, meetings, categories, and settings
@@ -89,7 +102,7 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
    npm run dev
    ```
 
-4. Open your browser and navigate to `http://localhost:3000`
+4. Open your browser and navigate to the URL shown by Vite (typically `http://localhost:5173`)
 
 ### Build for Production
 
