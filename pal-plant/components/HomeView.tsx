@@ -90,12 +90,27 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
   const randomFriend = friendsWithPhotos.length > 0
     ? friendsWithPhotos[Math.floor(Math.random() * friendsWithPhotos.length)]
     : null;
+  const hasMotion = !settings.reducedMotion;
 
   return (
     <div className="space-y-6 pb-24 animate-in fade-in duration-500" role="main" aria-label="Dashboard">
 
       {/* Hero Section */}
       <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${hero.gradient} p-6 border ${hero.border} shadow-sm`} role="region" aria-label="Garden score summary">
+        <div className="absolute inset-0 pointer-events-none">
+          <img
+            src="/assets/hero-hills.svg"
+            alt=""
+            aria-hidden="true"
+            className={`hero-asset hero-asset-hills ${hasMotion ? 'hero-float' : ''}`}
+          />
+          <img
+            src="/assets/hero-sparkles.svg"
+            alt=""
+            aria-hidden="true"
+            className={`hero-asset hero-asset-sparkles ${hasMotion ? 'hero-drift' : ''}`}
+          />
+        </div>
         <div className="relative z-10">
           <div className="flex justify-between items-start">
             <div>
@@ -109,6 +124,28 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
           </div>
         </div>
         <Leaf className={`absolute -bottom-8 -right-8 ${hero.leafColor} opacity-50 rotate-12`} size={140} />
+      </div>
+
+      {/* Animated Garden Scene */}
+      <div className={`relative overflow-hidden rounded-3xl ${theme.cardBg} border ${theme.border} p-4 shadow-sm`} role="region" aria-label="Animated garden scene">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className={`text-xs uppercase tracking-[0.2em] font-black ${theme.textSub}`}>Garden Vibes</p>
+            <h3 className={`text-lg font-black mt-1 ${theme.textMain}`}>Your social world is alive</h3>
+            <p className={`text-xs mt-2 ${theme.textSub}`}>Watch this grow as you stay in touch.</p>
+          </div>
+          <div className="relative w-28 h-28 shrink-0">
+            <img
+              src="/assets/plant-mascot.svg"
+              alt=""
+              aria-hidden="true"
+              className={`w-full h-full object-contain drop-shadow-md ${hasMotion ? 'mascot-bounce' : ''}`}
+            />
+            <span className={`firefly firefly-a ${hasMotion ? 'firefly-glow' : ''}`} />
+            <span className={`firefly firefly-b ${hasMotion ? 'firefly-glow' : ''}`} />
+            <span className={`firefly firefly-c ${hasMotion ? 'firefly-glow' : ''}`} />
+          </div>
+        </div>
       </div>
 
 
