@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
-import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download, Flower2, Sparkles, Leaf, Skull } from 'lucide-react';
+import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Search, BarChart3, X, Download, LayoutGrid, Skull } from 'lucide-react';
 import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group, ContactChannel } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
@@ -44,29 +44,6 @@ interface Toast {
   type: 'success' | 'info' | 'warning';
 }
 
-const TAB_SCENES: Record<Tab, { icon: React.ReactNode; title: string; subtitle: string }> = {
-  [Tab.HOME]: {
-    icon: <Sparkles size={16} className="text-amber-500" />,
-    title: 'Welcome to your garden realm',
-    subtitle: 'Watch the world react to every caring touch.'
-  },
-  [Tab.LIST]: {
-    icon: <Flower2 size={16} className="text-fuchsia-500" />,
-    title: 'Caretaker mode',
-    subtitle: 'Every card is a living plant with moods and momentum.'
-  },
-  [Tab.STATS]: {
-    icon: <Leaf size={16} className="text-emerald-600" />,
-    title: 'Growth observatory',
-    subtitle: 'Track patterns, streaks, and bloom quality over time.'
-  },
-  [Tab.MEETINGS]: {
-    icon: <Calendar size={16} className="text-sky-500" />,
-    title: 'Gathering grove',
-    subtitle: 'Shape plans into in-person moments and new memories.'
-  }
-};
-
 const ToastContainer: React.FC<{ toasts: Toast[]; onDismiss: (id: string) => void }> = ({ toasts, onDismiss }) => {
   if (toasts.length === 0) return null;
   return (
@@ -74,7 +51,7 @@ const ToastContainer: React.FC<{ toasts: Toast[]; onDismiss: (id: string) => voi
       {toasts.map(t => (
         <div
           key={t.id}
-          className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium animate-in slide-in-from-top fade-in duration-300 ${
+          className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-md shadow-lg border text-sm font-medium animate-in slide-in-from-top fade-in duration-300 ${
             t.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
             t.type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
             'bg-blue-50 border-blue-200 text-blue-800'
@@ -476,16 +453,10 @@ const App: React.FC = () => {
 
   return (
     <div data-theme={settings.theme} className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
-      <div className="app-garden-backdrop" aria-hidden="true">
-        <span className="bg-orb orb-a" />
-        <span className="bg-orb orb-b" />
-        <span className="bg-orb orb-c" />
-        <span className="bg-orb orb-d" />
-      </div>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {showBackupBanner && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[90] w-[90%] max-w-sm bg-blue-50 border border-blue-200 rounded-xl shadow-lg p-4 animate-in slide-in-from-top fade-in duration-300">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[90] w-[90%] max-w-sm bg-blue-50 border border-blue-200 rounded-md shadow-lg p-4 animate-in slide-in-from-top fade-in duration-300">
           <p className="text-sm font-bold text-blue-800 mb-2">Backup Reminder</p>
           <p className="text-xs text-blue-600 mb-3">It's been a while since your last backup. Download one now?</p>
           <div className="flex gap-2">
@@ -509,16 +480,16 @@ const App: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <button onClick={() => setActiveTab(Tab.HOME)} className="text-left">
             <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-              <Sprout className="text-emerald-600 fill-emerald-100" />
+              <LayoutGrid className="text-slate-700" />
               Pal Plant
             </h1>
             <p className="text-xs font-bold uppercase tracking-widest mt-0.5 opacity-60" aria-live="polite">
-              {activeTab === Tab.HOME ? 'Dashboard' : activeTab === Tab.LIST ? 'Your Garden' : activeTab === Tab.STATS ? 'Statistics' : 'Meeting Requests'}
+              {activeTab === Tab.HOME ? 'Overview' : activeTab === Tab.LIST ? 'Contacts' : activeTab === Tab.STATS ? 'Stats' : 'Meetings'}
             </p>
           </button>
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm border ${themeColors.border} ${themeColors.cardBg} active:scale-95 transition-transform app-pill-btn`}
+            className={`w-10 h-10 rounded-md flex items-center justify-center shadow-sm border ${themeColors.border} ${themeColors.cardBg} active:scale-95 transition-transform app-pill-btn`}
           >
             <SettingsIcon size={20} className={themeColors.textSub} />
           </button>
@@ -530,17 +501,17 @@ const App: React.FC = () => {
               <Search className={`absolute left-3 top-2.5 ${themeColors.textSub}`} size={16} />
               <input
                 type="text"
-                placeholder="Search your garden..."
+                placeholder="Search contacts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full ${themeColors.cardBg} pl-10 pr-4 py-2 rounded-xl text-sm border ${themeColors.border} focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all`}
+                className={`w-full ${themeColors.cardBg} pl-10 pr-4 py-2 rounded-md text-sm border ${themeColors.border} focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all`}
               />
             </div>
 
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-6 px-6">
-              <button onClick={() => handleSelectCategory('All')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedCategory === 'All' ? `${themeColors.primary} text-white border-transparent` : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}>All</button>
+              <button onClick={() => handleSelectCategory('All')} className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${selectedCategory === 'All' ? `${themeColors.primary} text-white` : `${themeColors.cardBg} ${themeColors.textSub}`}`}>All</button>
               {categories.map(cat => (
-                <button key={cat} onClick={() => handleSelectCategory(cat)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat ? `${themeColors.primary} text-white border-transparent` : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}>{cat}</button>
+                <button key={cat} onClick={() => handleSelectCategory(cat)} className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${selectedCategory === cat ? `${themeColors.primary} text-white` : `${themeColors.cardBg} ${themeColors.textSub}`}`}>{cat}</button>
               ))}
             </div>
 
@@ -548,25 +519,25 @@ const App: React.FC = () => {
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-6 px-6">
               <button 
                 onClick={() => setHealthFilter('All')} 
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'All' ? 'bg-slate-600 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'All' ? 'bg-slate-600 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
               >
                 All Health
               </button>
               <button 
                 onClick={() => setHealthFilter('Healthy')} 
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Healthy' ? 'bg-emerald-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Healthy' ? 'bg-emerald-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
               >
-                <Sprout size={12} className="inline -mt-0.5" /> Healthy
+                Healthy
               </button>
               <button
                 onClick={() => setHealthFilter('Wilting')}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Wilting' ? 'bg-yellow-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Wilting' ? 'bg-yellow-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
               >
-                <Leaf size={12} className="inline -mt-0.5" /> Wilting
+                Needs follow-up
               </button>
               <button
                 onClick={() => setHealthFilter('Withering')}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Withering' ? 'bg-red-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Withering' ? 'bg-red-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
               >
                 <Skull size={12} className="inline -mt-0.5" /> Withering
               </button>
@@ -582,22 +553,13 @@ const App: React.FC = () => {
                   Manage Groups ({groups.length})
                 </button>
               </div>
-              <button onClick={openAddModal} className="text-emerald-700">New plant</button>
+              <button onClick={openAddModal} className="text-emerald-700">Add contact</button>
             </div>
           </div>
         )}
       </header>
 
       <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:px-6 sm:pt-6 pb-40 max-w-2xl mx-auto w-full relative z-[1]">
-        <section className={`scene-banner ${settings.theme === 'midnight' ? 'scene-banner-night' : ''}`} aria-label="Current section style banner">
-          <div className="flex items-center gap-2">
-            {TAB_SCENES[activeTab].icon}
-            <p className="text-[10px] uppercase tracking-[0.18em] font-black opacity-60">Scene Mode</p>
-          </div>
-          <h2 className="text-base font-black mt-1">{TAB_SCENES[activeTab].title}</h2>
-          <p className="text-xs opacity-70 mt-1">{TAB_SCENES[activeTab].subtitle}</p>
-        </section>
-
         {activeTab === Tab.HOME ? (
           <HomeView
             friends={friends}
@@ -611,12 +573,12 @@ const App: React.FC = () => {
           <>
             {friends.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center app-empty-state">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 opacity-70 ${themeColors.cardBg}`}>
+                <div className={`w-16 h-16 rounded-md flex items-center justify-center mb-4 opacity-70 ${themeColors.cardBg}`}>
                   <Users size={32} className="text-emerald-500" />
                 </div>
-                <h3 className="text-lg font-bold">Your garden is empty</h3>
-                <p className="text-xs opacity-60 mt-1">Start with one seed friend and your world will begin to bloom.</p>
-                <button onClick={openAddModal} className="mt-6 font-bold text-sm underline opacity-80">Plant your first seed</button>
+                <h3 className="text-lg font-bold">No contacts yet</h3>
+                <p className="text-xs opacity-60 mt-1">Add your first contact to start building your relationship dashboard.</p>
+                <button onClick={openAddModal} className="mt-6 font-bold text-sm underline opacity-80">Add your first contact</button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -643,7 +605,7 @@ const App: React.FC = () => {
 
             <button
               onClick={openAddModal}
-              className={`fixed bottom-28 right-6 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
+              className={`fixed bottom-28 right-6 w-14 h-14 rounded-md flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
             >
               <Plus size={28} strokeWidth={3} />
             </button>
@@ -666,16 +628,16 @@ const App: React.FC = () => {
 
       <nav className={`fixed bottom-0 w-full ${themeColors.cardBg} border-t ${themeColors.border} px-6 py-4 pb-6 z-40 flex justify-between items-center sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300`} role="navigation" aria-label="Main navigation">
         <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} aria-label="Home" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Home size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Home</span></button>
-        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Garden" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Garden</span></button>
+        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Contacts" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Contacts</span></button>
         <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} aria-label="Statistics" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.STATS ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><BarChart3 size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Stats</span></button>
         <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} aria-label="Meeting requests" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Calendar size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Requests</span></button>
       </nav>
 
-      <div className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${themeColors.cardBg}/90 backdrop-blur-md border ${themeColors.border} shadow-xl rounded-full px-2 py-2 gap-2 z-40`} role="navigation" aria-label="Main navigation">
-        <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.HOME ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Home</button>
-        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.LIST ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Garden</button>
-        <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.STATS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Stats</button>
-        <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.MEETINGS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Requests</button>
+      <div className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${themeColors.cardBg}/90 backdrop-blur-md border ${themeColors.border} shadow-xl rounded-md px-2 py-2 gap-2 z-40`} role="navigation" aria-label="Main navigation">
+        <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.HOME ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Home</button>
+        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.LIST ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Garden</button>
+        <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.STATS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Stats</button>
+        <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.MEETINGS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Requests</button>
       </div>
 
       <FriendModal
