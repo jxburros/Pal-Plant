@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
-import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download } from 'lucide-react';
+import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download, Flower2, Sparkles, Leaf } from 'lucide-react';
 import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group, ContactChannel } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
@@ -43,6 +43,29 @@ interface Toast {
   message: string;
   type: 'success' | 'info' | 'warning';
 }
+
+const TAB_SCENES: Record<Tab, { icon: React.ReactNode; title: string; subtitle: string }> = {
+  [Tab.HOME]: {
+    icon: <Sparkles size={16} className="text-amber-500" />,
+    title: 'Welcome to your garden realm',
+    subtitle: 'Watch the world react to every caring touch.'
+  },
+  [Tab.LIST]: {
+    icon: <Flower2 size={16} className="text-fuchsia-500" />,
+    title: 'Caretaker mode',
+    subtitle: 'Every card is a living plant with moods and momentum.'
+  },
+  [Tab.STATS]: {
+    icon: <Leaf size={16} className="text-emerald-600" />,
+    title: 'Growth observatory',
+    subtitle: 'Track patterns, streaks, and bloom quality over time.'
+  },
+  [Tab.MEETINGS]: {
+    icon: <Calendar size={16} className="text-sky-500" />,
+    title: 'Gathering grove',
+    subtitle: 'Shape plans into in-person moments and new memories.'
+  }
+};
 
 const ToastContainer: React.FC<{ toasts: Toast[]; onDismiss: (id: string) => void }> = ({ toasts, onDismiss }) => {
   if (toasts.length === 0) return null;
@@ -453,6 +476,12 @@ const App: React.FC = () => {
 
   return (
     <div data-theme={settings.theme} className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
+      <div className="app-garden-backdrop" aria-hidden="true">
+        <span className="bg-orb orb-a" />
+        <span className="bg-orb orb-b" />
+        <span className="bg-orb orb-c" />
+        <span className="bg-orb orb-d" />
+      </div>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {showBackupBanner && (
@@ -489,7 +518,7 @@ const App: React.FC = () => {
           </button>
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm border ${themeColors.border} ${themeColors.cardBg} active:scale-95 transition-transform`}
+            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm border ${themeColors.border} ${themeColors.cardBg} active:scale-95 transition-transform app-pill-btn`}
           >
             <SettingsIcon size={20} className={themeColors.textSub} />
           </button>
@@ -559,7 +588,16 @@ const App: React.FC = () => {
         )}
       </header>
 
-      <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:px-6 sm:pt-6 pb-40 max-w-2xl mx-auto w-full">
+      <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:px-6 sm:pt-6 pb-40 max-w-2xl mx-auto w-full relative z-[1]">
+        <section className={`scene-banner ${settings.theme === 'midnight' ? 'scene-banner-night' : ''}`} aria-label="Current section style banner">
+          <div className="flex items-center gap-2">
+            {TAB_SCENES[activeTab].icon}
+            <p className="text-[10px] uppercase tracking-[0.18em] font-black opacity-60">Scene Mode</p>
+          </div>
+          <h2 className="text-base font-black mt-1">{TAB_SCENES[activeTab].title}</h2>
+          <p className="text-xs opacity-70 mt-1">{TAB_SCENES[activeTab].subtitle}</p>
+        </section>
+
         {activeTab === Tab.HOME ? (
           <HomeView
             friends={friends}
@@ -572,11 +610,12 @@ const App: React.FC = () => {
         ) : activeTab === Tab.LIST ? (
           <>
             {friends.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-center">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 opacity-50 ${themeColors.cardBg}`}>
-                  <Users size={32} />
+              <div className="flex flex-col items-center justify-center h-64 text-center app-empty-state">
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 opacity-70 ${themeColors.cardBg}`}>
+                  <Users size={32} className="text-emerald-500" />
                 </div>
                 <h3 className="text-lg font-bold">Your garden is empty</h3>
+                <p className="text-xs opacity-60 mt-1">Start with one seed friend and your world will begin to bloom.</p>
                 <button onClick={openAddModal} className="mt-6 font-bold text-sm underline opacity-80">Plant your first seed</button>
               </div>
             ) : (
@@ -626,10 +665,10 @@ const App: React.FC = () => {
       </main>
 
       <nav className={`fixed bottom-0 w-full ${themeColors.cardBg} border-t ${themeColors.border} px-6 py-4 pb-6 z-40 flex justify-between items-center sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300`} role="navigation" aria-label="Main navigation">
-        <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} aria-label="Home" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110' : 'opacity-40'}`}><Home size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Home</span></button>
-        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Garden" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Garden</span></button>
-        <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} aria-label="Statistics" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.STATS ? 'opacity-100 scale-110' : 'opacity-40'}`}><BarChart3 size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Stats</span></button>
-        <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} aria-label="Meeting requests" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110' : 'opacity-40'}`}><Calendar size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Requests</span></button>
+        <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} aria-label="Home" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Home size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Home</span></button>
+        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Garden" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Garden</span></button>
+        <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} aria-label="Statistics" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.STATS ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><BarChart3 size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Stats</span></button>
+        <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} aria-label="Meeting requests" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Calendar size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Requests</span></button>
       </nav>
 
       <div className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${themeColors.cardBg}/90 backdrop-blur-md border ${themeColors.border} shadow-xl rounded-full px-2 py-2 gap-2 z-40`} role="navigation" aria-label="Main navigation">
