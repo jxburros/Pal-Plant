@@ -56,3 +56,13 @@ body {
 [data-theme='midnight'] .border-slate-300 {
   border-color: rgb(71 85 105 / 0.9) !important;
 }
+
+
+main {
+  padding-top: 0.5rem;
+}
+
+.friend-card-shell {
+  border: 0;
+  border-radius: 0.5rem;
+}

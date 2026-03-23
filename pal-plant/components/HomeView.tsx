@@ -57,35 +57,35 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
   ].slice(0, 6);
 
   return (
-    <div className="space-y-4 pb-24" role="main" aria-label="Dashboard">
-      <section className={`${theme.cardBg} border ${theme.border} rounded-2xl p-4`}>
+    <div className="space-y-6 pb-24" role="main" aria-label="Dashboard">
+      <section className={`${theme.cardBg} rounded-md p-4`}>
         <p className={`text-xs uppercase tracking-wide ${theme.textSub}`}>Score</p>
         <p className={`text-4xl font-black mt-1 ${theme.textMain}`}>{score}</p>
       </section>
 
       <section className="grid grid-cols-3 gap-2">
-        <div className={`${theme.cardBg} border ${theme.border} rounded-xl p-3`}>
+        <div className={`${theme.cardBg} rounded-sm p-3`}>
           <p className={`text-[11px] ${theme.textSub}`}>Contacts</p>
           <p className={`text-xl font-bold ${theme.textMain}`}>{friends.length}</p>
         </div>
-        <div className={`${theme.cardBg} border ${theme.border} rounded-xl p-3`}>
+        <div className={`${theme.cardBg} rounded-sm p-3`}>
           <p className={`text-[11px] ${theme.textSub}`}>Attention</p>
           <p className={`text-xl font-bold ${theme.textMain}`}>{withering.length}</p>
         </div>
-        <div className={`${theme.cardBg} border ${theme.border} rounded-xl p-3`}>
+        <div className={`${theme.cardBg} rounded-sm p-3`}>
           <p className={`text-[11px] ${theme.textSub}`}>Meetings</p>
           <p className={`text-xl font-bold ${theme.textMain}`}>{meetings.length}</p>
         </div>
       </section>
 
-      <section className={`${theme.cardBg} border ${theme.border} rounded-2xl p-4`}>
+      <section className={`${theme.cardBg} rounded-md p-4`}>
         <p className={`text-xs uppercase tracking-wide mb-3 ${theme.textSub}`}>Priority list</p>
         {tasks.length === 0 ? (
           <p className={`text-sm ${theme.textSub}`}>Nothing urgent right now.</p>
         ) : (
           <div className="space-y-2">
             {tasks.map(task => (
-              <button key={task.id} onClick={task.action} className={`w-full text-left border ${theme.border} rounded-xl p-3`}>
+              <button key={task.id} onClick={task.action} className={`w-full text-left rounded-sm p-3`}>
                 <p className={`text-sm font-semibold ${theme.textMain}`}>{task.title}</p>
                 <p className={`text-xs mt-1 ${theme.textSub}`}>{task.detail}</p>
               </button>
@@ -95,11 +95,11 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
       </section>
 
       {activeNudges.length > 0 && (
-        <section className={`${theme.cardBg} border ${theme.border} rounded-2xl p-4`}>
+        <section className={`${theme.cardBg} rounded-md p-4`}>
           <p className={`text-xs uppercase tracking-wide mb-3 ${theme.textSub}`}>Cadence</p>
           <div className="space-y-2">
             {activeNudges.slice(0, 3).map(nudge => (
-              <div key={nudge.friendId} className={`border ${theme.border} rounded-xl p-3`}>
+              <div key={nudge.friendId} className={`border ${theme.border} rounded-sm p-3`}>
                 <p className={`text-sm font-semibold ${theme.textMain}`}>{nudge.friendName}</p>
                 <p className={`text-xs mt-1 ${theme.textSub}`}>{nudge.currentDays}d → {nudge.suggestedDays}d · {nudge.reason}</p>
                 <div className="flex gap-2 mt-2">
@@ -116,7 +116,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
                   )}
                   <button
                     onClick={() => setDismissedNudges(prev => new Set(prev).add(nudge.friendId))}
-                    className={`text-[11px] font-semibold px-3 py-1 rounded-md border ${theme.border}`}
+                    className={`text-[11px] font-semibold px-3 py-1 rounded-md`}
                   >
                     Dismiss
                   </button>
@@ -130,7 +130,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
       {friends.length > 0 && (
         <button
           onClick={() => setShowWeeklyPlan(prev => !prev)}
-          className={`w-full flex items-center justify-between p-4 ${theme.cardBg} border ${theme.border} rounded-2xl`}
+          className={`w-full flex items-center justify-between p-4 ${theme.cardBg} rounded-md`}
           aria-expanded={showWeeklyPlan}
           aria-controls="weekly-plan-section"
         >

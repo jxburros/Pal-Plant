@@ -51,7 +51,7 @@ const ToastContainer: React.FC<{ toasts: Toast[]; onDismiss: (id: string) => voi
       {toasts.map(t => (
         <div
           key={t.id}
-          className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium animate-in slide-in-from-top fade-in duration-300 ${
+          className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-md shadow-lg border text-sm font-medium animate-in slide-in-from-top fade-in duration-300 ${
             t.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
             t.type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
             'bg-blue-50 border-blue-200 text-blue-800'
@@ -456,7 +456,7 @@ const App: React.FC = () => {
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {showBackupBanner && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[90] w-[90%] max-w-sm bg-blue-50 border border-blue-200 rounded-xl shadow-lg p-4 animate-in slide-in-from-top fade-in duration-300">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[90] w-[90%] max-w-sm bg-blue-50 border border-blue-200 rounded-md shadow-lg p-4 animate-in slide-in-from-top fade-in duration-300">
           <p className="text-sm font-bold text-blue-800 mb-2">Backup Reminder</p>
           <p className="text-xs text-blue-600 mb-3">It's been a while since your last backup. Download one now?</p>
           <div className="flex gap-2">
@@ -489,7 +489,7 @@ const App: React.FC = () => {
           </button>
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm border ${themeColors.border} ${themeColors.cardBg} active:scale-95 transition-transform app-pill-btn`}
+            className={`w-10 h-10 rounded-md flex items-center justify-center shadow-sm border ${themeColors.border} ${themeColors.cardBg} active:scale-95 transition-transform app-pill-btn`}
           >
             <SettingsIcon size={20} className={themeColors.textSub} />
           </button>
@@ -504,14 +504,14 @@ const App: React.FC = () => {
                 placeholder="Search contacts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full ${themeColors.cardBg} pl-10 pr-4 py-2 rounded-xl text-sm border ${themeColors.border} focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all`}
+                className={`w-full ${themeColors.cardBg} pl-10 pr-4 py-2 rounded-md text-sm border ${themeColors.border} focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all`}
               />
             </div>
 
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-6 px-6">
-              <button onClick={() => handleSelectCategory('All')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedCategory === 'All' ? `${themeColors.primary} text-white border-transparent` : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}>All</button>
+              <button onClick={() => handleSelectCategory('All')} className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${selectedCategory === 'All' ? `${themeColors.primary} text-white` : `${themeColors.cardBg} ${themeColors.textSub}`}`}>All</button>
               {categories.map(cat => (
-                <button key={cat} onClick={() => handleSelectCategory(cat)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat ? `${themeColors.primary} text-white border-transparent` : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}>{cat}</button>
+                <button key={cat} onClick={() => handleSelectCategory(cat)} className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${selectedCategory === cat ? `${themeColors.primary} text-white` : `${themeColors.cardBg} ${themeColors.textSub}`}`}>{cat}</button>
               ))}
             </div>
 
@@ -519,25 +519,25 @@ const App: React.FC = () => {
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-6 px-6">
               <button 
                 onClick={() => setHealthFilter('All')} 
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'All' ? 'bg-slate-600 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'All' ? 'bg-slate-600 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
               >
                 All Health
               </button>
               <button 
                 onClick={() => setHealthFilter('Healthy')} 
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Healthy' ? 'bg-emerald-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Healthy' ? 'bg-emerald-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
               >
                 Healthy
               </button>
               <button
                 onClick={() => setHealthFilter('Wilting')}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Wilting' ? 'bg-yellow-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Wilting' ? 'bg-yellow-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
               >
                 Needs follow-up
               </button>
               <button
                 onClick={() => setHealthFilter('Withering')}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Withering' ? 'bg-red-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Withering' ? 'bg-red-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
               >
                 <Skull size={12} className="inline -mt-0.5" /> Withering
               </button>
@@ -573,7 +573,7 @@ const App: React.FC = () => {
           <>
             {friends.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center app-empty-state">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 opacity-70 ${themeColors.cardBg}`}>
+                <div className={`w-16 h-16 rounded-md flex items-center justify-center mb-4 opacity-70 ${themeColors.cardBg}`}>
                   <Users size={32} className="text-emerald-500" />
                 </div>
                 <h3 className="text-lg font-bold">No contacts yet</h3>
@@ -605,7 +605,7 @@ const App: React.FC = () => {
 
             <button
               onClick={openAddModal}
-              className={`fixed bottom-28 right-6 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
+              className={`fixed bottom-28 right-6 w-14 h-14 rounded-md flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
             >
               <Plus size={28} strokeWidth={3} />
             </button>
@@ -633,11 +633,11 @@ const App: React.FC = () => {
         <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} aria-label="Meeting requests" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Calendar size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Requests</span></button>
       </nav>
 
-      <div className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${themeColors.cardBg}/90 backdrop-blur-md border ${themeColors.border} shadow-xl rounded-full px-2 py-2 gap-2 z-40`} role="navigation" aria-label="Main navigation">
-        <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.HOME ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Home</button>
-        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.LIST ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Garden</button>
-        <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.STATS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Stats</button>
-        <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === Tab.MEETINGS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Requests</button>
+      <div className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${themeColors.cardBg}/90 backdrop-blur-md border ${themeColors.border} shadow-xl rounded-md px-2 py-2 gap-2 z-40`} role="navigation" aria-label="Main navigation">
+        <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.HOME ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Home</button>
+        <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.LIST ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Garden</button>
+        <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.STATS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Stats</button>
+        <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.MEETINGS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Requests</button>
       </div>
 
       <FriendModal

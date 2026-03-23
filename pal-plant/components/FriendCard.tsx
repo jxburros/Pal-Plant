@@ -80,19 +80,19 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
       })();
 
   return (
-    <div className="friend-card-shell bg-white rounded-2xl p-4 border border-slate-100 relative overflow-hidden mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
+    <div className="friend-card-shell bg-white rounded-md p-5 relative overflow-hidden mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
       <div className="friend-card-glow" aria-hidden="true" />
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
         <div className="flex items-center gap-1">
-          <span className={`text-[10px] font-black px-2 py-1 rounded-md border ${friend.individualScore > 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : friend.individualScore < 40 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+          <span className={`text-[10px] font-black px-2 py-1 rounded-sm border ${friend.individualScore > 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : friend.individualScore < 40 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-500'}`}>
             {Math.round(friend.individualScore || 50)}
           </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-1 rounded-md">
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-1 rounded-sm">
             {friend.category}
           </span>
         </div>
 
-        <div className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 w-fit ${statusColorClass}`}>
+        <div className={`px-2 py-1 rounded-sm text-[10px] font-bold flex items-center gap-1 w-fit ${statusColorClass}`}>
           {isOverdue ? <AlertCircle size={10} /> : <Droplets size={10} />}
           {isOverdue ? `${Math.abs(daysLeft)}d late` : `${daysLeft}d water`}
         </div>
@@ -101,7 +101,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
       <div className="flex justify-between items-start mb-3 mt-1 mr-24">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden flex-shrink-0 border-4 border-white shadow-sm relative group-hover:scale-105 transition-transform z-0">
+            <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden flex-shrink-0 border-4 border-white relative group-hover:scale-105 transition-transform z-0">
               {friend.photo ? (
                 <img src={friend.photo} alt={`Photo of ${friend.name}`} className="w-full h-full object-cover" />
               ) : (
@@ -110,7 +110,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
                 </div>
               )}
             </div>
-            <div className={`absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center z-10`} title={plantStage.label}>
+            <div className={`absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10`} title={plantStage.label}>
               <PlantIcon size={17} className={plantStage.color} />
             </div>
           </div>
@@ -125,11 +125,11 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
             <div className="flex items-center gap-3 mt-2">
               {friend.phone && (
                 <>
-                  <a href={`tel:${friend.phone}`} className="text-slate-400 hover:text-green-600 transition-colors" title="Call"><Phone size={14} /></a>
-                  <a href={`sms:${friend.phone}`} className="text-slate-400 hover:text-blue-500 transition-colors" title="Text"><MessageCircle size={14} /></a>
+                  <a href={`tel:${friend.phone}`} className="text-slate-400 hover:text-green-600 " title="Call"><Phone size={14} /></a>
+                  <a href={`sms:${friend.phone}`} className="text-slate-400 hover:text-blue-500 " title="Text"><MessageCircle size={14} /></a>
                 </>
               )}
-              {friend.email && <a href={`mailto:${friend.email}`} className="text-slate-400 hover:text-purple-500 transition-colors" title="Email"><Mail size={14} /></a>}
+              {friend.email && <a href={`mailto:${friend.email}`} className="text-slate-400 hover:text-purple-500 " title="Email"><Mail size={14} /></a>}
               {friend.birthday && (
                 <div className="flex items-center gap-1 text-[10px] text-pink-400 bg-pink-50 px-1.5 py-0.5 rounded-full" title={`Birthday: ${friend.birthday}`}>
                   <Cake size={10} />
@@ -146,22 +146,22 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
           <span>Needs Water</span>
           <span>Thriving</span>
         </div>
-        <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner" role="progressbar" aria-valuenow={Math.round(visualPercentage)} aria-valuemin={0} aria-valuemax={100} aria-label={`Contact timer: ${isOverdue ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days remaining`}`}>
-          <div className={`h-full transition-all duration-700 ease-out relative rounded-full ${progressColorClass}`} style={{ width: `${visualPercentage}%` }}>
+        <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden " role="progressbar" aria-valuenow={Math.round(visualPercentage)} aria-valuemin={0} aria-valuemax={100} aria-label={`Contact timer: ${isOverdue ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days remaining`}`}>
+          <div className={`h-full duration-700 ease-out relative rounded-full ${progressColorClass}`} style={{ width: `${visualPercentage}%` }}>
                       </div>
         </div>
       </div>
 
       <button
         onClick={() => setShowMechanics(prev => !prev)}
-        className="w-full mt-3 p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-xs text-slate-600 flex items-center justify-between border border-slate-100"
+        className="w-full mt-3 p-2 rounded-sm bg-slate-50 hover:bg-slate-100 text-xs text-slate-600 flex items-center justify-between"
       >
         <span className="font-semibold">Why score changed?</span>
         {showMechanics ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
       </button>
 
       {showMechanics && (
-        <div className="mt-2 p-3 rounded-xl border border-slate-100 bg-white text-xs text-slate-600 space-y-2">
+        <div className="mt-2 p-3 rounded-sm bg-white text-xs text-slate-600 space-y-2">
           <p>{scoreReason}</p>
           <p>
             Last score delta: <span className="font-semibold">{lastLog?.scoreDelta ?? 0}</span>
@@ -191,7 +191,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
             <button
               key={ch.value}
               onClick={() => onContact(friend.id, ch.value)}
-              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border active:scale-95 ${ch.color}`}
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-sm text-sm font-medium border active:scale-95 ${ch.color}`}
               aria-label={`Log ${ch.label} interaction with ${friend.name}`}
             >
               <Icon size={16} />
@@ -203,22 +203,22 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
 
       {/* Utility actions */}
       <div className="flex gap-2 mt-2">
-        <button onClick={() => onRequestMeeting(friend)} className="flex-1 px-3 py-2 rounded-xl text-slate-400 hover:bg-orange-50 hover:text-orange-600 transition-colors border border-slate-100 hover:border-orange-100 text-sm flex items-center justify-center gap-1" title="Create meeting request" aria-label={`Schedule meeting with ${friend.name}`}>
+        <button onClick={() => onRequestMeeting(friend)} className="flex-1 px-3 py-2 rounded-sm text-slate-400 hover:bg-orange-50 hover:text-orange-600  hover:border-orange-100 text-sm flex items-center justify-center gap-1" title="Create meeting request" aria-label={`Schedule meeting with ${friend.name}`}>
           <CalendarPlus size={16} />
           Meet
         </button>
 
-        <button onClick={() => onEdit(friend)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors border border-slate-100 hover:border-blue-100" title="Edit" aria-label={`Edit ${friend.name}`}>
+        <button onClick={() => onEdit(friend)} className="px-3 py-2 rounded-sm text-slate-400 hover:bg-blue-50 hover:text-blue-600  hover:border-blue-100" title="Edit" aria-label={`Edit ${friend.name}`}>
           <Edit2 size={18} />
         </button>
 
         {confirmDelete ? (
           <div className="flex gap-1">
-            <button onClick={() => { onDelete(friend.id); setConfirmDelete(false); }} className="px-2 py-2 rounded-xl bg-red-500 text-white text-[10px] font-bold transition-colors" title="Confirm Delete">Yes</button>
-            <button onClick={() => setConfirmDelete(false)} className="px-2 py-2 rounded-xl bg-slate-200 text-slate-600 text-[10px] font-bold transition-colors" title="Cancel">No</button>
+            <button onClick={() => { onDelete(friend.id); setConfirmDelete(false); }} className="px-2 py-2 rounded-sm bg-red-500 text-white text-[10px] font-bold " title="Confirm Delete">Yes</button>
+            <button onClick={() => setConfirmDelete(false)} className="px-2 py-2 rounded-sm bg-slate-200 text-slate-600 text-[10px] font-bold " title="Cancel">No</button>
           </div>
         ) : (
-          <button onClick={() => setConfirmDelete(true)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors border border-slate-100 hover:border-red-100" title="Delete">
+          <button onClick={() => setConfirmDelete(true)} className="px-3 py-2 rounded-sm text-slate-400 hover:bg-red-50 hover:text-red-500  hover:border-red-100" title="Delete">
             <Trash2 size={18} />
           </button>
         )}
