@@ -2,7 +2,12 @@
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#dcfce7"/>
-      <stop offset="100%" stop-color="#bbf7d0"/>
+      <stop offset="60%" stop-color="#bbf7d0"/>
+      <stop offset="100%" stop-color="#a7f3d0"/>
+    </linearGradient>
+    <linearGradient id="hillFar" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#86efac" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#22c55e" stop-opacity="0.5"/>
     </linearGradient>
     <linearGradient id="hillA" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#22c55e" stop-opacity="0.45"/>
@@ -12,8 +17,48 @@
       <stop offset="0%" stop-color="#4ade80" stop-opacity="0.4"/>
       <stop offset="100%" stop-color="#16a34a" stop-opacity="0.7"/>
     </linearGradient>
+    <radialGradient id="sunGlow" cx="0.8" cy="0.15">
+      <stop offset="0%" stop-color="#fef3c7" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#fde68a" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#fde68a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="treeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
   </defs>
+  <!-- Sky with subtle sun glow -->
   <rect width="1600" height="700" fill="url(#sky)"/>
+  <rect width="1600" height="700" fill="url(#sunGlow)"/>
+  <!-- Distant hills -->
+  <path d="M0 480C200 430 350 450 500 420C700 380 850 410 1000 440C1150 470 1350 430 1600 460V700H0V480Z" fill="url(#hillFar)"/>
+  <!-- Mid hills -->
   <path d="M0 520C145 460 256 470 382 520C542 584 688 552 810 492C964 414 1134 432 1266 500C1388 562 1492 582 1600 548V700H0V520Z" fill="url(#hillA)"/>
+  <!-- Foreground hills -->
   <path d="M0 574C174 504 292 512 456 576C604 632 754 618 918 560C1084 500 1246 502 1392 550C1498 584 1568 594 1600 596V700H0V574Z" fill="url(#hillB)"/>
+  <!-- Distant trees silhouettes -->
+  <g opacity="0.2">
+    <ellipse cx="200" cy="468" rx="18" ry="28" fill="url(#treeGrad)"/>
+    <rect x="197" y="468" width="6" height="16" rx="2" fill="#15803d"/>
+    <ellipse cx="320" cy="476" rx="14" ry="22" fill="url(#treeGrad)"/>
+    <rect x="317" y="476" width="5" height="14" rx="2" fill="#15803d"/>
+    <ellipse cx="520" cy="430" rx="20" ry="30" fill="url(#treeGrad)"/>
+    <rect x="517" y="430" width="6" height="18" rx="2" fill="#15803d"/>
+    <ellipse cx="900" cy="444" rx="16" ry="26" fill="url(#treeGrad)"/>
+    <rect x="897" y="444" width="5" height="16" rx="2" fill="#15803d"/>
+    <ellipse cx="1100" cy="448" rx="18" ry="28" fill="url(#treeGrad)"/>
+    <rect x="1097" y="448" width="6" height="16" rx="2" fill="#15803d"/>
+    <ellipse cx="1380" cy="438" rx="15" ry="24" fill="url(#treeGrad)"/>
+    <rect x="1377" y="438" width="5" height="14" rx="2" fill="#15803d"/>
+  </g>
+  <!-- Soft clouds -->
+  <g opacity="0.3">
+    <ellipse cx="300" cy="180" rx="80" ry="20" fill="white"/>
+    <ellipse cx="340" cy="175" rx="50" ry="18" fill="white"/>
+    <ellipse cx="260" cy="178" rx="40" ry="14" fill="white"/>
+    <ellipse cx="900" cy="140" rx="100" ry="22" fill="white"/>
+    <ellipse cx="950" cy="134" rx="60" ry="18" fill="white"/>
+    <ellipse cx="1300" cy="200" rx="70" ry="16" fill="white"/>
+    <ellipse cx="1340" cy="196" rx="50" ry="14" fill="white"/>
+  </g>
 </svg>

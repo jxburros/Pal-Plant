@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
-import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download, Flower2, Sparkles, Leaf } from 'lucide-react';
+import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Sprout, Search, BarChart3, X, Download, Flower2, Sparkles, Leaf, Skull } from 'lucide-react';
 import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group, ContactChannel } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
@@ -556,19 +556,19 @@ const App: React.FC = () => {
                 onClick={() => setHealthFilter('Healthy')} 
                 className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Healthy' ? 'bg-emerald-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
               >
-                🌱 Healthy
+                <Sprout size={12} className="inline -mt-0.5" /> Healthy
               </button>
-              <button 
-                onClick={() => setHealthFilter('Wilting')} 
+              <button
+                onClick={() => setHealthFilter('Wilting')}
                 className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Wilting' ? 'bg-yellow-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
               >
-                🍂 Wilting
+                <Leaf size={12} className="inline -mt-0.5" /> Wilting
               </button>
-              <button 
-                onClick={() => setHealthFilter('Withering')} 
+              <button
+                onClick={() => setHealthFilter('Withering')}
                 className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${healthFilter === 'Withering' ? 'bg-red-500 text-white border-transparent' : `${themeColors.cardBg} ${themeColors.textSub} ${themeColors.border}`}`}
               >
-                💀 Withering
+                <Skull size={12} className="inline -mt-0.5" /> Withering
               </button>
             </div>
 

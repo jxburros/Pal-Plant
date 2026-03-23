@@ -36,7 +36,7 @@ interface TooltipStep {
 const tooltipSteps: TooltipStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to Pal Plant! 🌱',
+    title: 'Welcome to Pal Plant!',
     description: 'Keep your relationships thriving by tracking when you last connected with friends and family. Let\'s take a quick tour!',
     icon: <Sprout size={32} className="text-emerald-500" />
   },

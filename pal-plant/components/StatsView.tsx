@@ -18,7 +18,7 @@ import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, YAxis } from 'recharts';
 import { Friend, ContactLog } from '../types';
 import { calculateTimeStatus, calculateStreaks, getCohortStats } from '../utils/helpers';
-import { Trophy, Zap, AlertTriangle, Flame, Users, TrendingUp } from 'lucide-react';
+import { Trophy, Zap, AlertTriangle, Flame, Users, TrendingUp, Sprout, Leaf, TreePine, Lightbulb } from 'lucide-react';
 import { getAnalyticsSummary, AnalyticsEventType } from '../utils/analytics';
 
 interface StatsViewProps {
@@ -347,10 +347,18 @@ const StatsView: React.FC<StatsViewProps> = ({ friends }) => {
           {/* Motivation */}
           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
             <p className="text-center text-slate-600 text-sm">
-              {streakData.currentStreak === 0 && "🌱 Every journey begins with a single step. Reach out to someone today!"}
-              {streakData.currentStreak > 0 && streakData.currentStreak < 7 && "🌿 You're building momentum! Keep going to reach a full week."}
-              {streakData.currentStreak >= 7 && streakData.currentStreak < 30 && "🌳 Amazing progress! You're a connection champion."}
-              {streakData.currentStreak >= 30 && "🏆 Incredible! You're a social superstar with over a month of daily connections!"}
+              {streakData.currentStreak === 0 && (
+                <span className="inline-flex items-center gap-2"><Sprout size={16} className="text-emerald-500 shrink-0" /> Every journey begins with a single step. Reach out to someone today!</span>
+              )}
+              {streakData.currentStreak > 0 && streakData.currentStreak < 7 && (
+                <span className="inline-flex items-center gap-2"><Leaf size={16} className="text-emerald-500 shrink-0" /> You're building momentum! Keep going to reach a full week.</span>
+              )}
+              {streakData.currentStreak >= 7 && streakData.currentStreak < 30 && (
+                <span className="inline-flex items-center gap-2"><TreePine size={16} className="text-emerald-600 shrink-0" /> Amazing progress! You're a connection champion.</span>
+              )}
+              {streakData.currentStreak >= 30 && (
+                <span className="inline-flex items-center gap-2"><Trophy size={16} className="text-amber-500 shrink-0" /> Incredible! You're a social superstar with over a month of daily connections!</span>
+              )}
             </p>
           </div>
         </>
@@ -437,7 +445,7 @@ const StatsView: React.FC<StatsViewProps> = ({ friends }) => {
           {/* Insights */}
           {Object.keys(cohortData).length > 0 && (
             <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-6 rounded-3xl shadow-lg text-white">
-              <h3 className="text-purple-100 text-sm font-medium mb-2">💡 Insight</h3>
+              <h3 className="text-purple-100 text-sm font-medium mb-2 flex items-center gap-2"><Lightbulb size={16} className="text-yellow-300" /> Insight</h3>
               <p className="text-white text-sm leading-relaxed">
                 {(() => {
                   const sortedCohorts = Object.entries(cohortData).sort((a, b) => b[1].avgScore - a[1].avgScore);

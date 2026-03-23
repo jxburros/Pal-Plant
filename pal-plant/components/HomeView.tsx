@@ -153,6 +153,8 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
           <div className="garden-layer garden-hills" />
           <div className="garden-layer garden-path" />
           <div className="garden-layer garden-pond" />
+          <img src="/assets/garden-flowers.svg" alt="" aria-hidden="true" className="garden-decor garden-decor-flowers" />
+          <img src="/assets/mushroom.svg" alt="" aria-hidden="true" className="garden-decor garden-decor-mushroom" />
 
           <img
             src="/assets/plant-mascot.svg"
@@ -160,20 +162,20 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
             aria-hidden="true"
             className={`garden-character garden-mascot ${hasMotion ? 'mascot-bounce' : ''}`}
           />
-          <span className={`garden-character garden-snail ${hasMotion ? 'critter-crawl' : ''}`} aria-hidden="true">🐌</span>
-          <span className={`garden-character garden-butterfly ${hasMotion ? 'butterfly-loop' : ''}`} aria-hidden="true">🦋</span>
-          <span className={`garden-character garden-gnome ${hasMotion ? 'gnome-wiggle' : ''}`} aria-hidden="true">🧙‍♂️</span>
-          <span className={`garden-character garden-bee ${hasMotion ? 'bee-zigzag' : ''}`} aria-hidden="true">🐝</span>
+          <img src="/assets/snail.svg" alt="" aria-hidden="true" className={`garden-character garden-snail ${hasMotion ? 'critter-crawl' : ''}`} />
+          <img src="/assets/butterfly.svg" alt="" aria-hidden="true" className={`garden-character garden-butterfly ${hasMotion ? 'butterfly-loop' : ''}`} />
+          <img src="/assets/gnome.svg" alt="" aria-hidden="true" className={`garden-character garden-gnome ${hasMotion ? 'gnome-wiggle' : ''}`} />
+          <img src="/assets/bee.svg" alt="" aria-hidden="true" className={`garden-character garden-bee ${hasMotion ? 'bee-zigzag' : ''}`} />
 
           <span className={`firefly firefly-a ${hasMotion ? 'firefly-glow' : ''}`} />
           <span className={`firefly firefly-b ${hasMotion ? 'firefly-glow' : ''}`} />
           <span className={`firefly firefly-c ${hasMotion ? 'firefly-glow' : ''}`} />
           <span className={`firefly firefly-d ${hasMotion ? 'firefly-glow' : ''}`} />
 
-          <div className="garden-clue clue-leaf" aria-hidden="true">🍃</div>
-          <div className="garden-clue clue-heart" aria-hidden="true">💚</div>
-          <div className="garden-clue clue-seed" aria-hidden="true">🌱</div>
-          {score >= 70 && <div className="garden-clue clue-crown" aria-hidden="true">👑</div>}
+          <div className="garden-clue clue-leaf" aria-hidden="true"><img src="/assets/leaf-clue.svg" alt="" width="22" height="22" /></div>
+          <div className="garden-clue clue-heart" aria-hidden="true"><img src="/assets/heart-clue.svg" alt="" width="22" height="22" /></div>
+          <div className="garden-clue clue-seed" aria-hidden="true"><img src="/assets/seedling-clue.svg" alt="" width="22" height="22" /></div>
+          {score >= 70 && <div className="garden-clue clue-crown" aria-hidden="true"><img src="/assets/crown-clue.svg" alt="" width="22" height="22" /></div>}
         </div>
 
         <div className="mt-4 flex items-start justify-between gap-4">

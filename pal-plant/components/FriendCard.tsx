@@ -111,8 +111,8 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
                 </div>
               )}
             </div>
-            <div className={`absolute -bottom-1 -right-1 w-8 h-8 rounded-full ${plantStage.bg} border-2 border-white shadow-sm flex items-center justify-center z-10`} title={plantStage.label}>
-              <PlantIcon size={16} className={plantStage.color} />
+            <div className={`absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-gradient-to-br ${plantStage.gradient} border-2 border-white shadow-md ring-2 ${plantStage.ring} flex items-center justify-center z-10`} title={plantStage.label}>
+              <PlantIcon size={17} className={plantStage.color} />
             </div>
           </div>
 
@@ -148,9 +148,10 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
           <span>Needs Water</span>
           <span>Thriving</span>
         </div>
-        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-50" role="progressbar" aria-valuenow={Math.round(visualPercentage)} aria-valuemin={0} aria-valuemax={100} aria-label={`Contact timer: ${isOverdue ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days remaining`}`}>
-          <div className={`h-full transition-all duration-500 ease-out relative ${progressColorClass}`} style={{ width: `${visualPercentage}%` }}>
-            <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20"></div>
+        <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner" role="progressbar" aria-valuenow={Math.round(visualPercentage)} aria-valuemin={0} aria-valuemax={100} aria-label={`Contact timer: ${isOverdue ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days remaining`}`}>
+          <div className={`h-full transition-all duration-700 ease-out relative rounded-full ${progressColorClass}`} style={{ width: `${visualPercentage}%` }}>
+            <div className="absolute top-0 left-0 w-full h-1/2 bg-white/25 rounded-full"></div>
+            <div className="absolute top-0 right-0 w-2 h-full bg-white/30 rounded-full"></div>
           </div>
         </div>
       </div>

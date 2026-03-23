@@ -1,0 +1,40 @@
+<svg width="120" height="60" viewBox="0 0 120 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Flower 1 - pink -->
+  <g transform="translate(20, 10)">
+    <line x1="0" y1="20" x2="0" y2="45" stroke="#16a34a" stroke-width="2" stroke-linecap="round"/>
+    <path d="M0 35C-6 32-8 28-4 26" stroke="#22c55e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <circle cx="-5" cy="14" r="5" fill="#f9a8d4"/>
+    <circle cx="5" cy="14" r="5" fill="#f9a8d4"/>
+    <circle cx="0" cy="8" r="5" fill="#f9a8d4"/>
+    <circle cx="-4" cy="20" r="5" fill="#f9a8d4"/>
+    <circle cx="4" cy="20" r="5" fill="#f9a8d4"/>
+    <circle cx="0" cy="14" r="3.5" fill="#fbbf24"/>
+  </g>
+  <!-- Flower 2 - purple -->
+  <g transform="translate(55, 15)">
+    <line x1="0" y1="16" x2="0" y2="40" stroke="#16a34a" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="-4" cy="10" r="4" fill="#c4b5fd"/>
+    <circle cx="4" cy="10" r="4" fill="#c4b5fd"/>
+    <circle cx="0" cy="6" r="4" fill="#c4b5fd"/>
+    <circle cx="-3" cy="15" r="4" fill="#c4b5fd"/>
+    <circle cx="3" cy="15" r="4" fill="#c4b5fd"/>
+    <circle cx="0" cy="10" r="3" fill="#fde68a"/>
+  </g>
+  <!-- Flower 3 - white daisy -->
+  <g transform="translate(90, 12)">
+    <line x1="0" y1="18" x2="0" y2="42" stroke="#16a34a" stroke-width="2" stroke-linecap="round"/>
+    <path d="M0 30C5 28 8 24 6 22" stroke="#22c55e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="0" cy="6" rx="3" ry="6" fill="white" opacity="0.9"/>
+    <ellipse cx="0" cy="6" rx="3" ry="6" fill="white" opacity="0.9" transform="rotate(60, 0, 12)"/>
+    <ellipse cx="0" cy="6" rx="3" ry="6" fill="white" opacity="0.9" transform="rotate(120, 0, 12)"/>
+    <ellipse cx="0" cy="6" rx="3" ry="6" fill="white" opacity="0.9" transform="rotate(180, 0, 12)"/>
+    <ellipse cx="0" cy="6" rx="3" ry="6" fill="white" opacity="0.9" transform="rotate(240, 0, 12)"/>
+    <ellipse cx="0" cy="6" rx="3" ry="6" fill="white" opacity="0.9" transform="rotate(300, 0, 12)"/>
+    <circle cx="0" cy="12" r="3.5" fill="#fbbf24"/>
+  </g>
+  <!-- Grass tufts -->
+  <path d="M5 55C5 48 8 44 10 55" stroke="#4ade80" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M38 52C38 46 42 42 43 52" stroke="#4ade80" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M70 54C70 48 73 44 75 54" stroke="#4ade80" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M105 53C105 47 108 43 110 53" stroke="#4ade80" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg>
