@@ -37,7 +37,7 @@ const tooltipSteps: TooltipStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to Pal Plant!',
-    description: 'Keep your relationships thriving by tracking when you last connected with friends and family. Let\'s take a quick tour!',
+    description: 'Track relationships like a living garden. You’ll get smart outreach suggestions, reminders, and stats to help you stay consistent.',
     icon: <Sprout size={32} className="text-emerald-500" />
   },
   {
@@ -78,21 +78,34 @@ const tooltipSteps: TooltipStep[] = [
   {
     id: 'garden',
     title: 'Your Garden',
-    description: 'Each person is represented as a plant. Water them regularly by marking when you\'ve connected. Plants wilt if you wait too long!',
+    description: 'The Garden tab is your full roster. Filter by category, search quickly, and log interactions right from each friend card.',
     icon: <Users size={32} className="text-emerald-500" />,
     shortcut: 'G'
   },
   {
+    id: 'home',
+    title: 'Home = Action Queue',
+    description: 'Home shows your score, suggested outreach, birthdays, and urgency so you always know who needs attention first.',
+    icon: <Sprout size={32} className="text-teal-500" />,
+    shortcut: 'H'
+  },
+  {
     id: 'meetings',
     title: 'Meeting Requests',
-    description: 'Schedule and track meetings with people. You can export meetings to your calendar and set up reminders.',
+    description: 'Track requests, schedule meetups, export calendar invites, and follow up to mark meetings complete or no-show.',
     icon: <Calendar size={32} className="text-indigo-500" />,
     shortcut: 'M'
   },
   {
+    id: 'stats',
+    title: 'Stats & Streaks',
+    description: 'Use Stats to review interaction trends, streaks, and category cohorts over time.',
+    icon: <TrendingUp size={32} className="text-cyan-600" />
+  },
+  {
     id: 'settings',
     title: 'Settings & Backup',
-    description: 'Customize your experience, backup your data, and sync across devices. Import contacts from CSV files too!',
+    description: 'Customize themes and accessibility, manage reminders, import contacts, and export/restore JSON backups.',
     icon: <Settings size={32} className="text-slate-500" />,
     shortcut: 'S'
   },
