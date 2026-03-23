@@ -80,7 +80,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
       })();
 
   return (
-    <div className="friend-card-shell bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-200 hover:shadow-md mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
+    <div className="friend-card-shell bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden transition-all duration-300 hover:shadow-md mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
       <div className="friend-card-glow" aria-hidden="true" />
       <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Identity</p>
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
@@ -158,7 +158,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
 
       <button
         onClick={() => setShowMechanics(prev => !prev)}
-        className="w-full mt-3 p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-xs text-slate-600 flex items-center justify-between border border-slate-100"
+        className="w-full mt-3 p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-xs text-slate-600 flex items-center justify-between border border-slate-100 card-subtle-button"
       >
         <span className="font-semibold">Why score changed?</span>
         {showMechanics ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -196,7 +196,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
             <button
               key={ch.value}
               onClick={() => onContact(friend.id, ch.value)}
-              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border active:scale-95 ${ch.color}`}
+              className={`card-action-button flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border active:scale-95 ${ch.color}`}
               aria-label={`Log ${ch.label} interaction with ${friend.name}`}
             >
               <Icon size={16} />
@@ -208,12 +208,12 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
 
       {/* Utility actions */}
       <div className="flex gap-2 mt-2">
-        <button onClick={() => onRequestMeeting(friend)} className="flex-1 px-3 py-2 rounded-xl text-slate-400 hover:bg-orange-50 hover:text-orange-600 transition-colors border border-slate-100 hover:border-orange-100 text-sm flex items-center justify-center gap-1" title="Create meeting request" aria-label={`Schedule meeting with ${friend.name}`}>
+        <button onClick={() => onRequestMeeting(friend)} className="card-subtle-button flex-1 px-3 py-2 rounded-xl text-slate-400 hover:bg-orange-50 hover:text-orange-600 transition-colors border border-slate-100 hover:border-orange-100 text-sm flex items-center justify-center gap-1" title="Create meeting request" aria-label={`Schedule meeting with ${friend.name}`}>
           <CalendarPlus size={16} />
           Meet
         </button>
 
-        <button onClick={() => onEdit(friend)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors border border-slate-100 hover:border-blue-100" title="Edit" aria-label={`Edit ${friend.name}`}>
+        <button onClick={() => onEdit(friend)} className="card-subtle-button px-3 py-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors border border-slate-100 hover:border-blue-100" title="Edit" aria-label={`Edit ${friend.name}`}>
           <Edit2 size={18} />
         </button>
 
@@ -223,7 +223,7 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
             <button onClick={() => setConfirmDelete(false)} className="px-2 py-2 rounded-xl bg-slate-200 text-slate-600 text-[10px] font-bold transition-colors" title="Cancel">No</button>
           </div>
         ) : (
-          <button onClick={() => setConfirmDelete(true)} className="px-3 py-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors border border-slate-100 hover:border-red-100" title="Delete">
+          <button onClick={() => setConfirmDelete(true)} className="card-subtle-button px-3 py-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors border border-slate-100 hover:border-red-100" title="Delete">
             <Trash2 size={18} />
           </button>
         )}
