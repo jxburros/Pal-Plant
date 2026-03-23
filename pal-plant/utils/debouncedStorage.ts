@@ -30,11 +30,27 @@ type StorageType = 'friends' | 'meetings' | 'categories' | 'settings' | 'groups'
 
 interface PendingWrite {
   type: StorageType;
-  data: any;
+  data: unknown;
   timeout: NodeJS.Timeout;
 }
 
 const pendingWrites = new Map<StorageType, PendingWrite>();
+
+const saveHandlers: Record<StorageType, (data: unknown) => Promise<void>> = {
+  friends: (data) => saveFriends(data as Friend[]),
+  meetings: (data) => saveMeetings(data as MeetingRequest[]),
+  categories: (data) => saveCategories(data as string[]),
+  settings: (data) => saveSettings(data as AppSettings),
+  groups: (data) => saveGroups(data as Group[]),
+};
+
+const localStorageKeys: Record<StorageType, string> = {
+  friends: 'friendkeep_data',
+  meetings: 'friendkeep_meetings',
+  categories: 'friendkeep_categories',
+  settings: 'friendkeep_settings',
+  groups: 'friendkeep_groups',
+};
 
 /**
  * Flush a pending write immediately
@@ -47,23 +63,7 @@ async function flushWrite(type: StorageType): Promise<void> {
   pendingWrites.delete(type);
 
   try {
-    switch (type) {
-      case 'friends':
-        await saveFriends(pending.data);
-        break;
-      case 'meetings':
-        await saveMeetings(pending.data);
-        break;
-      case 'categories':
-        await saveCategories(pending.data);
-        break;
-      case 'settings':
-        await saveSettings(pending.data);
-        break;
-      case 'groups':
-        await saveGroups(pending.data);
-        break;
-    }
+    await saveHandlers[type](pending.data);
   } catch (error) {
     console.error(`Error flushing ${type} write:`, error);
   }
@@ -72,7 +72,7 @@ async function flushWrite(type: StorageType): Promise<void> {
 /**
  * Schedule a debounced write
  */
-function scheduleWrite(type: StorageType, data: any): void {
+function scheduleWrite(type: StorageType, data: unknown): void {
   // Cancel existing timeout
   const existing = pendingWrites.get(type);
   if (existing) {
@@ -136,30 +136,13 @@ export function cancelAllWrites(): void {
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     // Use synchronous method for beforeunload to ensure writes complete
-    const types = Array.from(pendingWrites.keys());
-    for (const type of types) {
+    for (const type of pendingWrites.keys()) {
       const pending = pendingWrites.get(type);
       if (pending) {
         clearTimeout(pending.timeout);
         // Force synchronous localStorage write as fallback during unload
         try {
-          switch (type) {
-            case 'friends':
-              localStorage.setItem('friendkeep_data', JSON.stringify(pending.data));
-              break;
-            case 'meetings':
-              localStorage.setItem('friendkeep_meetings', JSON.stringify(pending.data));
-              break;
-            case 'categories':
-              localStorage.setItem('friendkeep_categories', JSON.stringify(pending.data));
-              break;
-            case 'settings':
-              localStorage.setItem('friendkeep_settings', JSON.stringify(pending.data));
-              break;
-            case 'groups':
-              localStorage.setItem('friendkeep_groups', JSON.stringify(pending.data));
-              break;
-          }
+          localStorage.setItem(localStorageKeys[type], JSON.stringify(pending.data));
         } catch (error) {
           console.error(`Error during unload write for ${type}:`, error);
         }
