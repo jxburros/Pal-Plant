@@ -17,7 +17,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, FileText, AlertTriangle, Check, Users, ChevronDown, ChevronUp, BookUser } from 'lucide-react';
 import { Friend } from '../types';
-import { parseCSVContacts, detectDuplicates, generateId, THEMES } from '../utils/helpers';
+import { parseCSVContacts, detectDuplicates, generateId, getThemeColors } from '../utils/helpers';
 import { AppSettings } from '../types';
 import { pickContacts, isContactPickerAvailable } from '../utils/contacts';
 
@@ -53,7 +53,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
   const [importingDeviceContacts, setImportingDeviceContacts] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const theme = THEMES[settings.theme];
+  const theme = getThemeColors(settings.theme, settings.highContrast);
 
   if (!isOpen) return null;
 

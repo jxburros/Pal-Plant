@@ -17,7 +17,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Calendar, UserPlus, X, Check, MapPin, Briefcase, Mail, Phone, Upload, Clock, Download, Users, AlertTriangle, RefreshCw } from 'lucide-react';
 import { MeetingRequest, MeetingTimeframe, Friend } from '../types';
-import { generateId, fileToBase64, getMeetingUrgency, THEMES, downloadCalendarEvent, getGoogleCalendarUrl, getInitials, getAvatarColor } from '../utils/helpers';
+import { generateId, fileToBase64, getMeetingUrgency, getThemeColors, downloadCalendarEvent, getGoogleCalendarUrl, getInitials, getAvatarColor } from '../utils/helpers';
 import { AppSettings } from '../types';
 
 
@@ -49,7 +49,7 @@ interface MeetingRequestsViewProps {
 const MeetingRequestsView: React.FC<MeetingRequestsViewProps> = ({
   requests, onAddRequest, onUpdateRequest, onDeleteRequest, settings, friends = []
 }) => {
-  const theme = THEMES[settings.theme];
+  const theme = getThemeColors(settings.theme, settings.highContrast);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -513,7 +513,7 @@ const MeetingCard: React.FC<{
   const isStale = req.status === 'REQUESTED' && urgency.daysPassed > (timeframeMeta.staleDays * 1.2);
 
   return (
-    <div className={`${theme.cardBg} rounded-2xl shadow-sm border ${isOverdue ? 'border-red-300 ring-2 ring-red-100' : isStale ? 'border-amber-300' : theme.border} overflow-hidden`}>
+    <div className={`${theme.cardBg} rounded-sm shadow-sm border ${isOverdue ? 'border-red-300 ring-2 ring-red-100' : isStale ? 'border-amber-300' : theme.border} overflow-hidden`}>
       {/* Top Timer Bar (Only for Requested) */}
       {req.status === 'REQUESTED' && (
         <div className="h-2 bg-slate-100 w-full relative">
@@ -544,6 +544,11 @@ const MeetingCard: React.FC<{
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide ${req.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
                   {req.status}
                 </span>
+                {req.verified && (
+                  <span className="ml-2 inline-flex items-center px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-brand-sage border border-brand-tan rounded-full">
+                    Conservatory Seal
+                  </span>
+                )}
              </div>
 
              {req.organization && (
