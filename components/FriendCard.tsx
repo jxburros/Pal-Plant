@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Phone, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, ChevronDown, ChevronUp, PhoneCall, Video, Users, Gamepad2, Sparkles } from 'lucide-react';
+import { Phone, AlertCircle, Edit2, Trash2, Mail, MessageCircle, CalendarPlus, Cake, Droplets, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { ActionFeedback, ContactChannel, Friend, CHANNEL_WEIGHTS, CHANNEL_SCORE_BONUS } from '../types';
 import { calculateTimeStatus, getProgressBarColor, getStatusColor, getPlantStage, getInitials, getAvatarColor } from '../utils/helpers';
 import InlineFeedback from './InlineFeedback';
@@ -30,12 +30,12 @@ interface FriendCardProps {
   onDismissFeedback?: (friendId: string) => void;
 }
 
-const CHANNEL_OPTIONS: { value: ContactChannel; label: string; icon: typeof Phone; color: string; activeColor: string }[] = [
-  { value: 'text', label: 'Text', icon: MessageCircle, color: 'text-blue-500 border-blue-200 hover:bg-blue-50', activeColor: 'bg-blue-500 text-white border-blue-500' },
-  { value: 'call', label: 'Call', icon: PhoneCall, color: 'text-emerald-600 border-emerald-200 hover:bg-emerald-50', activeColor: 'bg-emerald-600 text-white border-emerald-600' },
-  { value: 'gaming', label: 'Gaming', icon: Gamepad2, color: 'text-indigo-500 border-indigo-200 hover:bg-indigo-50', activeColor: 'bg-indigo-500 text-white border-indigo-500' },
-  { value: 'video', label: 'Video', icon: Video, color: 'text-purple-500 border-purple-200 hover:bg-purple-50', activeColor: 'bg-purple-500 text-white border-purple-500' },
-  { value: 'in-person', label: 'In Person', icon: Users, color: 'text-orange-500 border-orange-200 hover:bg-orange-50', activeColor: 'bg-orange-500 text-white border-orange-500' },
+const CHANNEL_OPTIONS: { value: ContactChannel; label: string; color: string; activeColor: string }[] = [
+  { value: 'text', label: 'Text Message', color: 'text-brand-ink border-brand-tan hover:bg-brand-cream/60', activeColor: 'bg-brand-sage text-white border-brand-sage' },
+  { value: 'call', label: 'Phone Call', color: 'text-brand-ink border-brand-tan hover:bg-brand-cream/60', activeColor: 'bg-brand-sage text-white border-brand-sage' },
+  { value: 'gaming', label: 'Gaming', color: 'text-brand-ink border-brand-tan hover:bg-brand-cream/60', activeColor: 'bg-brand-sage text-white border-brand-sage' },
+  { value: 'video', label: 'Video Call', color: 'text-brand-ink border-brand-tan hover:bg-brand-cream/60', activeColor: 'bg-brand-sage text-white border-brand-sage' },
+  { value: 'in-person', label: 'In Person', color: 'text-brand-ink border-brand-tan hover:bg-brand-cream/60', activeColor: 'bg-brand-sage text-white border-brand-sage' },
 ];
 
 const CHANNEL_LABELS: Record<ContactChannel, string> = {
@@ -44,6 +44,24 @@ const CHANNEL_LABELS: Record<ContactChannel, string> = {
   'gaming': 'Gaming',
   'video': 'Video Call',
   'in-person': 'In Person',
+};
+
+const VinylPlantBadge: React.FC<{ percentage: number }> = ({ percentage }) => {
+  const pct = Math.max(0, Math.min(100, percentage));
+  const stem = pct > 50 ? '#8A9A5B' : '#A4A675';
+  const bloom = pct > 30 ? '#8A9A5B' : '#C69084';
+  const leaf = pct > 20 ? '#6F7A49' : '#B88A7F';
+
+  return (
+    <svg viewBox="0 0 72 72" className="w-10 h-10" aria-hidden="true">
+      <circle cx="36" cy="36" r="34" fill="#F5F5DC" stroke="#D2B48C" strokeWidth="2" />
+      <rect x="34" y="24" width="4" height="28" rx="2" fill={stem} />
+      <ellipse cx="27" cy="35" rx="8" ry="5" transform="rotate(-25 27 35)" fill={leaf} />
+      <ellipse cx="45" cy="32" rx="8" ry="5" transform="rotate(25 45 32)" fill={leaf} />
+      <circle cx="36" cy="18" r="8" fill={bloom} />
+      <circle cx="36" cy="18" r="3" fill="#E2725B" />
+    </svg>
+  );
 };
 
 const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, onEdit, onRequestMeeting, feedback, onDismissFeedback }) => {
@@ -59,7 +77,6 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
   const progressColorClass = getProgressBarColor(percentageLeft);
 
   const plantStage = getPlantStage(percentageLeft);
-  const PlantIcon = plantStage.icon;
 
   const lastLog = friend.logs[0];
   const previousLog = friend.logs[1];
@@ -80,28 +97,28 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
       })();
 
   return (
-    <div className="friend-card-shell bg-white rounded-md p-5 relative overflow-hidden mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
+    <div className="friend-card-shell bg-white rounded-sm p-4 relative overflow-hidden mb-4 group space-y-3" role="article" aria-label={`Friend card for ${friend.name}`}>
       <div className="friend-card-glow" aria-hidden="true" />
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
         <div className="flex items-center gap-1">
-          <span className={`text-[10px] font-black px-2 py-1 rounded-sm border ${friend.individualScore > 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : friend.individualScore < 40 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-500'}`}>
+          <span className={`text-[10px] font-semibold px-2 py-1 rounded-sm border ${friend.individualScore > 80 ? 'bg-brand-cream text-brand-sage border-brand-tan' : friend.individualScore < 40 ? 'bg-[#FDF1EE] text-brand-terracotta border-brand-tan' : 'bg-brand-cream text-brand-ink border-brand-tan'}`}>
             {Math.round(friend.individualScore || 50)}
           </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-1 rounded-sm">
+          <span className="text-[10px] font-semibold uppercase tracking-wider bg-brand-cream text-brand-ink px-2 py-1 rounded-sm border border-brand-tan">
             {friend.category}
           </span>
         </div>
 
-        <div className={`px-2 py-1 rounded-sm text-[10px] font-bold flex items-center gap-1 w-fit ${statusColorClass}`}>
+        <div className={`px-2 py-1 rounded-sm text-[10px] font-semibold flex items-center gap-1 w-fit border ${statusColorClass}`}>
           {isOverdue ? <AlertCircle size={10} /> : <Droplets size={10} />}
           {isOverdue ? `${Math.abs(daysLeft)}d late` : `${daysLeft}d water`}
         </div>
       </div>
 
       <div className="flex justify-between items-start mb-3 mt-1 mr-24">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden flex-shrink-0 border-4 border-white relative group-hover:scale-105 transition-transform z-0">
+            <div className="w-14 h-14 rounded-full bg-brand-cream overflow-hidden flex-shrink-0 border border-brand-tan relative group-hover:scale-105 transition-transform z-0">
               {friend.photo ? (
                 <img src={friend.photo} alt={`Photo of ${friend.name}`} className="w-full h-full object-cover" />
               ) : (
@@ -110,28 +127,28 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
                 </div>
               )}
             </div>
-            <div className={`absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10`} title={plantStage.label}>
-              <PlantIcon size={17} className={plantStage.color} />
+            <div className="absolute -bottom-2 -right-3 bg-white rounded-full" title={plantStage.label}>
+              <VinylPlantBadge percentage={visualPercentage} />
             </div>
           </div>
 
           <div>
-            <h3 className="font-bold text-slate-800 text-lg leading-tight truncate max-w-[150px] flex items-center gap-1">
+            <h3 className="font-bold text-brand-ink text-xl leading-tight truncate max-w-[150px] flex items-center gap-1">
               {friend.name}
-              {friend.individualScore >= 80 && <Sparkles size={14} className="text-amber-500" aria-hidden="true" />}
+              {friend.individualScore >= 80 && <Sparkles size={14} className="text-brand-sage" aria-hidden="true" />}
             </h3>
-            <p className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${plantStage.color}`}>{plantStage.label}</p>
+            <p className={`text-[10px] font-semibold uppercase tracking-wider mt-0.5 ${plantStage.color}`}>{plantStage.label}</p>
 
             <div className="flex items-center gap-3 mt-2">
               {friend.phone && (
                 <>
-                  <a href={`tel:${friend.phone}`} className="text-slate-400 hover:text-green-600 " title="Call"><Phone size={14} /></a>
-                  <a href={`sms:${friend.phone}`} className="text-slate-400 hover:text-blue-500 " title="Text"><MessageCircle size={14} /></a>
+                  <a href={`tel:${friend.phone}`} className="text-brand-clay-ink hover:text-brand-sage" title="Call"><Phone size={14} /></a>
+                  <a href={`sms:${friend.phone}`} className="text-brand-clay-ink hover:text-brand-sage" title="Text"><MessageCircle size={14} /></a>
                 </>
               )}
-              {friend.email && <a href={`mailto:${friend.email}`} className="text-slate-400 hover:text-purple-500 " title="Email"><Mail size={14} /></a>}
+              {friend.email && <a href={`mailto:${friend.email}`} className="text-brand-clay-ink hover:text-brand-sage" title="Email"><Mail size={14} /></a>}
               {friend.birthday && (
-                <div className="flex items-center gap-1 text-[10px] text-pink-400 bg-pink-50 px-1.5 py-0.5 rounded-full" title={`Birthday: ${friend.birthday}`}>
+                <div className="flex items-center gap-1 text-[10px] text-brand-terracotta bg-[#FDF1EE] px-1.5 py-0.5 rounded-sm border border-brand-tan" title={`Birthday: ${friend.birthday}`}>
                   <Cake size={10} />
                   <span>{friend.birthday}</span>
                 </div>
@@ -141,34 +158,33 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         </div>
       </div>
 
-      <div className="mt-3 relative">
-        <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1 px-1">
+      <div className="mt-2 relative">
+        <div className="flex justify-between text-[10px] font-semibold text-brand-clay-ink mb-1 px-1">
           <span>Needs Water</span>
           <span>Thriving</span>
         </div>
-        <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden " role="progressbar" aria-valuenow={Math.round(visualPercentage)} aria-valuemin={0} aria-valuemax={100} aria-label={`Contact timer: ${isOverdue ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days remaining`}`}>
-          <div className={`h-full duration-700 ease-out relative rounded-full ${progressColorClass}`} style={{ width: `${visualPercentage}%` }}>
-                      </div>
+        <div className="w-full h-3 bg-brand-cream rounded-full overflow-hidden border border-brand-tan" role="progressbar" aria-valuenow={Math.round(visualPercentage)} aria-valuemin={0} aria-valuemax={100} aria-label={`Contact timer: ${isOverdue ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days remaining`}`}>
+          <div className={`h-full duration-700 ease-out relative rounded-full transition-colors ${progressColorClass}`} style={{ width: `${visualPercentage}%` }} />
         </div>
       </div>
 
       <button
         onClick={() => setShowMechanics(prev => !prev)}
-        className="w-full mt-3 p-2 rounded-sm bg-slate-50 hover:bg-slate-100 text-xs text-slate-600 flex items-center justify-between"
+        className="w-full mt-3 p-2 rounded-sm bg-brand-cream/70 hover:bg-brand-cream text-xs text-brand-clay-ink border border-brand-tan flex items-center justify-between"
       >
         <span className="font-semibold">Why score changed?</span>
         {showMechanics ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
       </button>
 
       {showMechanics && (
-        <div className="mt-2 p-3 rounded-sm bg-white text-xs text-slate-600 space-y-2">
+        <div className="mt-2 p-3 rounded-sm bg-white text-xs text-brand-clay-ink border border-brand-tan space-y-2">
           <p>{scoreReason}</p>
           <p>
             Last score delta: <span className="font-semibold">{lastLog?.scoreDelta ?? 0}</span>
             {lastLog ? ` (${new Date(lastLog.date).toLocaleString()})` : ''}
           </p>
           <div className="mt-2 space-y-1">
-            <p className="font-semibold text-slate-700">Channel impact on timer:</p>
+            <p className="font-semibold text-brand-ink">Channel impact on timer:</p>
             {CHANNEL_OPTIONS.map(ch => (
               <p key={ch.value} className="text-[10px]">
                 {ch.label}: <span className="font-semibold">{Math.round(CHANNEL_WEIGHTS[ch.value] * 100)}%</span> timer reset, up to <span className="font-semibold">+{CHANNEL_SCORE_BONUS[ch.value]}</span> pts
@@ -183,42 +199,36 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onContact, onDelete, on
         </div>
       )}
 
-      {/* Channel-based interaction buttons */}
-      <div className="grid grid-cols-2 gap-2 mt-2">
-        {CHANNEL_OPTIONS.map(ch => {
-          const Icon = ch.icon;
-          return (
-            <button
-              key={ch.value}
-              onClick={() => onContact(friend.id, ch.value)}
-              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-sm text-sm font-medium border active:scale-95 ${ch.color}`}
-              aria-label={`Log ${ch.label} interaction with ${friend.name}`}
-            >
-              <Icon size={16} />
-              {ch.label}
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+        {CHANNEL_OPTIONS.map(ch => (
+          <button
+            key={ch.value}
+            onClick={() => onContact(friend.id, ch.value)}
+            className={`px-3 py-2 rounded-sm text-xs font-semibold border active:scale-95 transition-colors ${ch.color}`}
+            aria-label={`Log ${ch.label} interaction with ${friend.name}`}
+          >
+            Log {ch.label}
+          </button>
+        ))}
       </div>
 
-      {/* Utility actions */}
       <div className="flex gap-2 mt-2">
-        <button onClick={() => onRequestMeeting(friend)} className="flex-1 px-3 py-2 rounded-sm text-slate-400 hover:bg-orange-50 hover:text-orange-600  hover:border-orange-100 text-sm flex items-center justify-center gap-1" title="Create meeting request" aria-label={`Schedule meeting with ${friend.name}`}>
+        <button onClick={() => onRequestMeeting(friend)} className="flex-1 px-3 py-2 rounded-sm text-brand-clay-ink hover:bg-brand-cream border border-brand-tan text-sm flex items-center justify-center gap-1" title="Create meeting request" aria-label={`Schedule meeting with ${friend.name}`}>
           <CalendarPlus size={16} />
           Meet
         </button>
 
-        <button onClick={() => onEdit(friend)} className="px-3 py-2 rounded-sm text-slate-400 hover:bg-blue-50 hover:text-blue-600  hover:border-blue-100" title="Edit" aria-label={`Edit ${friend.name}`}>
+        <button onClick={() => onEdit(friend)} className="px-3 py-2 rounded-sm text-brand-clay-ink border border-brand-tan hover:bg-brand-cream" title="Edit" aria-label={`Edit ${friend.name}`}>
           <Edit2 size={18} />
         </button>
 
         {confirmDelete ? (
           <div className="flex gap-1">
-            <button onClick={() => { onDelete(friend.id); setConfirmDelete(false); }} className="px-2 py-2 rounded-sm bg-red-500 text-white text-[10px] font-bold " title="Confirm Delete">Yes</button>
-            <button onClick={() => setConfirmDelete(false)} className="px-2 py-2 rounded-sm bg-slate-200 text-slate-600 text-[10px] font-bold " title="Cancel">No</button>
+            <button onClick={() => { onDelete(friend.id); setConfirmDelete(false); }} className="px-2 py-2 rounded-sm bg-brand-terracotta text-white text-[10px] font-bold" title="Confirm Delete">Yes</button>
+            <button onClick={() => setConfirmDelete(false)} className="px-2 py-2 rounded-sm bg-brand-cream text-brand-ink text-[10px] font-bold border border-brand-tan" title="Cancel">No</button>
           </div>
         ) : (
-          <button onClick={() => setConfirmDelete(true)} className="px-3 py-2 rounded-sm text-slate-400 hover:bg-red-50 hover:text-red-500  hover:border-red-100" title="Delete">
+          <button onClick={() => setConfirmDelete(true)} className="px-3 py-2 rounded-sm text-brand-terracotta border border-brand-tan hover:bg-[#FDF1EE]" title="Delete">
             <Trash2 size={18} />
           </button>
         )}
