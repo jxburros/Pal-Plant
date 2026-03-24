@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, ChevronRight, ChevronLeft, Sprout, Users, Calendar, Settings, Keyboard, TrendingUp, Clock, Award } from 'lucide-react';
-import { THEMES } from '../utils/helpers';
+import { getThemeColors } from '../utils/helpers';
 import { AppSettings } from '../types';
 
 interface OnboardingTooltipsProps {
@@ -119,7 +119,7 @@ const tooltipSteps: TooltipStep[] = [
 
 const OnboardingTooltips: React.FC<OnboardingTooltipsProps> = ({ settings, onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const theme = THEMES[settings.theme];
+  const theme = getThemeColors(settings.theme, settings.highContrast);
 
   const handleNext = () => {
     if (currentStep < tooltipSteps.length - 1) {

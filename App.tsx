@@ -23,7 +23,7 @@ import MeetingRequestsView from './components/MeetingRequestsView';
 import SettingsModal from './components/SettingsModal';
 import HomeView from './components/HomeView';
 import { useKeyboardShortcuts } from './components/KeyboardShortcuts';
-import { generateId, calculateTimeStatus, THEMES } from './utils/helpers';
+import { generateId, calculateTimeStatus, getThemeColors } from './utils/helpers';
 import { trackEvent } from './utils/analytics';
 import { useReminderEngine } from './hooks/useReminderEngine';
 import { useFriendsEngine } from './hooks/useFriendsEngine';
@@ -280,7 +280,7 @@ const App: React.FC = () => {
   }, [isStorageReady, meetingRequests, lastOpened, meetingFollowUp]);
 
   // Memoize theme colors and text size to avoid recalculation on every render
-  const themeColors = useMemo(() => THEMES[settings.theme], [settings.theme]);
+  const themeColors = useMemo(() => getThemeColors(settings.theme, settings.highContrast), [settings.theme, settings.highContrast]);
   const textSizeClass = useMemo(() => {
     return settings.textSize === 'large' ? 'text-lg' : 
            settings.textSize === 'xl' ? 'text-xl' : 'text-base';
@@ -452,7 +452,7 @@ const App: React.FC = () => {
   }, [markContacted, showToast]);
 
   return (
-    <div data-theme={settings.theme} className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''}`}>
+    <div data-theme={settings.theme} className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''} ${settings.highContrast ? 'contrast-125' : ''}`}>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {showBackupBanner && (
@@ -560,6 +560,17 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:px-6 sm:pt-6 pb-40 max-w-2xl mx-auto w-full relative z-[1]">
+        {activeTab === Tab.HOME && (
+          <section className={`mb-4 ${themeColors.cardBg} border ${themeColors.border} rounded-sm`}>
+            <p className={`px-3 py-2 text-[11px] uppercase tracking-wide ${themeColors.textSub}`}>Discovery Shelf</p>
+            <div className="flex overflow-x-auto divide-x divide-brand-tan">
+              <button onClick={() => setActiveTab(Tab.LIST)} className="px-4 py-3 text-xs font-semibold whitespace-nowrap hover:bg-brand-cream/50">Open Contacts</button>
+              <button onClick={() => setActiveTab(Tab.MEETINGS)} className="px-4 py-3 text-xs font-semibold whitespace-nowrap hover:bg-brand-cream/50">Review Meetings</button>
+              <button onClick={() => setIsGroupManagementOpen(true)} className="px-4 py-3 text-xs font-semibold whitespace-nowrap hover:bg-brand-cream/50">Manage Groups</button>
+              <button onClick={openAddModal} className="px-4 py-3 text-xs font-semibold whitespace-nowrap hover:bg-brand-cream/50">Add Contact</button>
+            </div>
+          </section>
+        )}
         {activeTab === Tab.HOME ? (
           <HomeView
             friends={friends}
