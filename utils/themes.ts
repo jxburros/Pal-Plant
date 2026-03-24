@@ -31,63 +31,81 @@ import { ThemeId, ThemeColors } from '../types';
  */
 export const THEMES: Record<ThemeId, ThemeColors> = {
   plant: {
-    bg: 'bg-[#f4f7f4]', 
-    cardBg: 'bg-white', 
-    textMain: 'text-[#2c3e2e]', 
-    textSub: 'text-[#6b7c6d]',
-    primary: 'bg-[#4a674e]', 
-    primaryText: 'text-white', 
-    accent: 'bg-[#8fb394]', 
-    border: 'border-[#e0e8e0]'
+    bg: 'bg-brand-cream',
+    cardBg: 'bg-white',
+    textMain: 'text-brand-ink',
+    textSub: 'text-brand-clay-ink',
+    primary: 'bg-brand-sage',
+    primaryText: 'text-white',
+    accent: 'bg-brand-terracotta',
+    border: 'border-brand-tan'
   },
   midnight: {
-    bg: 'bg-slate-900', 
-    cardBg: 'bg-slate-800', 
-    textMain: 'text-white', 
+    bg: 'bg-slate-900',
+    cardBg: 'bg-slate-800',
+    textMain: 'text-white',
     textSub: 'text-slate-400',
-    primary: 'bg-blue-600', 
-    primaryText: 'text-white', 
-    accent: 'bg-pink-500', 
+    primary: 'bg-blue-600',
+    primaryText: 'text-white',
+    accent: 'bg-pink-500',
     border: 'border-slate-700'
   },
   forest: {
-    bg: 'bg-stone-100', 
-    cardBg: 'bg-white', 
-    textMain: 'text-stone-800', 
+    bg: 'bg-stone-100',
+    cardBg: 'bg-white',
+    textMain: 'text-stone-800',
     textSub: 'text-stone-500',
-    primary: 'bg-emerald-800', 
-    primaryText: 'text-emerald-50', 
-    accent: 'bg-lime-600', 
+    primary: 'bg-emerald-800',
+    primaryText: 'text-emerald-50',
+    accent: 'bg-lime-600',
     border: 'border-stone-200'
   },
   ocean: {
-    bg: 'bg-sky-50', 
-    cardBg: 'bg-white', 
-    textMain: 'text-sky-950', 
+    bg: 'bg-sky-50',
+    cardBg: 'bg-white',
+    textMain: 'text-sky-950',
     textSub: 'text-sky-500',
-    primary: 'bg-sky-600', 
-    primaryText: 'text-white', 
-    accent: 'bg-cyan-400', 
+    primary: 'bg-sky-600',
+    primaryText: 'text-white',
+    accent: 'bg-cyan-400',
     border: 'border-sky-100'
   },
   sunset: {
-    bg: 'bg-orange-50', 
-    cardBg: 'bg-white', 
-    textMain: 'text-orange-950', 
+    bg: 'bg-orange-50',
+    cardBg: 'bg-white',
+    textMain: 'text-orange-950',
     textSub: 'text-orange-600',
-    primary: 'bg-orange-600', 
-    primaryText: 'text-white', 
-    accent: 'bg-yellow-400', 
+    primary: 'bg-orange-600',
+    primaryText: 'text-white',
+    accent: 'bg-yellow-400',
     border: 'border-orange-200'
   },
   berry: {
-    bg: 'bg-fuchsia-50', 
-    cardBg: 'bg-white', 
-    textMain: 'text-fuchsia-950', 
+    bg: 'bg-fuchsia-50',
+    cardBg: 'bg-white',
+    textMain: 'text-fuchsia-950',
     textSub: 'text-fuchsia-600',
-    primary: 'bg-fuchsia-700', 
-    primaryText: 'text-white', 
-    accent: 'bg-pink-500', 
+    primary: 'bg-fuchsia-700',
+    primaryText: 'text-white',
+    accent: 'bg-pink-500',
     border: 'border-fuchsia-200'
   }
+};
+
+export const HIGH_CONTRAST_THEMES: Record<ThemeId, ThemeColors> = {
+  ...THEMES,
+  plant: {
+    bg: 'bg-[#F2EFD8]',
+    cardBg: 'bg-white',
+    textMain: 'text-[#1F1A14]',
+    textSub: 'text-[#3A3027]',
+    primary: 'bg-[#59663A]',
+    primaryText: 'text-white',
+    accent: 'bg-[#B6513B]',
+    border: 'border-[#9A7B5E]'
+  }
+};
+
+export const getThemeColors = (themeId: ThemeId, highContrast = false): ThemeColors => {
+  return highContrast ? HIGH_CONTRAST_THEMES[themeId] : THEMES[themeId];
 };

@@ -32,7 +32,17 @@ export default {
           500: '#0ea5e9',
           600: '#0284c7',
           700: '#0369a1',
+          cream: '#F5F5DC',
+          sage: '#8A9A5B',
+          terracotta: '#E2725B',
+          tan: '#D2B48C',
+          ink: '#2F261F',
+          'clay-ink': '#6E5A48'
         }
+      },
+      fontFamily: {
+        display: ['Cormorant Garamond', 'serif'],
+        sans: ['Outfit', 'sans-serif']
       }
     },
   },
