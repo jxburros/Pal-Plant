@@ -89,7 +89,7 @@ Pal-Plant uses a garden metaphor to visualize your relationships. Each contact i
 1. Clone the repository:
    ```bash
    git clone https://github.com/jxburros/Pal-Plant.git
-   cd Pal-Plant/pal-plant
+   cd Pal-Plant
    ```
 
 2. Install dependencies:
@@ -223,7 +223,6 @@ The **channel** determines how much of the contact timer is restored and the bas
 ## 📁 Project Structure
 
 ```
-pal-plant/
 ├── components/           # React components
 │   ├── AddFriendModal.tsx
 │   ├── BulkImportModal.tsx
