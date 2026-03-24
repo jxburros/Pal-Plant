@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import { Friend, ThemeId, ThemeColors, MeetingRequest, ContactLog, MeetingTimeframe, ContactChannel, CHANNEL_SCORE_BONUS } from '../types';
+import { Friend, MeetingRequest, ContactLog, MeetingTimeframe, ContactChannel, CHANNEL_SCORE_BONUS } from '../types';
 import { calculateDailyWilt as _calculateDailyWilt } from './scoring';
 import { Sprout, Flower, Trees, Leaf, Skull } from 'lucide-react';
 import React from 'react';
 import { TIMER_BUFFER_MULTIPLIER } from './scoring';
+export { THEMES, HIGH_CONTRAST_THEMES, getThemeColors } from './themes';
 
 // ─── Avatar Helpers ───────────────────────────────────────────────
 
@@ -426,17 +427,17 @@ export const getCohortStats = (friends: Friend[]): Record<string, {
 // ─── Visual Helpers ───────────────────────────────────────────────
 
 export const getStatusColor = (percentage: number): string => {
-  if (percentage <= 0) return 'text-red-600 bg-red-100 border-red-200'; // Overdue
-  if (percentage < 25) return 'text-orange-600 bg-orange-100 border-orange-200'; // Urgent
-  if (percentage < 50) return 'text-yellow-600 bg-yellow-100 border-yellow-200'; // Warning
-  return 'text-emerald-600 bg-emerald-100 border-emerald-200'; // Good
+  if (percentage <= 0) return 'text-brand-terracotta bg-[#FDF1EE] border-brand-tan'; // Overdue
+  if (percentage < 25) return 'text-brand-terracotta bg-[#FDF1EE] border-brand-tan'; // Urgent
+  if (percentage < 50) return 'text-[#8E6D54] bg-brand-cream border-brand-tan'; // Warning
+  return 'text-brand-sage bg-[#EEF2E5] border-brand-tan'; // Good
 };
 
 export const getProgressBarColor = (percentage: number): string => {
-  if (percentage <= 0) return 'bg-red-500';
-  if (percentage < 25) return 'bg-orange-500';
-  if (percentage < 50) return 'bg-yellow-500';
-  return 'bg-emerald-500';
+  if (percentage <= 0) return 'bg-brand-terracotta';
+  if (percentage < 25) return 'bg-brand-terracotta';
+  if (percentage < 50) return 'bg-[#C8A57A]';
+  return 'bg-brand-sage';
 };
 
 // Returns a component and label based on percentage
@@ -681,31 +682,3 @@ export const getSmartNudges = (friends: Friend[]): SmartNudge[] => {
   return nudges;
 };
 
-// ─── Themes ───────────────────────────────────────────────────────
-
-export const THEMES: Record<ThemeId, ThemeColors> = {
-  plant: {
-    bg: 'bg-[#f4f7f4]', cardBg: 'bg-white', textMain: 'text-[#2c3e2e]', textSub: 'text-[#6b7c6d]',
-    primary: 'bg-[#4a674e]', primaryText: 'text-white', accent: 'bg-[#8fb394]', border: 'border-[#e0e8e0]'
-  },
-  midnight: {
-    bg: 'bg-slate-900', cardBg: 'bg-slate-800', textMain: 'text-white', textSub: 'text-slate-400',
-    primary: 'bg-blue-600', primaryText: 'text-white', accent: 'bg-pink-500', border: 'border-slate-700'
-  },
-  forest: {
-    bg: 'bg-stone-100', cardBg: 'bg-white', textMain: 'text-stone-800', textSub: 'text-stone-500',
-    primary: 'bg-emerald-800', primaryText: 'text-emerald-50', accent: 'bg-lime-600', border: 'border-stone-200'
-  },
-  ocean: {
-    bg: 'bg-sky-50', cardBg: 'bg-white', textMain: 'text-sky-950', textSub: 'text-sky-500',
-    primary: 'bg-sky-600', primaryText: 'text-white', accent: 'bg-cyan-400', border: 'border-sky-100'
-  },
-  sunset: {
-    bg: 'bg-orange-50', cardBg: 'bg-white', textMain: 'text-orange-950', textSub: 'text-orange-600',
-    primary: 'bg-orange-600', primaryText: 'text-white', accent: 'bg-yellow-400', border: 'border-orange-200'
-  },
-  berry: {
-    bg: 'bg-fuchsia-50', cardBg: 'bg-white', textMain: 'text-fuchsia-950', textSub: 'text-fuchsia-600',
-    primary: 'bg-fuchsia-700', primaryText: 'text-white', accent: 'bg-pink-500', border: 'border-fuchsia-200'
-  }
-};

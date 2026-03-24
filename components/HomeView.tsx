@@ -10,7 +10,7 @@
 
 import React, { useState } from 'react';
 import { Friend, MeetingRequest, AppSettings } from '../types';
-import { calculateSocialGardenScore, calculateTimeStatus, getUpcomingBirthdays, getSmartNudges, THEMES } from '../utils/helpers';
+import { calculateSocialGardenScore, calculateTimeStatus, getUpcomingBirthdays, getSmartNudges, getThemeColors } from '../utils/helpers';
 import { ChevronRight } from 'lucide-react';
 import WeeklyPlanView from './WeeklyPlanView';
 
@@ -23,8 +23,36 @@ interface HomeViewProps {
   onApplyNudge?: (friendId: string, newFrequencyDays: number) => void;
 }
 
+const CircularGauge: React.FC<{ score: number }> = ({ score }) => {
+  const clamped = Math.max(0, Math.min(100, score));
+  const circumference = 2 * Math.PI * 30;
+  const offset = circumference - (clamped / 100) * circumference;
+  const color = clamped < 40 ? '#E2725B' : '#8A9A5B';
+
+  return (
+    <div className="relative w-20 h-20 mx-auto">
+      <svg viewBox="0 0 72 72" className="w-full h-full -rotate-90" aria-hidden="true">
+        <circle cx="36" cy="36" r="30" stroke="#E7D8C6" strokeWidth="6" fill="none" />
+        <circle
+          cx="36"
+          cy="36"
+          r="30"
+          stroke={color}
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          fill="none"
+          className="transition-all duration-500"
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-brand-ink">{clamped}</div>
+    </div>
+  );
+};
+
 const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings, onNavigateToFriend, onNavigateToMeetings, onApplyNudge }) => {
-  const theme = THEMES[settings.theme];
+  const theme = getThemeColors(settings.theme, settings.highContrast);
   const score = calculateSocialGardenScore(friends, meetingRequests);
   const birthdays = getUpcomingBirthdays(friends).slice(0, 2);
   const nudges = getSmartNudges(friends);
@@ -57,35 +85,32 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
   ].slice(0, 6);
 
   return (
-    <div className="space-y-6 pb-24" role="main" aria-label="Dashboard">
-      <section className={`${theme.cardBg} rounded-md p-4`}>
-        <p className={`text-xs uppercase tracking-wide ${theme.textSub}`}>Score</p>
-        <p className={`text-4xl font-black mt-1 ${theme.textMain}`}>{score}</p>
-      </section>
-
+    <div className="space-y-4 pb-24" role="main" aria-label="Dashboard">
       <section className="grid grid-cols-3 gap-2">
-        <div className={`${theme.cardBg} rounded-sm p-3`}>
-          <p className={`text-[11px] ${theme.textSub}`}>Contacts</p>
-          <p className={`text-xl font-bold ${theme.textMain}`}>{friends.length}</p>
+        <div className={`${theme.cardBg} border ${theme.border} rounded-sm p-3 text-center`}>
+          <p className={`text-[11px] uppercase tracking-wide ${theme.textSub}`}>Garden Score</p>
+          <CircularGauge score={score} />
         </div>
-        <div className={`${theme.cardBg} rounded-sm p-3`}>
-          <p className={`text-[11px] ${theme.textSub}`}>Attention</p>
-          <p className={`text-xl font-bold ${theme.textMain}`}>{withering.length}</p>
+        <div className={`${theme.cardBg} border ${theme.border} rounded-sm p-3 flex flex-col justify-between`}>
+          <p className={`text-[11px] uppercase tracking-wide ${theme.textSub}`}>Attention</p>
+          <p className={`text-3xl font-bold leading-none ${theme.textMain}`}>{withering.length}</p>
+          <p className={`text-[11px] ${theme.textSub}`}>Need outreach</p>
         </div>
-        <div className={`${theme.cardBg} rounded-sm p-3`}>
-          <p className={`text-[11px] ${theme.textSub}`}>Meetings</p>
-          <p className={`text-xl font-bold ${theme.textMain}`}>{meetings.length}</p>
+        <div className={`${theme.cardBg} border ${theme.border} rounded-sm p-3 flex flex-col justify-between`}>
+          <p className={`text-[11px] uppercase tracking-wide ${theme.textSub}`}>Meetings</p>
+          <p className={`text-3xl font-bold leading-none ${theme.textMain}`}>{meetings.length}</p>
+          <p className={`text-[11px] ${theme.textSub}`}>Scheduled</p>
         </div>
       </section>
 
-      <section className={`${theme.cardBg} rounded-md p-4`}>
-        <p className={`text-xs uppercase tracking-wide mb-3 ${theme.textSub}`}>Priority list</p>
+      <section className={`${theme.cardBg} border ${theme.border} rounded-sm p-4`}>
+        <p className={`text-xs uppercase tracking-wide mb-3 ${theme.textSub}`}>Curated Tasks</p>
         {tasks.length === 0 ? (
           <p className={`text-sm ${theme.textSub}`}>Nothing urgent right now.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {tasks.map(task => (
-              <button key={task.id} onClick={task.action} className={`w-full text-left rounded-sm p-3`}>
+              <button key={task.id} onClick={task.action} className={`w-full text-left border ${theme.border} rounded-sm p-3 hover:bg-brand-cream/50 transition-colors`}>
                 <p className={`text-sm font-semibold ${theme.textMain}`}>{task.title}</p>
                 <p className={`text-xs mt-1 ${theme.textSub}`}>{task.detail}</p>
               </button>
@@ -95,7 +120,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
       </section>
 
       {activeNudges.length > 0 && (
-        <section className={`${theme.cardBg} rounded-md p-4`}>
+        <section className={`${theme.cardBg} border ${theme.border} rounded-sm p-4`}>
           <p className={`text-xs uppercase tracking-wide mb-3 ${theme.textSub}`}>Cadence</p>
           <div className="space-y-2">
             {activeNudges.slice(0, 3).map(nudge => (
@@ -109,14 +134,14 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
                         onApplyNudge(nudge.friendId, nudge.suggestedDays);
                         setDismissedNudges(prev => new Set(prev).add(nudge.friendId));
                       }}
-                      className="text-[11px] font-semibold px-3 py-1 rounded-md bg-slate-900 text-white"
+                      className="text-[11px] font-semibold px-3 py-1 rounded-sm bg-brand-sage text-white"
                     >
                       Apply
                     </button>
                   )}
                   <button
                     onClick={() => setDismissedNudges(prev => new Set(prev).add(nudge.friendId))}
-                    className={`text-[11px] font-semibold px-3 py-1 rounded-md`}
+                    className="text-[11px] font-semibold px-3 py-1 rounded-sm border border-brand-tan"
                   >
                     Dismiss
                   </button>
@@ -130,7 +155,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
       {friends.length > 0 && (
         <button
           onClick={() => setShowWeeklyPlan(prev => !prev)}
-          className={`w-full flex items-center justify-between p-4 ${theme.cardBg} rounded-md`}
+          className={`w-full flex items-center justify-between p-4 ${theme.cardBg} border ${theme.border} rounded-sm`}
           aria-expanded={showWeeklyPlan}
           aria-controls="weekly-plan-section"
         >
