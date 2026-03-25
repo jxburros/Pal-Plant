@@ -150,7 +150,7 @@ const StatsView: React.FC<StatsViewProps> = ({ friends }) => {
         <>
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
             <h3 className="text-sm font-bold text-slate-700 mb-2">Last 7 Days Activity</h3>
-            <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-2 text-xs">
               <div className="bg-white rounded-lg p-2 border border-slate-100">
                 <p className="text-slate-500">Contacts Logged</p>
                 <p className="font-black text-slate-800 text-lg">{analyticsSummary.CONTACT_LOGGED}</p>
@@ -167,7 +167,7 @@ const StatsView: React.FC<StatsViewProps> = ({ friends }) => {
           </div>
 
           {/* Header Stats */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-3">
             <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
               <div className="bg-blue-50 p-2 rounded-full mb-2 text-blue-500">
                 <Zap size={20} />
@@ -219,7 +219,7 @@ const StatsView: React.FC<StatsViewProps> = ({ friends }) => {
                 </ResponsiveContainer>
               )}
             </div>
-            <div className="flex justify-center gap-6 text-sm">
+            <div className="flex justify-center gap-4 sm:gap-6 text-sm flex-wrap">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
                 <span className="text-slate-600">On Time</span>
@@ -295,7 +295,7 @@ const StatsView: React.FC<StatsViewProps> = ({ friends }) => {
           </div>
 
           {/* Streak Stats */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-4">
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
               <div className="flex items-center gap-2 mb-2">
                 <Trophy size={18} className="text-yellow-500" />
