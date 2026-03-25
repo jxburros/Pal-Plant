@@ -476,7 +476,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <header className={`px-6 pt-8 pb-4 ${themeColors.bg}/95 backdrop-blur-md sticky top-0 z-30 border-b ${themeColors.border} transition-colors duration-300`} role="banner">
+      <header className={`px-4 sm:px-6 pt-8 pb-4 ${themeColors.bg}/95 backdrop-blur-md sticky top-0 z-30 border-b ${themeColors.border} transition-colors duration-300`} role="banner">
         <div className="flex justify-between items-center mb-4">
           <button onClick={() => setActiveTab(Tab.HOME)} className="text-left">
             <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
@@ -508,7 +508,7 @@ const App: React.FC = () => {
               />
             </div>
 
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-6 px-6">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:-mx-6 sm:px-6">
               <button onClick={() => handleSelectCategory('All')} className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${selectedCategory === 'All' ? `${themeColors.primary} text-white` : `${themeColors.cardBg} ${themeColors.textSub}`}`}>All</button>
               {categories.map(cat => (
                 <button key={cat} onClick={() => handleSelectCategory(cat)} className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${selectedCategory === cat ? `${themeColors.primary} text-white` : `${themeColors.cardBg} ${themeColors.textSub}`}`}>{cat}</button>
@@ -516,7 +516,7 @@ const App: React.FC = () => {
             </div>
 
             {/* Health Status Filters */}
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-6 px-6">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:-mx-6 sm:px-6">
               <button 
                 onClick={() => setHealthFilter('All')} 
                 className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'All' ? 'bg-slate-600 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
@@ -543,8 +543,8 @@ const App: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex justify-between items-center text-xs font-bold text-slate-600 px-1 mt-2">
-              <div className="flex gap-3">
+            <div className="flex flex-col gap-2 min-[480px]:flex-row min-[480px]:justify-between min-[480px]:items-center text-xs font-bold text-slate-600 px-1 mt-2">
+              <div className="flex flex-wrap gap-3">
                 <button onClick={() => setIsBulkImportOpen(true)} className="underline decoration-dotted underline-offset-4">
                   Import contacts
                 </button>
@@ -559,7 +559,7 @@ const App: React.FC = () => {
         )}
       </header>
 
-      <main className="flex-1 overflow-y-auto no-scrollbar p-4 sm:px-6 sm:pt-6 pb-40 max-w-2xl mx-auto w-full relative z-[1]">
+      <main className="flex-1 overflow-y-auto no-scrollbar p-3 sm:p-4 sm:px-6 sm:pt-6 pb-40 max-w-2xl mx-auto w-full relative z-[1]">
         {activeTab === Tab.HOME && (
           <section className={`mb-4 ${themeColors.cardBg} border ${themeColors.border} rounded-sm`}>
             <p className={`px-3 py-2 text-[11px] uppercase tracking-wide ${themeColors.textSub}`}>Discovery Shelf</p>
@@ -616,9 +616,9 @@ const App: React.FC = () => {
 
             <button
               onClick={openAddModal}
-              className={`fixed bottom-28 right-6 w-14 h-14 rounded-md flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
+              className={`fixed bottom-28 right-4 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-md flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
             >
-              <Plus size={28} strokeWidth={3} />
+              <Plus size={24} className="sm:w-7 sm:h-7" strokeWidth={3} />
             </button>
           </>
         ) : activeTab === Tab.STATS ? (
@@ -637,7 +637,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <nav className={`fixed bottom-0 w-full ${themeColors.cardBg} border-t ${themeColors.border} px-6 py-4 pb-6 z-40 flex justify-between items-center sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300`} role="navigation" aria-label="Main navigation">
+      <nav className={`fixed bottom-0 w-full ${themeColors.cardBg} border-t ${themeColors.border} px-3 py-3 pb-5 z-40 flex justify-between items-center sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300`} role="navigation" aria-label="Main navigation">
         <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} aria-label="Home" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Home size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Home</span></button>
         <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Contacts" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Contacts</span></button>
         <button onClick={() => setActiveTab(Tab.STATS)} aria-current={activeTab === Tab.STATS ? 'page' : undefined} aria-label="Statistics" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.STATS ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><BarChart3 size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Stats</span></button>

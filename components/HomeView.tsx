@@ -86,7 +86,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
 
   return (
     <div className="space-y-4 pb-24" role="main" aria-label="Dashboard">
-      <section className="grid grid-cols-3 gap-2">
+      <section className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-2">
         <div className={`${theme.cardBg} border ${theme.border} rounded-sm p-3 text-center`}>
           <p className={`text-[11px] uppercase tracking-wide ${theme.textSub}`}>Garden Score</p>
           <CircularGauge score={score} />
@@ -108,7 +108,7 @@ const HomeView: React.FC<HomeViewProps> = ({ friends, meetingRequests, settings,
         {tasks.length === 0 ? (
           <p className={`text-sm ${theme.textSub}`}>Nothing urgent right now.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 min-[560px]:grid-cols-2 gap-2">
             {tasks.map(task => (
               <button key={task.id} onClick={task.action} className={`w-full text-left border ${theme.border} rounded-sm p-3 hover:bg-brand-cream/50 transition-colors`}>
                 <p className={`text-sm font-semibold ${theme.textMain}`}>{task.title}</p>
