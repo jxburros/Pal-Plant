@@ -34,6 +34,7 @@ export type AnalyticsEventType =
   | 'MEETING_SCHEDULED'
   | 'MEETING_COMPLETED'
   | 'MEETING_CLOSED'
+  | 'MEETING_DISMISSED'
   | 'BULK_IMPORT';
 
 export interface AnalyticsEvent {

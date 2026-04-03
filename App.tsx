@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Plus, Users, Calendar, Settings as SettingsIcon, Home, Search, BarChart3, X, Download, LayoutGrid, Skull } from 'lucide-react';
-import { Friend, Tab, ContactLog, MeetingRequest, AppSettings, Group, ContactChannel } from './types';
+import { Friend, Tab, MeetingRequest, ContactChannel } from './types';
 import FriendCard from './components/FriendCard';
 import FriendModal from './components/AddFriendModal';
 import MeetingRequestsView from './components/MeetingRequestsView';
@@ -26,10 +26,9 @@ import { useKeyboardShortcuts } from './components/KeyboardShortcuts';
 import { generateId, calculateTimeStatus, getThemeColors } from './utils/helpers';
 import { trackEvent } from './utils/analytics';
 import { useReminderEngine } from './hooks/useReminderEngine';
-import { useFriendsEngine } from './hooks/useFriendsEngine';
+import { useAppContext } from './hooks/AppContext';
 import { editFriendLog, addPastLog as addPastLogFn } from './utils/friendEngine';
-import { initStorage, getFriends, getMeetings, getCategories, getSettings, exportAllData, importAllData, saveMetadata, getMetadata, getGroups } from './utils/storage';
-import { debouncedSaveFriends, debouncedSaveMeetings, debouncedSaveCategories, debouncedSaveSettings, debouncedSaveGroups } from './utils/debouncedStorage';
+import { exportAllData, saveMetadata } from './utils/storage';
 
 const StatsView = lazy(() => import('./components/StatsView'));
 const OnboardingTooltips = lazy(() => import('./components/OnboardingTooltips'));
@@ -37,6 +36,8 @@ const BulkImportModal = lazy(() => import('./components/BulkImportModal'));
 const RuleGuide = lazy(() => import('./components/RuleGuide'));
 const MeetingFollowUpModal = lazy(() => import('./components/MeetingFollowUpModal'));
 const GroupManagementModal = lazy(() => import('./components/GroupManagementModal'));
+
+// ─── Toast ────────────────────────────────────────────────────────
 
 interface Toast {
   id: string;
@@ -65,7 +66,21 @@ const ToastContainer: React.FC<{ toasts: Toast[]; onDismiss: (id: string) => voi
   );
 };
 
+// ─── App ──────────────────────────────────────────────────────────
+
 const App: React.FC = () => {
+  // ─── Context (data state + actions) ───────────────────────────
+  const {
+    friends, setFriends, meetingRequests, setMeetingRequests, settings, setSettings, updateSettings,
+    categories, addCategory, groups, setGroups,
+    feedbackMap, isStorageReady, lastOpened,
+    markContacted, clearFeedback, deleteFriend,
+    deleteLog: ctxDeleteLog, editLog: ctxEditLog, addPastInteraction: ctxAddPastInteraction,
+    saveFriend: ctxSaveFriend, bulkImportFriends,
+    addMeetingRequest, updateMeetingRequest, deleteMeetingRequest,
+  } = useAppContext();
+
+  // ─── UI State ─────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<Tab>(Tab.HOME);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -78,10 +93,10 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showBackupBanner, setShowBackupBanner] = useState(false);
-  const [isStorageReady, setIsStorageReady] = useState(false);
   const [meetingFollowUp, setMeetingFollowUp] = useState<MeetingRequest | null>(null);
-  const [lastOpened, setLastOpened] = useState<Date>(new Date());
   const [isGroupManagementOpen, setIsGroupManagementOpen] = useState(false);
+
+  // ─── Toast Helpers ────────────────────────────────────────────
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = generateId();
@@ -93,111 +108,7 @@ const App: React.FC = () => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const [settings, setSettings] = useState<AppSettings>({
-    theme: 'plant',
-    textSize: 'normal',
-    highContrast: false,
-    reducedMotion: false,
-    reminders: {
-      pushEnabled: false,
-      reminderHoursBefore: 24,
-      backupReminderEnabled: true,
-      backupReminderDays: 7
-    },
-    hasSeenOnboarding: false
-  });
-
-  const {
-    friends, setFriends, feedbackMap, markContacted, clearFeedback,
-    deleteFriend, deleteLog: engineDeleteLog, editLog: engineEditLog,
-    addPastInteraction: engineAddPastInteraction, saveFriend, bulkImport
-  } = useFriendsEngine(() => []);
-
-  const [categories, setCategories] = useState<string[]>(['Friends', 'Romantic', 'Business', 'Family']);
-
-  const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>([]);
-
-  const [groups, setGroups] = useState<Group[]>([]);
-
-  // Initialize storage and load data on mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Initialize storage (runs migration if needed)
-        await initStorage();
-
-        // Load all data from storage
-        const [loadedFriends, loadedMeetings, loadedCategories, loadedSettings, loadedGroups, lastOpenedStr] = await Promise.all([
-          getFriends(),
-          getMeetings(),
-          getCategories(),
-          getSettings(),
-          getGroups(),
-          getMetadata('lastOpened')
-        ]);
-
-        // Update state with loaded data (even if empty)
-        setFriends(loadedFriends);
-        setMeetingRequests(loadedMeetings);
-        setCategories(loadedCategories);
-        setGroups(loadedGroups);
-        
-        if (loadedSettings) {
-          setSettings(prev => ({
-            ...prev,
-            ...loadedSettings,
-            reminders: {
-              ...prev.reminders,
-              ...(loadedSettings.reminders || {})
-            }
-          }));
-        }
-
-        // Load last opened timestamp
-        if (lastOpenedStr) {
-          setLastOpened(new Date(lastOpenedStr));
-        }
-
-        setIsStorageReady(true);
-      } catch (error) {
-        console.error('Error loading data from storage:', error);
-        // Continue with localStorage data already loaded in initial state
-        setIsStorageReady(true);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  // Save friends with debouncing
-  useEffect(() => {
-    if (!isStorageReady) return;
-    debouncedSaveFriends(friends);
-  }, [friends, isStorageReady]);
-
-  // Save categories with debouncing
-  useEffect(() => {
-    if (!isStorageReady) return;
-    debouncedSaveCategories(categories);
-  }, [categories, isStorageReady]);
-
-  // Save meetings with debouncing
-  useEffect(() => {
-    if (!isStorageReady) return;
-    debouncedSaveMeetings(meetingRequests);
-  }, [meetingRequests, isStorageReady]);
-
-  // Save groups with debouncing
-  useEffect(() => {
-    if (!isStorageReady) return;
-    debouncedSaveGroups(groups);
-  }, [groups, isStorageReady]);
-
-  // Save settings with debouncing
-  useEffect(() => {
-    if (!isStorageReady) return;
-    debouncedSaveSettings(settings);
-  }, [settings, isStorageReady]);
+  // ─── Onboarding ───────────────────────────────────────────────
 
   useEffect(() => {
     if (!settings.hasSeenOnboarding) {
@@ -206,6 +117,12 @@ const App: React.FC = () => {
     }
   }, [settings.hasSeenOnboarding]);
 
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    updateSettings({ hasSeenOnboarding: true });
+  };
+
+  // ─── Backup ───────────────────────────────────────────────────
 
   const triggerBackupDownload = useCallback(async () => {
     try {
@@ -219,7 +136,6 @@ const App: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      // Mark backup as done
       await saveMetadata('friendkeep_last_backup_at', new Date().toISOString());
       showToast('Backup downloaded successfully!', 'success');
     } catch (error) {
@@ -236,223 +152,158 @@ const App: React.FC = () => {
     onQuickBackup: triggerBackupDownload
   });
 
-  const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
-    setSettings(prev => ({ ...prev, hasSeenOnboarding: true }));
-  };
+  // ─── Meeting Follow-up Detection ──────────────────────────────
 
-  const openAddModal = useCallback(() => { 
-    setEditingFriend(null); 
-    setIsModalOpen(true); 
+  useEffect(() => {
+    if (!isStorageReady || meetingFollowUp) return;
+    const now = new Date();
+    const passed = meetingRequests.find(m =>
+      m.status === 'SCHEDULED' && m.scheduledDate &&
+      new Date(m.scheduledDate) > lastOpened &&
+      new Date(m.scheduledDate) <= now
+    );
+    if (passed) setMeetingFollowUp(passed);
+  }, [isStorageReady, meetingRequests, lastOpened, meetingFollowUp]);
+
+  // ─── Keyboard Shortcuts ───────────────────────────────────────
+
+  const openAddModal = useCallback(() => {
+    setEditingFriend(null);
+    setIsModalOpen(true);
   }, []);
-  
+
   const { setShowShortcutsModal, ShortcutsModal } = useKeyboardShortcuts(
     setActiveTab,
     openAddModal,
     () => setIsSettingsOpen(true)
   );
 
-  // Save lastOpened timestamp on unmount
-  useEffect(() => {
-    return () => {
-      saveMetadata('lastOpened', new Date().toISOString()).catch(err => {
-        console.error('Error saving lastOpened timestamp:', err);
-      });
-    };
-  }, []);
+  // ─── Derived State ────────────────────────────────────────────
 
-  // Detect passed meetings since last opened
-  useEffect(() => {
-    if (!isStorageReady || meetingFollowUp) return;
-
-    const now = new Date();
-    const passedMeetings = meetingRequests.filter(m => {
-      if (m.status !== 'SCHEDULED' || !m.scheduledDate) return false;
-      const scheduledDate = new Date(m.scheduledDate);
-      // Check if meeting has passed since lastOpened
-      return scheduledDate > lastOpened && scheduledDate <= now;
-    });
-
-    // Show follow-up for the first passed meeting
-    if (passedMeetings.length > 0) {
-      setMeetingFollowUp(passedMeetings[0]);
-    }
-  }, [isStorageReady, meetingRequests, lastOpened, meetingFollowUp]);
-
-  // Memoize theme colors and text size to avoid recalculation on every render
   const themeColors = useMemo(() => getThemeColors(settings.theme, settings.highContrast), [settings.theme, settings.highContrast]);
-  const textSizeClass = useMemo(() => {
-    return settings.textSize === 'large' ? 'text-lg' : 
-           settings.textSize === 'xl' ? 'text-xl' : 'text-base';
-  }, [settings.textSize]);
+  const textSizeClass = useMemo(() =>
+    settings.textSize === 'large' ? 'text-lg' : settings.textSize === 'xl' ? 'text-xl' : 'text-base',
+    [settings.textSize]);
 
-  const handleSaveFriend = (friend: Friend) => {
-    saveFriend(friend, !!editingFriend);
-    setEditingFriend(null);
-  };
-
-  const handleAddCategory = (newCat: string) => {
-    if (!categories.includes(newCat)) setCategories(prev => [...prev, newCat]);
-  };
-
-  const deleteLog = (friendId: string, logId: string) => {
-    engineDeleteLog(friendId, logId);
-    if (editingFriend?.id === friendId) {
-      setEditingFriend(prev => prev ? ({ ...prev, logs: prev.logs.filter(l => l.id !== logId) }) : null);
-    }
-  };
-
-  const editLog = (friendId: string, logId: string, updates: { channel?: ContactChannel; date?: string }) => {
-    engineEditLog(friendId, logId, updates);
-    if (editingFriend?.id === friendId) {
-      setEditingFriend(prev => {
-        if (!prev) return null;
-        return editFriendLog(prev, logId, updates);
-      });
-    }
-  };
-
-  const handleAddPastInteraction = (friendId: string, channel: ContactChannel, date: string) => {
-    engineAddPastInteraction(friendId, channel, date);
-    if (editingFriend?.id === friendId) {
-      setEditingFriend(prev => {
-        if (!prev) return null;
-        return addPastLogFn(prev, channel, date);
-      });
-    }
-  };
-
-  const handleRequestMeeting = useCallback((friend: Friend) => {
-    setMeetingRequests(prev => [{
-      id: generateId(),
-      name: friend.name,
-      status: 'REQUESTED',
-      dateAdded: new Date().toISOString(),
-      linkedIds: [friend.id], // Using linkedIds array (backward compat handled in MeetingRequestsView)
-      category: friend.category === 'Family' ? 'Family' : 'Friend'
-    }, ...prev]);
-    trackEvent('MEETING_CREATED', { friendId: friend.id });
-    setActiveTab(Tab.MEETINGS);
-  }, []);
-
-  const openEditModal = useCallback((friend: Friend) => { 
-    setEditingFriend(friend); 
-    setIsModalOpen(true); 
-  }, []);
-
-  const handleBulkImport = useCallback((newFriends: Friend[]) => {
-    bulkImport(newFriends);
-    showToast(`Successfully imported ${newFriends.length} contacts!`);
-  }, [bulkImport, showToast]);
-
-  // Memoize filtered and sorted friends to avoid recalculation on every render
   const filteredFriends = useMemo(() => {
     return friends.filter(f => {
-      const matchesCategory = selectedCategory === 'All' || f.category === selectedCategory;
-      const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.notes?.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      // Health filter
+      if (selectedCategory !== 'All' && f.category !== selectedCategory) return false;
+      if (searchQuery && !f.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !f.notes?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (healthFilter !== 'All') {
-        const status = calculateTimeStatus(f.lastContacted, f.frequencyDays);
-        const percentage = status.percentageLeft;
-        
-        if (healthFilter === 'Withering' && percentage > 0) return false;
-        if (healthFilter === 'Wilting' && (percentage <= 0 || percentage >= 25)) return false;
-        if (healthFilter === 'Healthy' && percentage < 25) return false;
+        const { percentageLeft } = calculateTimeStatus(f.lastContacted, f.frequencyDays);
+        if (healthFilter === 'Withering' && percentageLeft > 0) return false;
+        if (healthFilter === 'Wilting' && (percentageLeft <= 0 || percentageLeft >= 25)) return false;
+        if (healthFilter === 'Healthy' && percentageLeft < 25) return false;
       }
-      
-      return matchesCategory && matchesSearch;
+      return true;
     });
   }, [friends, selectedCategory, searchQuery, healthFilter]);
 
   const sortedFriends = useMemo(() => {
-    // Re-sort when switching to LIST tab to show current time-based status
-    // Avoids constant re-sorting while viewing (prevents scroll jumps)
-    const _ = activeTab === Tab.LIST ? Date.now() : 0;
-    
+    // Reference activeTab so switching to LIST triggers a re-sort (prevents scroll jumps)
+    void activeTab;
     return [...filteredFriends].sort((a, b) => {
-      const aStatus = calculateTimeStatus(a.lastContacted, a.frequencyDays);
-      const bStatus = calculateTimeStatus(b.lastContacted, b.frequencyDays);
-      return aStatus.percentageLeft - bStatus.percentageLeft;
+      const aLeft = calculateTimeStatus(a.lastContacted, a.frequencyDays).percentageLeft;
+      const bLeft = calculateTimeStatus(b.lastContacted, b.frequencyDays).percentageLeft;
+      return aLeft - bLeft;
     });
   }, [filteredFriends, activeTab]);
 
-  const handleNavigateToFriend = useCallback((friendName: string) => {
-    setActiveTab(Tab.LIST);
-    setSearchQuery(friendName);
+  // ─── Handlers ─────────────────────────────────────────────────
+
+  // Log wrappers that also keep editingFriend in sync
+  const deleteLog = (friendId: string, logId: string) => {
+    ctxDeleteLog(friendId, logId);
+    if (editingFriend?.id === friendId) {
+      setEditingFriend(prev => prev ? { ...prev, logs: prev.logs.filter(l => l.id !== logId) } : null);
+    }
+  };
+
+  const editLog = (friendId: string, logId: string, updates: { channel?: ContactChannel; date?: string }) => {
+    ctxEditLog(friendId, logId, updates);
+    if (editingFriend?.id === friendId) {
+      setEditingFriend(prev => prev ? editFriendLog(prev, logId, updates) : null);
+    }
+  };
+
+  const handleAddPastInteraction = (friendId: string, channel: ContactChannel, date: string) => {
+    ctxAddPastInteraction(friendId, channel, date);
+    if (editingFriend?.id === friendId) {
+      setEditingFriend(prev => prev ? addPastLogFn(prev, channel, date) : null);
+    }
+  };
+
+  const handleSaveFriend = (friend: Friend) => {
+    ctxSaveFriend(friend, !!editingFriend);
+    setEditingFriend(null);
+  };
+
+  const handleAddCategory = (newCat: string) => addCategory(newCat);
+
+  const openEditModal = useCallback((friend: Friend) => {
+    setEditingFriend(friend);
+    setIsModalOpen(true);
   }, []);
 
-  const handleNavigateToMeetings = useCallback(() => {
+  const handleBulkImport = useCallback((newFriends: Friend[]) => {
+    bulkImportFriends(newFriends);
+    showToast(`Successfully imported ${newFriends.length} contacts!`);
+  }, [bulkImportFriends, showToast]);
+
+  const handleRequestMeeting = useCallback((friend: Friend) => {
+    addMeetingRequest({
+      id: generateId(),
+      name: friend.name,
+      status: 'REQUESTED',
+      dateAdded: new Date().toISOString(),
+      linkedIds: [friend.id],
+      category: friend.category === 'Family' ? 'Family' : 'Friend'
+    });
+    trackEvent('MEETING_CREATED', { friendId: friend.id });
     setActiveTab(Tab.MEETINGS);
-  }, []);
-
-  // Memoize category selection handler to avoid creating new functions on every render
-  const handleSelectCategory = useCallback((category: string) => {
-    setSelectedCategory(category);
-  }, []);
-
-  // Memoize meeting request handlers to prevent child component re-renders
-  const handleAddMeetingRequest = useCallback((req: MeetingRequest) => {
-    setMeetingRequests(prev => [req, ...prev]);
-    trackEvent('MEETING_CREATED', { meetingId: req.id });
-  }, []);
-
-  const handleUpdateMeetingRequest = useCallback((req: MeetingRequest) => {
-    setMeetingRequests(prev => prev.map(r => r.id === req.id ? req : r));
-    if (req.status === 'SCHEDULED') trackEvent('MEETING_SCHEDULED', { meetingId: req.id });
-    if (req.status === 'COMPLETE' && req.verified) trackEvent('MEETING_COMPLETED', { meetingId: req.id });
-    if (req.status === 'COMPLETE' && req.verified === false) trackEvent('MEETING_CLOSED', { meetingId: req.id });
-  }, []);
-
-  const handleDeleteMeetingRequest = useCallback((id: string) => {
-    setMeetingRequests(prev => prev.filter(r => r.id !== id));
-  }, []);
+  }, [addMeetingRequest]);
 
   const handleApplyNudge = useCallback((friendId: string, newFrequencyDays: number) => {
-    setFriends(prev => prev.map(f =>
-      f.id === friendId ? { ...f, frequencyDays: newFrequencyDays } : f
-    ));
+    setFriends(prev => prev.map(f => f.id === friendId ? { ...f, frequencyDays: newFrequencyDays } : f));
     showToast(`Cadence updated to ${newFrequencyDays} days`, 'success');
   }, [setFriends, showToast]);
 
-  // Handle meeting follow-up confirmation
   const handleMeetingFollowUpConfirm = useCallback((meetingId: string, linkedIds: string[]) => {
-    // Mark all linked friends as contacted (in-person since they met)
-    if (linkedIds.length > 0) {
-      linkedIds.forEach(friendId => {
-        markContacted(friendId, 'in-person');
-      });
-      showToast(`Marked ${linkedIds.length} contact${linkedIds.length > 1 ? 's' : ''} as updated`, 'success');
-    }
-    
-    // Update meeting status to COMPLETE
-    setMeetingRequests(prev => prev.map(r => 
+    linkedIds.forEach(id => markContacted(id, 'in-person'));
+    if (linkedIds.length > 0) showToast(`Marked ${linkedIds.length} contact${linkedIds.length > 1 ? 's' : ''} as updated`, 'success');
+    setMeetingRequests(prev => prev.map(r =>
       r.id === meetingId ? { ...r, status: 'COMPLETE' as const, verified: true } : r
     ));
     trackEvent('MEETING_COMPLETED', { meetingId, participantCount: linkedIds.length });
-  }, [markContacted, showToast]);
+    setMeetingFollowUp(null);
+  }, [markContacted, showToast, setMeetingRequests]);
 
-  // Handle meeting follow-up dismissal
   const handleMeetingFollowUpDismiss = useCallback((meetingId: string) => {
-    // Update meeting status to COMPLETE but not verified
-    setMeetingRequests(prev => prev.map(r => 
+    setMeetingRequests(prev => prev.map(r =>
       r.id === meetingId ? { ...r, status: 'COMPLETE' as const, verified: false } : r
     ));
     trackEvent('MEETING_DISMISSED', { meetingId });
-  }, []);
+    setMeetingFollowUp(null);
+  }, [setMeetingRequests]);
 
-  // Handle group contact action
   const handleGroupContact = useCallback((memberIds: string[], channel: ContactChannel) => {
-    memberIds.forEach(friendId => {
-      markContacted(friendId, channel);
-    });
+    memberIds.forEach(id => markContacted(id, channel));
     showToast(`Contacted ${memberIds.length} friend${memberIds.length > 1 ? 's' : ''}!`, 'success');
     setIsGroupManagementOpen(false);
   }, [markContacted, showToast]);
 
+  const handleSelectCategory = useCallback((cat: string) => setSelectedCategory(cat), []);
+  const handleNavigateToFriend = useCallback((name: string) => { setActiveTab(Tab.LIST); setSearchQuery(name); }, []);
+  const handleNavigateToMeetings = useCallback(() => setActiveTab(Tab.MEETINGS), []);
+
+  // ─── Render ───────────────────────────────────────────────────
+
   return (
-    <div data-theme={settings.theme} className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''} ${settings.highContrast ? 'contrast-125' : ''}`}>
+    <div
+      data-theme={settings.theme}
+      className={`h-full w-full ${themeColors.bg} ${themeColors.textMain} ${textSizeClass} transition-colors duration-300 flex flex-col relative ${settings.reducedMotion ? 'motion-reduce' : ''} ${settings.highContrast ? 'contrast-125' : ''}`}
+    >
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {showBackupBanner && (
@@ -466,10 +317,7 @@ const App: React.FC = () => {
             >
               <Download size={14} /> Download Backup
             </button>
-            <button
-              onClick={() => setShowBackupBanner(false)}
-              className="px-4 bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded-lg"
-            >
+            <button onClick={() => setShowBackupBanner(false)} className="px-4 bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded-lg">
               Dismiss
             </button>
           </div>
@@ -515,42 +363,20 @@ const App: React.FC = () => {
               ))}
             </div>
 
-            {/* Health Status Filters */}
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:-mx-6 sm:px-6">
-              <button 
-                onClick={() => setHealthFilter('All')} 
-                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'All' ? 'bg-slate-600 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
-              >
-                All Health
-              </button>
-              <button 
-                onClick={() => setHealthFilter('Healthy')} 
-                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Healthy' ? 'bg-emerald-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
-              >
-                Healthy
-              </button>
-              <button
-                onClick={() => setHealthFilter('Wilting')}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Wilting' ? 'bg-yellow-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
-              >
-                Needs follow-up
-              </button>
-              <button
-                onClick={() => setHealthFilter('Withering')}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Withering' ? 'bg-red-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}
-              >
+              <button onClick={() => setHealthFilter('All')} className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'All' ? 'bg-slate-600 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}>All Health</button>
+              <button onClick={() => setHealthFilter('Healthy')} className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Healthy' ? 'bg-emerald-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}>Healthy</button>
+              <button onClick={() => setHealthFilter('Wilting')} className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Wilting' ? 'bg-yellow-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}>Needs follow-up</button>
+              <button onClick={() => setHealthFilter('Withering')} className={`whitespace-nowrap px-4 py-1.5 rounded-md text-xs font-bold transition-all ${healthFilter === 'Withering' ? 'bg-red-500 text-white' : `${themeColors.cardBg} ${themeColors.textSub}`}`}>
                 <Skull size={12} className="inline -mt-0.5" /> Withering
               </button>
             </div>
 
             <div className="flex flex-col gap-2 min-[480px]:flex-row min-[480px]:justify-between min-[480px]:items-center text-xs font-bold text-slate-600 px-1 mt-2">
               <div className="flex flex-wrap gap-3">
-                <button onClick={() => setIsBulkImportOpen(true)} className="underline decoration-dotted underline-offset-4">
-                  Import contacts
-                </button>
+                <button onClick={() => setIsBulkImportOpen(true)} className="underline decoration-dotted underline-offset-4">Import contacts</button>
                 <button onClick={() => setIsGroupManagementOpen(true)} className="underline decoration-dotted underline-offset-4 flex items-center gap-1">
-                  <Users size={12} />
-                  Manage Groups ({groups.length})
+                  <Users size={12} /> Manage Groups ({groups.length})
                 </button>
               </div>
               <button onClick={openAddModal} className="text-emerald-700">Add contact</button>
@@ -571,6 +397,7 @@ const App: React.FC = () => {
             </div>
           </section>
         )}
+
         {activeTab === Tab.HOME ? (
           <HomeView
             friends={friends}
@@ -598,7 +425,6 @@ const App: React.FC = () => {
                     <p>No plants found matching "{searchQuery}"</p>
                   </div>
                 )}
-
                 {sortedFriends.map(friend => (
                   <FriendCard
                     key={friend.id}
@@ -613,7 +439,6 @@ const App: React.FC = () => {
                 ))}
               </div>
             )}
-
             <button
               onClick={openAddModal}
               className={`fixed bottom-28 right-4 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-md flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all ${themeColors.primary} z-40`}
@@ -628,15 +453,16 @@ const App: React.FC = () => {
         ) : (
           <MeetingRequestsView
             requests={meetingRequests}
-            onAddRequest={handleAddMeetingRequest}
-            onUpdateRequest={handleUpdateMeetingRequest}
-            onDeleteRequest={handleDeleteMeetingRequest}
+            onAddRequest={addMeetingRequest}
+            onUpdateRequest={updateMeetingRequest}
+            onDeleteRequest={deleteMeetingRequest}
             settings={settings}
             friends={friends}
           />
         )}
       </main>
 
+      {/* Mobile nav */}
       <nav className={`fixed bottom-0 w-full ${themeColors.cardBg} border-t ${themeColors.border} px-3 py-3 pb-5 z-40 flex justify-between items-center sm:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300`} role="navigation" aria-label="Main navigation">
         <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} aria-label="Home" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.HOME ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Home size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Home</span></button>
         <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} aria-label="Contacts" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.LIST ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Users size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Contacts</span></button>
@@ -644,6 +470,7 @@ const App: React.FC = () => {
         <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} aria-label="Meeting requests" className={`flex flex-col items-center gap-1 w-1/4 transition-opacity ${activeTab === Tab.MEETINGS ? 'opacity-100 scale-110 nav-tab-active' : 'opacity-40'}`}><Calendar size={24} aria-hidden="true" /><span className="text-[10px] font-bold">Requests</span></button>
       </nav>
 
+      {/* Desktop nav */}
       <div className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${themeColors.cardBg}/90 backdrop-blur-md border ${themeColors.border} shadow-xl rounded-md px-2 py-2 gap-2 z-40`} role="navigation" aria-label="Main navigation">
         <button onClick={() => setActiveTab(Tab.HOME)} aria-current={activeTab === Tab.HOME ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.HOME ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Home</button>
         <button onClick={() => setActiveTab(Tab.LIST)} aria-current={activeTab === Tab.LIST ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.LIST ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Garden</button>
@@ -651,6 +478,7 @@ const App: React.FC = () => {
         <button onClick={() => setActiveTab(Tab.MEETINGS)} aria-current={activeTab === Tab.MEETINGS ? 'page' : undefined} className={`px-6 py-2.5 rounded-md text-sm font-bold transition-all ${activeTab === Tab.MEETINGS ? `${themeColors.primary} ${themeColors.primaryText}` : `${themeColors.textSub} hover:bg-white/10`}`}>Requests</button>
       </div>
 
+      {/* Modals */}
       <FriendModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
