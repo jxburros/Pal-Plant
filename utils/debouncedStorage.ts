@@ -29,12 +29,12 @@ const DEBOUNCE_DELAY = 1000; // 1 second
 type StorageType = 'friends' | 'meetings' | 'categories' | 'settings' | 'groups';
 
 interface PendingWrite {
-  type: StorageType;
   data: unknown;
-  timeout: NodeJS.Timeout;
+  timeout: ReturnType<typeof setTimeout>;
 }
 
 const pendingWrites = new Map<StorageType, PendingWrite>();
+const writeChains = new Map<StorageType, Promise<void>>();
 
 const saveHandlers: Record<StorageType, (data: unknown) => Promise<void>> = {
   friends: (data) => saveFriends(data as Friend[]),
@@ -62,11 +62,18 @@ async function flushWrite(type: StorageType): Promise<void> {
   clearTimeout(pending.timeout);
   pendingWrites.delete(type);
 
-  try {
-    await saveHandlers[type](pending.data);
-  } catch (error) {
-    console.error(`Error flushing ${type} write:`, error);
-  }
+  const previousWrite = writeChains.get(type) ?? Promise.resolve();
+  const writeOperation = previousWrite
+    .catch(() => {
+      // Previous write failure should not block subsequent writes.
+    })
+    .then(() => saveHandlers[type](pending.data))
+    .catch((error) => {
+      console.error(`Error flushing ${type} write:`, error);
+    });
+
+  writeChains.set(type, writeOperation);
+  await writeOperation;
 }
 
 /**
@@ -84,7 +91,7 @@ function scheduleWrite(type: StorageType, data: unknown): void {
     flushWrite(type);
   }, DEBOUNCE_DELAY);
 
-  pendingWrites.set(type, { type, data, timeout });
+  pendingWrites.set(type, { data, timeout });
 }
 
 /**
@@ -120,6 +127,7 @@ export async function flushAllWrites(): Promise<void> {
     promises.push(flushWrite(type));
   }
   await Promise.all(promises);
+  await Promise.all(writeChains.values());
 }
 
 /**
